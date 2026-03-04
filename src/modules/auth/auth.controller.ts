@@ -3,6 +3,7 @@ import { AuthRequest } from "../../middleware/auth.middleware";
 import {
   getCurrentUser,
   loginUser,
+  logoutAllUserTokens,
   logoutUser,
   refreshAccessToken,
   registerUser,
@@ -67,6 +68,16 @@ export const logout = async (
   try {
     await logoutUser(req.body);
     res.json({ message: "Logged out" });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const logoutAll = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    await logoutAllUserTokens(req.userId);
+    res.json({ message: "Logged out all sessions" });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

@@ -63,6 +63,7 @@ model product_variants {
   weight      Int?
   created_at  DateTime?     @default(now()) @db.Timestamp(6)
   order_items order_items[]
+  cart_items  cart_items[]
   products    products?     @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -197,6 +198,22 @@ model users {
   user_addresses user_addresses[]
   wallets        wallets[]
   refresh_tokens refresh_tokens[]
+  cart_items     cart_items[]
+}
+
+model cart_items {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String           @db.Uuid
+  product_variant_id String           @db.Uuid
+  quantity           Int              @default(1)
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?        @default(now()) @db.Timestamp(6)
+  users              users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants   product_variants @relation(fields: [product_variant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, product_variant_id])
+  @@index([user_id])
+  @@index([product_variant_id])
 }
 
 model shop_payouts {

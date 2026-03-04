@@ -236,3 +236,10 @@ export const logoutUser = async (input: LogoutInput) => {
     data: { revoked_at: new Date() },
   });
 };
+
+export const logoutAllUserTokens = async (userId: string) => {
+  await prisma.refresh_tokens.updateMany({
+    where: { user_id: userId, revoked_at: null },
+    data: { revoked_at: new Date() },
+  });
+};
