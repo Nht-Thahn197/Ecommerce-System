@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bambi - Trang chủ</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="./store.css" />
   </head>
   <body>
@@ -18,23 +19,39 @@
           <span>Thông báo</span>
           <span>Hỗ trợ</span>
           <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <header class="header">
       <div class="container header-inner">
-        <div class="logo">
+        <a class="logo" href="/ui/">
           <div class="logo-badge">B</div>
           <span>Bambi</span>
-        </div>
+        </a>
         <div class="search-wrap">
           <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
           <button>Tìm</button>
         </div>
         <div class="header-actions">
-          <a class="pill" href="/ui/login.html">Đăng nhập</a>
-          <a class="pill" href="/ui/register.html">Đăng ký</a>
           <span class="pill">Giỏ hàng (2)</span>
         </div>
       </div>
@@ -222,5 +239,6 @@
     <footer class="footer">
       Bambi Marketplace - Tham khảo giao diện theo phong cách Shopee
     </footer>
+    <script src="/ui/store.js"></script>
   </body>
 </html>

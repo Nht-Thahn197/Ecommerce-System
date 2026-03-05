@@ -2,15 +2,15 @@
 
 :root {
   color-scheme: light;
-  --bg-1: #f7f2ea;
-  --bg-2: #efe6d8;
-  --ink: #1f2937;
+  --bg-1: #fff6ed;
+  --bg-2: #ffe8d5;
+  --ink: #333333;
   --muted: #6b7280;
   --card: rgba(255, 255, 255, 0.88);
   --line: rgba(31, 41, 55, 0.12);
-  --accent: #0f766e;
-  --accent-2: #f97316;
-  --accent-3: #0ea5e9;
+  --accent: #ff7a00;
+  --accent-2: #ffb266;
+  --accent-3: #ffb266;
   --danger: #b91c1c;
   --shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
   --radius: 18px;
@@ -24,8 +24,8 @@ body {
   margin: 0;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: var(--ink);
-  background: radial-gradient(1200px 800px at 8% 10%, #fff6e9, transparent 60%),
-    radial-gradient(900px 700px at 90% 15%, #e8f6f3, transparent 60%),
+  background: radial-gradient(1200px 800px at 8% 10%, #fff6ed, transparent 60%),
+    radial-gradient(900px 700px at 90% 15%, #ffe8d5, transparent 60%),
     linear-gradient(160deg, var(--bg-1), var(--bg-2));
   min-height: 100vh;
 }
@@ -37,7 +37,7 @@ body::after {
   inset: auto auto 10% -12%;
   width: 420px;
   height: 420px;
-  background: radial-gradient(circle at 30% 30%, rgba(249, 115, 22, 0.22), transparent 70%);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 122, 0, 0.18), transparent 70%);
   filter: blur(4px);
   z-index: 0;
   animation: float 14s ease-in-out infinite;
@@ -47,7 +47,7 @@ body::after {
   inset: -8% -12% auto auto;
   width: 520px;
   height: 520px;
-  background: radial-gradient(circle at 70% 30%, rgba(14, 165, 233, 0.18), transparent 70%);
+  background: radial-gradient(circle at 70% 30%, rgba(255, 178, 102, 0.22), transparent 70%);
   animation-delay: -4s;
 }
 
@@ -176,7 +176,7 @@ body::after {
   background: var(--accent);
   color: white;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 12px 22px rgba(15, 118, 110, 0.22);
+  box-shadow: 0 12px 22px rgba(255, 122, 0, 0.25);
 }
 
 .btn:hover {
@@ -185,7 +185,7 @@ body::after {
 
 .btn.secondary {
   background: var(--accent-3);
-  box-shadow: 0 12px 22px rgba(14, 165, 233, 0.2);
+  box-shadow: 0 12px 22px rgba(255, 178, 102, 0.25);
 }
 
 .btn.ghost {
@@ -197,7 +197,7 @@ body::after {
 
 .btn.warn {
   background: var(--accent-2);
-  box-shadow: 0 12px 22px rgba(249, 115, 22, 0.2);
+  box-shadow: 0 12px 22px rgba(255, 178, 102, 0.25);
 }
 
 .btn.danger {
@@ -215,7 +215,7 @@ body::after {
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 13px;
-  background: rgba(15, 118, 110, 0.12);
+  background: rgba(255, 122, 0, 0.12);
   color: var(--accent);
 }
 
@@ -252,18 +252,18 @@ body::after {
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
-  background: rgba(15, 118, 110, 0.12);
+  background: rgba(255, 122, 0, 0.12);
   color: var(--accent);
 }
 
 .chip.orange {
-  background: rgba(249, 115, 22, 0.16);
-  color: #9a3412;
+  background: rgba(255, 178, 102, 0.22);
+  color: #9a4c00;
 }
 
 .chip.blue {
-  background: rgba(14, 165, 233, 0.16);
-  color: #0369a1;
+  background: rgba(255, 178, 102, 0.18);
+  color: #9a4c00;
 }
 
 .chip.gray {

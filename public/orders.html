@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đơn mua | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="./store.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <span>Kênh Người Bán</span>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <a class="logo" href="/ui/">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </a>
+        <div class="search-wrap">
+          <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
+          <button>Tìm</button>
+        </div>
+        <div class="header-actions">
+          <span class="pill">Giỏ hàng (2)</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="orders-wrapper">
+        <aside class="side-card">
+          <h4>Đơn mua</h4>
+          <nav class="side-menu">
+            <a class="active" href="/ui/orders.html">Tất cả</a>
+            <a href="#">Chờ thanh toán</a>
+            <a href="#">Vận chuyển</a>
+            <a href="#">Chờ giao hàng</a>
+            <a href="#">Hoàn thành</a>
+            <a href="#">Đã hủy</a>
+            <a href="#">Trả hàng/Hoàn tiền</a>
+          </nav>
+        </aside>
+        <section class="panel-card">
+          <div class="order-tabs">
+            <a class="active" href="#">Tất cả</a>
+            <a href="#">Chờ thanh toán</a>
+            <a href="#">Vận chuyển</a>
+            <a href="#">Chờ giao hàng</a>
+            <a href="#">Hoàn thành</a>
+            <a href="#">Đã hủy</a>
+            <a href="#">Trả hàng/Hoàn tiền</a>
+          </div>
+          <div class="order-search">
+            <span>🔍</span>
+            <span class="muted">Bạn có thể tìm kiếm theo tên Shop, ID đơn hàng hoặc Tên Sản phẩm</span>
+          </div>
+
+          <div class="order-card">
+            <div class="order-header">
+              <div>
+                <strong>Rosslyn - Dụng cụ làm đẹp</strong>
+                <span class="badge" style="margin-left: 8px">Yêu thích</span>
+              </div>
+              <div class="order-status">Giao hàng thành công</div>
+            </div>
+            <div class="order-item">
+              <div class="order-thumb">Ảnh</div>
+              <div>
+                <div>Cốp đựng đồ trang điểm chống nước Rosslyn QT121</div>
+                <div class="muted">Phân loại: Đen 26x23x10 | x1</div>
+              </div>
+              <div>
+                <div class="muted" style="text-decoration: line-through">261.000đ</div>
+                <div class="price">179.620đ</div>
+              </div>
+            </div>
+            <div class="order-actions">
+              <div class="muted">Đang chờ Người bán đánh giá</div>
+              <div class="actions">
+                <button class="primary">Mua lại</button>
+                <button>Liên hệ người bán</button>
+                <button>Xem đánh giá shop</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="order-card">
+            <div class="order-header">
+              <div>
+                <strong>Gadget Pro</strong>
+              </div>
+              <div class="order-status">Đang vận chuyển</div>
+            </div>
+            <div class="order-item">
+              <div class="order-thumb">Ảnh</div>
+              <div>
+                <div>Bàn phím cơ K108 hotswap</div>
+                <div class="muted">Phân loại: Trắng | x1</div>
+              </div>
+              <div class="price">582.102đ</div>
+            </div>
+            <div class="order-actions">
+              <div class="muted">Dự kiến giao trong 2-3 ngày</div>
+              <div class="actions">
+                <button class="primary">Theo dõi</button>
+                <button>Liên hệ người bán</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      Bambi Marketplace - Trang đơn mua tham khảo phong cách Shopee
+    </footer>
+
+    <script src="/ui/store.js"></script>
+  </body>
+</html>

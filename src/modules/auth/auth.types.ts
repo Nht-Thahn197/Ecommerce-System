@@ -12,6 +12,15 @@ export interface LoginInput {
   password: string;
 }
 
+export interface UpdateProfileInput {
+  email?: string;
+  full_name?: string;
+  phone?: string | null;
+  gender?: "male" | "female" | "other" | string;
+  birth_date?: string | null;
+  avatar_url?: string | null;
+}
+
 export interface RefreshTokenInput {
   refresh_token: string;
 }

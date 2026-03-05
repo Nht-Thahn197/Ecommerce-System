@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tài khoản của tôi | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="./store.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <span>Kênh Người Bán</span>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <a class="logo" href="/ui/">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </a>
+        <div class="search-wrap">
+          <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
+          <button>Tìm</button>
+        </div>
+        <div class="header-actions">
+          <span class="pill">Giỏ hàng (2)</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="account-wrapper">
+        <aside class="side-card">
+          <h4>Tài khoản</h4>
+          <nav class="side-menu">
+            <a class="active" href="/ui/account.html">Hồ sơ của tôi</a>
+            <a href="#">Địa chỉ</a>
+            <a href="#">Đổi mật khẩu</a>
+            <a href="#">Thông báo</a>
+          </nav>
+        </aside>
+        <section class="panel-card">
+          <h2 class="panel-title">Hồ Sơ Của Tôi</h2>
+          <p class="panel-sub">Quản lý thông tin hồ sơ để bảo mật tài khoản</p>
+          <div class="profile-grid">
+            <div>
+              <div class="form-row">
+                <label>Tên</label>
+                <input id="profileName" type="text" placeholder="Nhập tên" />
+              </div>
+              <div class="form-row">
+                <label>Email</label>
+                <input id="profileEmail" type="email" placeholder="Nhập email" />
+              </div>
+              <div class="form-row">
+                <label>Số điện thoại</label>
+                <input id="profilePhone" type="text" placeholder="Nhập số điện thoại" />
+              </div>
+              <div class="form-row">
+                <label>Giới tính</label>
+                <div class="radio-group">
+                  <label><input type="radio" name="gender" value="male" /> Nam</label>
+                  <label><input type="radio" name="gender" value="female" /> Nữ</label>
+                  <label><input type="radio" name="gender" value="other" /> Khác</label>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>Ngày sinh</label>
+                <input id="profileBirth" type="date" />
+              </div>
+              <button id="saveProfile" class="save-btn">Lưu</button>
+              <div id="profileStatus" class="status" style="margin-top: 12px"></div>
+            </div>
+            <div class="avatar-box">
+              <div class="avatar-circle">
+                <span id="avatarLabel">Ảnh</span>
+                <img id="avatarPreview" alt="Ảnh đại diện" />
+              </div>
+              <input id="avatarInput" type="file" accept="image/*" style="display: none" />
+              <button id="avatarButton">Chọn ảnh</button>
+              <p>Dung lượng file tối đa 1 MB</p>
+              <p>Định dạng: JPEG, PNG</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      Bambi Marketplace - Trang tài khoản tham khảo phong cách Shopee
+    </footer>
+
+    <script src="/ui/store.js"></script>
+    <script src="/ui/account.js"></script>
+  </body>
+</html>

@@ -8,6 +8,7 @@ import {
   LogoutInput,
   RefreshTokenInput,
   RegisterInput,
+  UpdateProfileInput,
 } from "./auth.types";
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -26,6 +27,9 @@ const publicUserSelect = {
   id: true,
   email: true,
   phone: true,
+  gender: true,
+  birth_date: true,
+  avatar_url: true,
   full_name: true,
   role: true,
   status: true,
@@ -45,6 +49,15 @@ const isValidEmail = (email: string) =>
 const isValidPassword = (password: string) =>
   password.length >= MIN_PASSWORD_LENGTH &&
   password.length <= MAX_PASSWORD_LENGTH;
+
+const normalizeGender = (value?: string | null) => {
+  if (!value) return null;
+  const raw = value.toLowerCase();
+  if (["male", "nam"].includes(raw)) return "male";
+  if (["female", "nu", "nữ"].includes(raw)) return "female";
+  if (["other", "khac", "khác"].includes(raw)) return "other";
+  return null;
+};
 
 const requireJwtSecret = (): Secret => {
   const secret = process.env.JWT_SECRET;
@@ -189,6 +202,106 @@ export const getCurrentUser = async (userId: string): Promise<PublicUser> => {
   });
 
   if (!user) throw new Error("User not found");
+
+  return user;
+};
+
+export const updateProfile = async (
+  userId: string,
+  input: UpdateProfileInput
+): Promise<PublicUser> => {
+  const data: Prisma.usersUpdateInput = {};
+
+  if (input.email !== undefined) {
+    const email = input.email?.trim();
+    if (!email) {
+      throw new Error("Email là bắt buộc");
+    }
+    const normalized = normalizeEmail(email);
+    if (!isValidEmail(normalized)) {
+      throw new Error("Email không hợp lệ");
+    }
+    const existing = await prisma.users.findFirst({
+      where: { email: normalized, NOT: { id: userId } },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new Error("Email đã tồn tại");
+    }
+    data.email = normalized;
+  }
+
+  if (input.full_name !== undefined) {
+    const fullName = input.full_name?.trim();
+    data.full_name = fullName || null;
+  }
+
+  if (input.phone !== undefined) {
+    const phone = input.phone?.trim();
+    if (!phone) {
+      data.phone = null;
+    } else {
+      const existing = await prisma.users.findFirst({
+        where: { phone, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new Error("Số điện thoại đã tồn tại");
+      }
+      data.phone = phone;
+    }
+  }
+
+  if (input.gender !== undefined) {
+    const normalized = normalizeGender(input.gender);
+    if (!normalized && input.gender) {
+      throw new Error("Giới tính không hợp lệ");
+    }
+    data.gender = normalized;
+  }
+
+  if (input.birth_date !== undefined) {
+    const birth = input.birth_date?.trim();
+    if (!birth) {
+      data.birth_date = null;
+    } else {
+      const parsed = new Date(birth);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new Error("Ngày sinh không hợp lệ");
+      }
+      data.birth_date = parsed;
+    }
+  }
+
+  if (input.avatar_url !== undefined) {
+    const avatar = input.avatar_url?.trim();
+    if (!avatar) {
+      data.avatar_url = null;
+    } else if (avatar.length > 1_500_000) {
+      throw new Error("Ảnh quá lớn");
+    } else {
+      data.avatar_url = avatar;
+    }
+  }
+
+  const user = await prisma.users.update({
+    where: { id: userId },
+    data,
+    select: publicUserSelect,
+  });
+
+  return user;
+};
+
+export const updateAvatar = async (
+  userId: string,
+  avatarUrl: string | null
+): Promise<PublicUser> => {
+  const user = await prisma.users.update({
+    where: { id: userId },
+    data: { avatar_url: avatarUrl },
+    select: publicUserSelect,
+  });
 
   return user;
 };

@@ -7,12 +7,15 @@ import {
   logoutUser,
   refreshAccessToken,
   registerUser,
+  updateAvatar,
+  updateProfile,
 } from "./auth.service";
 import {
   LoginInput,
   LogoutInput,
   RefreshTokenInput,
   RegisterInput,
+  UpdateProfileInput,
 } from "./auth.types";
 
 export const register = async (
@@ -43,6 +46,40 @@ export const me = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     const user = await getCurrentUser(req.userId);
+    res.json({ user });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateMe = async (
+  req: AuthRequest<{}, {}, UpdateProfileInput>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    const user = await updateProfile(req.userId, req.body);
+    res.json({ user });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const uploadAvatar = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    const validationError = (req as any).fileValidationError as
+      | string
+      | undefined;
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) {
+      return res.status(400).json({ message: "Không có ảnh" });
+    }
+    const avatarUrl = `/ui/uploads/avatars/${file.filename}`;
+    const user = await updateAvatar(req.userId, avatarUrl);
     res.json({ user });
   } catch (error: any) {
     res.status(400).json({ message: error.message });

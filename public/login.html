@@ -4,74 +4,128 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Đăng nhập | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="./shared.css" />
     <style>
-      .login-grid {
-        align-items: stretch;
+      body {
+        background: radial-gradient(1000px 700px at 10% 10%, #fff6ed, transparent 60%),
+          radial-gradient(900px 700px at 90% 5%, #ffe8d5, transparent 60%),
+          #fff6ed;
       }
-      .login-hero {
+
+      .login-shell {
+        max-width: 980px;
+        margin: 24px auto 80px;
+        padding: 0 20px;
+      }
+
+      .login-card {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+        padding: 28px;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 22px;
+      }
+
+      .brand-panel {
+        border-radius: 18px;
+        padding: 22px;
+        background: linear-gradient(135deg, #ff7a00 0%, #ffb266 100%);
+        color: white;
+        position: relative;
+        overflow: hidden;
+        min-height: 320px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        gap: 16px;
-        min-height: 420px;
+        justify-content: space-between;
       }
-      .login-hero h2 {
+
+      .brand-panel::after {
+        content: "";
+        position: absolute;
+        inset: auto -30% -40% auto;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.4), transparent 70%);
+      }
+
+      .brand-title {
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
         font-size: 28px;
-        margin: 0;
+        margin: 0 0 6px;
       }
-      .login-hero ul {
+
+      .brand-sub {
         margin: 0;
-        padding: 0;
-        list-style: none;
+        opacity: 0.9;
       }
-      .login-hero li {
-        margin-bottom: 8px;
+
+      .badge-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .badge {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .form-panel h2 {
+        margin: 0 0 6px;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      }
+
+      .hint {
         color: var(--muted);
+        margin-bottom: 18px;
       }
+
       .link {
         color: var(--accent);
         text-decoration: none;
         font-weight: 600;
       }
+
+      @media (max-width: 900px) {
+        .login-card {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
-    <div class="app">
-      <header class="topbar">
-        <div class="brand">
-          <h1>Đăng nhập</h1>
-          <p>Đăng nhập để mua hàng, đặt đơn và quản lý trả hàng.</p>
-        </div>
+    <div class="login-shell">
+      <header class="brand" style="margin-bottom: 18px">
+        <h1>Đăng nhập</h1>
+        <p>Truy cập nhanh vào mua sắm, đơn hàng và tài khoản.</p>
       </header>
 
       <div id="status" class="status" style="display: none"></div>
 
-      <section class="grid cols-2 login-grid">
-        <div class="card login-hero">
-          <h2>Chào mừng bạn quay lại.</h2>
-          <p class="muted">
-            Dùng email hoặc số điện thoại kèm mật khẩu.
-          </p>
-          <ul>
-            <li>Mua hàng từ nhiều shop</li>
-            <li>Theo dõi đơn hàng và trả hàng</li>
-            <li>Mở khu vực Seller khi sẵn sàng</li>
-          </ul>
-          <p class="muted">
-            Bạn là người bán? Vào
-            <a class="link" href="/ui/seller/">Khu vực Seller</a>.
-          </p>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Đăng nhập</h2>
+      <section class="login-card">
+        <div class="brand-panel">
+          <div>
+            <h2 class="brand-title">Bambi Member</h2>
+            <p class="brand-sub">Tích điểm, theo dõi đơn và ưu đãi riêng cho bạn.</p>
           </div>
+          <div class="badge-row">
+            <span class="badge">Freeship 0đ</span>
+            <span class="badge">Ưu đãi mỗi ngày</span>
+            <span class="badge">Hỗ trợ 24/7</span>
+          </div>
+        </div>
+        <div class="form-panel">
+          <h2>Đăng nhập tài khoản</h2>
+          <p class="hint">Dùng email hoặc số điện thoại đã đăng ký.</p>
           <form id="loginForm">
-            <div class="field">
-              <label>Địa chỉ API (Base URL)</label>
-              <input id="baseUrl" class="input" value="http://localhost:3000" />
-            </div>
             <div class="field">
               <label>Email hoặc số điện thoại</label>
               <input class="input" name="identifier" required />
@@ -80,30 +134,23 @@
               <label>Mật khẩu</label>
               <input class="input" name="password" type="password" required />
             </div>
-            <div class="field">
-              <label>
-                <input type="checkbox" id="useForSeller" checked />
-                Dùng token này cho Seller Studio luôn
-              </label>
-            </div>
             <button class="btn" type="submit">Đăng nhập</button>
           </form>
+          <p class="note">
+            Chưa có tài khoản? <a class="link" href="/ui/register.html">Đăng ký ngay</a>
+          </p>
         </div>
       </section>
     </div>
 
     <script>
       const statusEl = document.querySelector("#status");
-      const baseUrlEl = document.querySelector("#baseUrl");
       const form = document.querySelector("#loginForm");
-      const useForSeller = document.querySelector("#useForSeller");
 
       const storageKeys = {
         base: "bambi_user_base",
         token: "bambi_user_token",
         refresh: "bambi_user_refresh",
-        sellerBase: "bambi_seller_base",
-        sellerToken: "bambi_seller_token",
       };
 
       const setStatus = (message, type = "info") => {
@@ -119,8 +166,7 @@
       };
 
       const apiFetch = async (path, options = {}) => {
-        const base = baseUrlEl.value.trim().replace(/\/$/, "");
-        const response = await fetch(base + path, {
+        const response = await fetch(path, {
           ...options,
           headers: { "Content-Type": "application/json" },
         });
@@ -145,25 +191,17 @@
             method: "POST",
             body: JSON.stringify({ identifier, password }),
           });
-          localStorage.setItem(storageKeys.base, baseUrlEl.value.trim());
+          localStorage.setItem(storageKeys.base, window.location.origin);
           localStorage.setItem(storageKeys.token, payload.token);
           localStorage.setItem(storageKeys.refresh, payload.refresh_token);
-          if (useForSeller.checked) {
-            localStorage.setItem(storageKeys.sellerBase, baseUrlEl.value.trim());
-            localStorage.setItem(storageKeys.sellerToken, payload.token);
-          }
-          setStatus("Đăng nhập thành công.");
+          setStatus("Đăng nhập thành công. Đang chuyển về trang chủ...");
+          setTimeout(() => {
+            window.location.href = "/ui/";
+          }, 800);
         } catch (error) {
           setStatus(error.message, "error");
         }
       });
-
-      const init = () => {
-        const savedBase = localStorage.getItem(storageKeys.base);
-        if (savedBase) baseUrlEl.value = savedBase;
-      };
-
-      init();
     </script>
   </body>
 </html>
