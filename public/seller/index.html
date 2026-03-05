@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bambi Khu vực Người bán</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1>Khu vực Người bán</h1>
+          <p>Quản lý sản phẩm, biến thể, đơn hàng và vận chuyển tại một nơi.</p>
+        </div>
+        <div class="token-panel">
+          <div class="field">
+            <label for="baseUrl">Địa chỉ API (Base URL)</label>
+            <input id="baseUrl" class="input" value="http://localhost:3000" />
+          </div>
+          <div class="field">
+            <label for="token">Token Seller</label>
+            <input id="token" class="input" placeholder="Bearer token" />
+          </div>
+          <div class="row">
+            <button class="btn" id="saveSettings">Lưu</button>
+            <button class="btn ghost" id="clearSettings">Xóa</button>
+          </div>
+          <div class="note">Token và shop đã chọn được lưu cục bộ.</div>
+        </div>
+      </header>
+
+      <div id="status" class="status" style="display: none"></div>
+
+      <section class="grid cols-2">
+        <div class="card">
+          <div class="section-title">
+            <h2>Shop của tôi</h2>
+            <button class="btn secondary" id="loadShops">Tải</button>
+          </div>
+          <div id="shopsList"></div>
+          <div class="divider"></div>
+          <div class="stack">
+            <div>
+              <strong>Shop đang chọn</strong>
+              <div id="selectedShop" class="chip gray">Chưa chọn</div>
+            </div>
+            <button class="btn ghost" id="refreshProducts">Tải sản phẩm</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">
+            <h2>Sản phẩm</h2>
+          </div>
+          <div id="productList"></div>
+        </div>
+      </section>
+
+      <section class="grid cols-2" style="margin-top: 18px">
+        <div class="card">
+          <div class="section-title">
+            <h2>Tạo sản phẩm</h2>
+          </div>
+          <form id="createProductForm">
+            <div class="field">
+              <label>Tên</label>
+              <input class="input" name="name" required />
+            </div>
+            <div class="field">
+              <label>Mô tả</label>
+              <textarea class="textarea" name="description"></textarea>
+            </div>
+            <div class="row">
+              <div class="field" style="flex: 1">
+                <label>Mã danh mục</label>
+                <input class="input" name="category_id" type="number" />
+              </div>
+              <div class="field" style="flex: 1">
+                <label>Trạng thái</label>
+                <select class="select" name="status">
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Ẩn</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn" type="submit">Tạo sản phẩm</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="section-title">
+            <h2>Cập nhật sản phẩm</h2>
+          </div>
+          <form id="updateProductForm">
+            <div class="field">
+              <label>Mã sản phẩm</label>
+              <input class="input" name="product_id" id="updateProductId" required />
+            </div>
+            <div class="field">
+              <label>Tên</label>
+              <input class="input" name="name" />
+            </div>
+            <div class="field">
+              <label>Mô tả</label>
+              <textarea class="textarea" name="description"></textarea>
+            </div>
+            <div class="row">
+              <div class="field" style="flex: 1">
+                <label>Mã danh mục</label>
+                <input class="input" name="category_id" type="number" />
+              </div>
+              <div class="field" style="flex: 1">
+                <label>Trạng thái</label>
+                <select class="select" name="status">
+                  <option value="">Giữ nguyên</option>
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Ẩn</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn secondary" type="submit">Cập nhật</button>
+              <button class="btn danger" type="button" id="deleteProduct">
+                Xóa (Ẩn)
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="grid cols-2" style="margin-top: 18px">
+        <div class="card">
+          <div class="section-title">
+            <h2>Tạo biến thể</h2>
+          </div>
+          <form id="createVariantForm">
+            <div class="field">
+              <label>Mã sản phẩm</label>
+              <input class="input" name="product_id" id="variantProductId" required />
+            </div>
+            <div class="row">
+              <div class="field" style="flex: 1">
+                <label>SKU</label>
+                <input class="input" name="sku" />
+              </div>
+              <div class="field" style="flex: 1">
+                <label>Giá</label>
+                <input class="input" name="price" type="number" step="0.01" required />
+              </div>
+            </div>
+            <div class="row">
+              <div class="field" style="flex: 1">
+                <label>Tồn kho</label>
+                <input class="input" name="stock" type="number" />
+              </div>
+              <div class="field" style="flex: 1">
+                <label>Cân nặng</label>
+                <input class="input" name="weight" type="number" step="0.01" />
+              </div>
+            </div>
+            <button class="btn" type="submit">Tạo biến thể</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="section-title">
+            <h2>Cập nhật biến thể</h2>
+          </div>
+          <form id="updateVariantForm">
+            <div class="field">
+              <label>Mã biến thể</label>
+              <input class="input" name="variant_id" id="updateVariantId" required />
+            </div>
+            <div class="row">
+              <div class="field" style="flex: 1">
+                <label>SKU</label>
+                <input class="input" name="sku" />
+              </div>
+              <div class="field" style="flex: 1">
+                <label>Giá</label>
+                <input class="input" name="price" type="number" step="0.01" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="field" style="flex: 1">
+                <label>Tồn kho</label>
+                <input class="input" name="stock" type="number" />
+              </div>
+              <div class="field" style="flex: 1">
+                <label>Cân nặng</label>
+                <input class="input" name="weight" type="number" step="0.01" />
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn secondary" type="submit">Cập nhật biến thể</button>
+              <button class="btn danger" type="button" id="deleteVariant">
+                Xóa biến thể
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="grid cols-2" style="margin-top: 18px">
+        <div class="card">
+          <div class="section-title">
+            <h2>Cập nhật tồn kho</h2>
+          </div>
+          <form id="stockForm">
+            <div class="field">
+              <label>Mã biến thể</label>
+              <input class="input" name="variant_id" id="stockVariantId" required />
+            </div>
+            <div class="field">
+              <label>Tồn kho</label>
+              <input class="input" name="stock" type="number" required />
+            </div>
+            <button class="btn warn" type="submit">Cập nhật tồn</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="section-title">
+            <h2>Đơn của shop</h2>
+            <button class="btn secondary" id="loadOrders">Tải</button>
+          </div>
+          <div id="orderItems"></div>
+        </div>
+      </section>
+
+      <section class="grid cols-2" style="margin-top: 18px">
+        <div class="card">
+          <div class="section-title">
+            <h2>Cập nhật trạng thái item</h2>
+          </div>
+          <form id="orderStatusForm">
+            <div class="field">
+              <label>Mã item</label>
+              <input class="input" name="item_id" id="orderItemId" required />
+            </div>
+            <div class="field">
+              <label>Trạng thái mới</label>
+              <select class="select" name="status" required>
+                <option value="confirmed">Đã xác nhận</option>
+                <option value="shipping">Đang giao</option>
+                <option value="delivered">Đã giao</option>
+                <option value="cancelled">Hủy</option>
+              </select>
+            </div>
+            <button class="btn" type="submit">Cập nhật trạng thái</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="section-title">
+            <h2>Cập nhật vận chuyển</h2>
+          </div>
+          <form id="shipmentForm">
+            <div class="field">
+              <label>Mã item</label>
+              <input class="input" name="item_id" id="shipmentItemId" required />
+            </div>
+            <div class="field">
+              <label>Mã vận đơn</label>
+              <input class="input" name="tracking_code" />
+            </div>
+            <div class="field">
+              <label>Trạng thái vận chuyển</label>
+              <select class="select" name="shipping_status">
+                <option value="waiting_pickup">Chờ lấy hàng</option>
+                <option value="shipping">Đang giao</option>
+                <option value="delivered">Đã giao</option>
+              </select>
+            </div>
+            <button class="btn secondary" type="submit">Cập nhật vận chuyển</button>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const $ = (selector) => document.querySelector(selector);
+      const statusEl = $("#status");
+      const baseUrlEl = $("#baseUrl");
+      const tokenEl = $("#token");
+      const selectedShopEl = $("#selectedShop");
+
+      const storageKeys = {
+        base: "bambi_seller_base",
+        token: "bambi_seller_token",
+        shop: "bambi_seller_shop",
+      };
+
+      const escapeHtml = (value) =>
+        String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+
+      const setStatus = (message, type = "info") => {
+        if (!message) {
+          statusEl.style.display = "none";
+          statusEl.textContent = "";
+          statusEl.className = "status";
+          return;
+        }
+        statusEl.style.display = "block";
+        statusEl.textContent = message;
+        statusEl.className = `status ${type === "error" ? "error" : ""}`;
+      };
+
+      const getSettings = () => {
+        const base = baseUrlEl.value.trim().replace(/\/$/, "");
+        const token = tokenEl.value.trim();
+        return { base, token };
+      };
+
+      const apiFetch = async (path, options = {}) => {
+        const { base, token } = getSettings();
+        const headers = Object.assign(
+          { "Content-Type": "application/json" },
+          options.headers || {}
+        );
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const response = await fetch(base + path, {
+          ...options,
+          headers,
+        });
+        const text = await response.text();
+        let payload;
+        try {
+          payload = text ? JSON.parse(text) : {};
+        } catch (error) {
+          payload = { message: text };
+        }
+        if (!response.ok) {
+          throw new Error(payload.message || "Yêu cầu thất bại");
+        }
+        return payload;
+      };
+
+      let selectedShopId = null;
+
+      const setSelectedShop = (shopId) => {
+        selectedShopId = shopId;
+        if (shopId) {
+          selectedShopEl.textContent = shopId;
+          selectedShopEl.className = "chip";
+          localStorage.setItem(storageKeys.shop, shopId);
+        } else {
+          selectedShopEl.textContent = "Chưa chọn";
+          selectedShopEl.className = "chip gray";
+          localStorage.removeItem(storageKeys.shop);
+        }
+      };
+
+      const loadShops = async () => {
+        setStatus("");
+        const payload = await apiFetch("/shops/me");
+        const data = payload.shops?.data || [];
+        const container = $("#shopsList");
+        if (!data.length) {
+          container.innerHTML = "<p class='muted'>Chưa có shop.</p>";
+          return;
+        }
+        container.innerHTML = `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Shop</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data
+                .map(
+                  (shop) => `
+                <tr>
+                  <td>
+                    <strong>${escapeHtml(shop.name)}</strong><br />
+                    <span class="muted">${escapeHtml(shop.id)}</span>
+                  </td>
+                  <td><span class="chip gray">${escapeHtml(shop.status)}</span></td>
+                  <td>
+                    <button class="btn" data-action="select-shop" data-id="${shop.id}">
+                      Dùng
+                    </button>
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        `;
+      };
+
+      const loadProducts = async () => {
+        if (!selectedShopId) {
+          setStatus("Vui lòng chọn shop trước.", "error");
+          return;
+        }
+        setStatus("");
+        const payload = await apiFetch(
+          `/products?shop_id=${selectedShopId}&status=active&limit=50`
+        );
+        const data = payload.data || [];
+        const container = $("#productList");
+        if (!data.length) {
+          container.innerHTML = "<p class='muted'>Chưa có sản phẩm.</p>";
+          return;
+        }
+        container.innerHTML = data
+          .map(
+            (product) => `
+          <div class="card" style="margin-bottom: 12px">
+            <div class="section-title">
+              <div>
+                <strong>${escapeHtml(product.name)}</strong>
+                <div class="muted">${escapeHtml(product.id)}</div>
+              </div>
+              <div class="row">
+                <button class="btn ghost" data-action="select-product" data-id="${product.id}">
+                  Chọn
+                </button>
+              </div>
+            </div>
+            <div class="pillbar">
+              <span class="chip">${escapeHtml(product.status)}</span>
+              <span class="chip blue">Biến thể: ${product.product_variants.length}</span>
+            </div>
+            <div class="divider"></div>
+            <div class="stack">
+              ${product.product_variants
+                .map(
+                  (variant) => `
+                <div class="metric">
+                  <div>
+                    <div><strong>${escapeHtml(variant.sku || "không-sku")}</strong></div>
+                    <div class="muted">${escapeHtml(variant.id)}</div>
+                  </div>
+                  <div>
+                    <span class="chip orange">Tồn ${escapeHtml(variant.stock)}</span>
+                    <span class="chip blue">${escapeHtml(variant.price)}</span>
+                    <button class="btn ghost" data-action="select-variant" data-id="${variant.id}">
+                      Dùng
+                    </button>
+                  </div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          </div>
+        `
+          )
+          .join("");
+      };
+
+      const loadOrders = async () => {
+        setStatus("");
+        const payload = await apiFetch("/orders/seller/items?limit=20");
+        const data = payload.items?.data || payload.data || [];
+        const container = $("#orderItems");
+        if (!data.length) {
+          container.innerHTML = "<p class='muted'>Chưa có item đơn.</p>";
+          return;
+        }
+        container.innerHTML = `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Mã item</th>
+                <th>Sản phẩm</th>
+                <th>Trạng thái</th>
+                <th>Đơn</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data
+                .map(
+                  (item) => `
+                <tr>
+                  <td>${escapeHtml(item.id)}</td>
+                  <td>${escapeHtml(item.product_variants?.products?.name || "-")}</td>
+                  <td><span class="chip gray">${escapeHtml(item.status)}</span></td>
+                  <td>${escapeHtml(item.orders?.id || "-")}</td>
+                  <td>
+                    <button class="btn ghost" data-action="use-item" data-id="${item.id}">
+                      Dùng
+                    </button>
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        `;
+      };
+
+      $("#shopsList").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        if (button.dataset.action === "select-shop") {
+          setSelectedShop(button.dataset.id);
+          loadProducts().catch((err) => setStatus(err.message, "error"));
+        }
+      });
+
+      $("#productList").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        if (button.dataset.action === "select-product") {
+          $("#updateProductId").value = button.dataset.id;
+          $("#variantProductId").value = button.dataset.id;
+        }
+        if (button.dataset.action === "select-variant") {
+          $("#updateVariantId").value = button.dataset.id;
+          $("#stockVariantId").value = button.dataset.id;
+        }
+      });
+
+      $("#orderItems").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        if (button.dataset.action === "use-item") {
+          $("#orderItemId").value = button.dataset.id;
+          $("#shipmentItemId").value = button.dataset.id;
+        }
+      });
+
+      $("#saveSettings").addEventListener("click", () => {
+        const { base, token } = getSettings();
+        localStorage.setItem(storageKeys.base, base);
+        localStorage.setItem(storageKeys.token, token);
+        setStatus("Đã lưu cài đặt.");
+      });
+
+      $("#clearSettings").addEventListener("click", () => {
+        localStorage.removeItem(storageKeys.base);
+        localStorage.removeItem(storageKeys.token);
+        localStorage.removeItem(storageKeys.shop);
+        baseUrlEl.value = "http://localhost:3000";
+        tokenEl.value = "";
+        setSelectedShop(null);
+        setStatus("Đã xóa cài đặt.");
+      });
+
+      $("#loadShops").addEventListener("click", () =>
+        loadShops().catch((err) => setStatus(err.message, "error"))
+      );
+
+      $("#refreshProducts").addEventListener("click", () =>
+        loadProducts().catch((err) => setStatus(err.message, "error"))
+      );
+
+      $("#loadOrders").addEventListener("click", () =>
+        loadOrders().catch((err) => setStatus(err.message, "error"))
+      );
+
+      $("#createProductForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const body = {
+          name: form.name.value.trim(),
+          description: form.description.value.trim() || undefined,
+          category_id: form.category_id.value
+            ? Number(form.category_id.value)
+            : undefined,
+          status: form.status.value,
+          shop_id: selectedShopId || undefined,
+        };
+        await apiFetch("/products", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        form.reset();
+        setStatus("Đã tạo sản phẩm.");
+        loadProducts();
+      });
+
+      $("#updateProductForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const productId = form.product_id.value.trim();
+        const body = {};
+        if (form.name.value.trim()) body.name = form.name.value.trim();
+        if (form.description.value.trim())
+          body.description = form.description.value.trim();
+        if (form.category_id.value)
+          body.category_id = Number(form.category_id.value);
+        if (form.status.value) body.status = form.status.value;
+        await apiFetch(`/products/${productId}`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        });
+        setStatus("Đã cập nhật sản phẩm.");
+        loadProducts();
+      });
+
+      $("#deleteProduct").addEventListener("click", async () => {
+        const productId = $("#updateProductId").value.trim();
+        if (!productId) {
+          setStatus("Cần mã sản phẩm.", "error");
+          return;
+        }
+        await apiFetch(`/products/${productId}`, { method: "DELETE" });
+        setStatus("Đã ẩn sản phẩm.");
+        loadProducts();
+      });
+
+      $("#createVariantForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const productId = form.product_id.value.trim();
+        const body = {
+          sku: form.sku.value.trim() || undefined,
+          price: Number(form.price.value),
+          stock: form.stock.value ? Number(form.stock.value) : undefined,
+          weight: form.weight.value ? Number(form.weight.value) : undefined,
+        };
+        await apiFetch(`/products/${productId}/variants`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        form.reset();
+        setStatus("Đã tạo biến thể.");
+        loadProducts();
+      });
+
+      $("#updateVariantForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const variantId = form.variant_id.value.trim();
+        const body = {};
+        if (form.sku.value.trim()) body.sku = form.sku.value.trim();
+        if (form.price.value) body.price = Number(form.price.value);
+        if (form.stock.value) body.stock = Number(form.stock.value);
+        if (form.weight.value) body.weight = Number(form.weight.value);
+        await apiFetch(`/products/variants/${variantId}`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        });
+        setStatus("Đã cập nhật biến thể.");
+        loadProducts();
+      });
+
+      $("#deleteVariant").addEventListener("click", async () => {
+        const variantId = $("#updateVariantId").value.trim();
+        if (!variantId) {
+          setStatus("Cần mã biến thể.", "error");
+          return;
+        }
+        await apiFetch(`/products/variants/${variantId}`, { method: "DELETE" });
+        setStatus("Đã xóa biến thể.");
+        loadProducts();
+      });
+
+      $("#stockForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const variantId = form.variant_id.value.trim();
+        const body = { stock: Number(form.stock.value) };
+        await apiFetch(`/products/variants/${variantId}/stock`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        });
+        setStatus("Đã cập nhật tồn kho.");
+        loadProducts();
+      });
+
+      $("#orderStatusForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const itemId = form.item_id.value.trim();
+        const body = { status: form.status.value };
+        await apiFetch(`/orders/items/${itemId}/status`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        });
+        setStatus("Đã cập nhật item.");
+        loadOrders();
+      });
+
+      $("#shipmentForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const itemId = form.item_id.value.trim();
+        const body = {
+          tracking_code: form.tracking_code.value.trim() || undefined,
+          shipping_status: form.shipping_status.value || undefined,
+        };
+        await apiFetch(`/shipments/items/${itemId}`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        });
+        setStatus("Đã cập nhật vận chuyển.");
+        loadOrders();
+      });
+
+      const init = () => {
+        const savedBase = localStorage.getItem(storageKeys.base);
+        const savedToken = localStorage.getItem(storageKeys.token);
+        const savedShop = localStorage.getItem(storageKeys.shop);
+        if (savedBase) baseUrlEl.value = savedBase;
+        if (savedToken) tokenEl.value = savedToken;
+        if (savedShop) setSelectedShop(savedShop);
+      };
+
+      init();
+    </script>
+  </body>
+</html>

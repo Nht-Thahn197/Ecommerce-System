@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import userRoutes from "./modules/users/user.route";
 import authRoutes from "./modules/auth/auth.route";
 import productRoutes from "./modules/products/product.route";
@@ -11,10 +12,12 @@ import shopRoutes from "./modules/shops/shop.route";
 import adminRoutes from "./modules/admin/admin.route";
 import searchRoutes from "./modules/search/search.route";
 import paymentRoutes from "./modules/payments/payment.route";
+import returnRoutes from "./modules/returns/return.route";
 
 const app = express();
 
 app.use(express.json());
+app.use("/ui", express.static(path.join(process.cwd(), "public")));
 
 app.get("/", (req, res) => {
   res.send("🦌 Bambi E-Commerce API is running...");
@@ -32,4 +35,5 @@ app.use("/shops", shopRoutes);
 app.use("/admin", adminRoutes);
 app.use("/search", searchRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/returns", returnRoutes);
 export default app;

@@ -25,6 +25,7 @@ const REFRESH_TOKEN_TTL_DAYS = (() => {
 const publicUserSelect = {
   id: true,
   email: true,
+  phone: true,
   full_name: true,
   role: true,
   status: true,
@@ -97,6 +98,7 @@ export const registerUser = async (data: RegisterInput): Promise<PublicUser> => 
   }
 
   const email = normalizeEmail(data.email);
+  const phone = data.phone?.trim() || null;
 
   if (!isValidEmail(email)) {
     throw new Error("Invalid email format");
@@ -115,6 +117,16 @@ export const registerUser = async (data: RegisterInput): Promise<PublicUser> => 
     throw new Error("Email already exists");
   }
 
+  if (phone) {
+    const existingPhone = await prisma.users.findFirst({
+      where: { phone },
+      select: { id: true },
+    });
+    if (existingPhone) {
+      throw new Error("Phone already exists");
+    }
+  }
+
   const hashedPassword = await bcrypt.hash(data.password, 10);
   const fullName = data.full_name?.trim() || null;
 
@@ -123,6 +135,7 @@ export const registerUser = async (data: RegisterInput): Promise<PublicUser> => 
       email,
       password_hash: hashedPassword,
       full_name: fullName,
+      phone,
       role: "customer",
       status: "active",
     },
@@ -135,16 +148,25 @@ export const registerUser = async (data: RegisterInput): Promise<PublicUser> => 
 export const loginUser = async (
   input: LoginInput
 ): Promise<{ user: PublicUser; token: string; refresh_token: string }> => {
-  if (!input.email || !input.password) {
-    throw new Error("Email and password are required");
+  const identifier = (input.identifier || input.email || input.phone || "").trim();
+  if (!identifier || !input.password) {
+    throw new Error("Email/phone and password are required");
   }
 
-  const email = normalizeEmail(input.email);
+  let user: (PublicUser & { password_hash: string }) | null = null;
 
-  const user = await prisma.users.findUnique({
-    where: { email },
-    select: { ...publicUserSelect, password_hash: true },
-  });
+  if (isValidEmail(identifier)) {
+    const email = normalizeEmail(identifier);
+    user = await prisma.users.findUnique({
+      where: { email },
+      select: { ...publicUserSelect, password_hash: true },
+    });
+  } else {
+    user = await prisma.users.findFirst({
+      where: { phone: identifier },
+      select: { ...publicUserSelect, password_hash: true },
+    });
+  }
 
   if (!user) throw new Error("User not found");
 

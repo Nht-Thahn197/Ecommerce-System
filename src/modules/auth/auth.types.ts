@@ -2,10 +2,13 @@ export interface RegisterInput {
   email: string;
   password: string;
   full_name?: string;
+  phone?: string;
 }
 
 export interface LoginInput {
-  email: string;
+  identifier?: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 

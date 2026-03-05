@@ -200,7 +200,6 @@ const isValidTransition = (
   }
 
   if (next === "received") return current === "delivered";
-  if (next === "returned") return current === "received";
   if (next === "cancelled") return canCustomerCancel(current);
   return false;
 };

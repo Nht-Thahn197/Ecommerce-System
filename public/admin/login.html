@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đăng nhập Admin | Bambi</title>
+    <link rel="stylesheet" href="../shared.css" />
+    <style>
+      .login-grid {
+        align-items: stretch;
+      }
+      .login-hero {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 16px;
+        min-height: 420px;
+      }
+      .login-hero h2 {
+        font-size: 28px;
+        margin: 0;
+      }
+      .login-hero ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .login-hero li {
+        margin-bottom: 8px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1>Đăng nhập Admin</h1>
+          <p>Đăng nhập để duyệt shop, xử lý tranh chấp và vận hành hệ thống.</p>
+        </div>
+      </header>
+
+      <div id="status" class="status" style="display: none"></div>
+
+      <section class="grid cols-2 login-grid">
+        <div class="card login-hero">
+          <h2>Giữ cho sàn vận hành ổn định.</h2>
+          <p class="muted">
+            Trang quản trị dành cho kiểm soát vận hành và xử lý khiếu nại.
+          </p>
+          <ul>
+            <li>Duyệt shop và hồ sơ</li>
+            <li>Xử lý trả hàng và tranh chấp</li>
+            <li>Theo dõi đơn hàng và thanh toán</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="section-title">
+            <h2>Đăng nhập</h2>
+          </div>
+          <form id="loginForm">
+            <div class="field">
+              <label>Địa chỉ API (Base URL)</label>
+              <input id="baseUrl" class="input" value="http://localhost:3000" />
+            </div>
+            <div class="field">
+              <label>Email hoặc số điện thoại</label>
+              <input class="input" name="identifier" required />
+            </div>
+            <div class="field">
+              <label>Mật khẩu</label>
+              <input class="input" name="password" type="password" required />
+            </div>
+            <button class="btn" type="submit">Đăng nhập</button>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const statusEl = document.querySelector("#status");
+      const baseUrlEl = document.querySelector("#baseUrl");
+      const form = document.querySelector("#loginForm");
+
+      const storageKeys = {
+        base: "bambi_admin_base",
+        token: "bambi_admin_token",
+        refresh: "bambi_admin_refresh",
+      };
+
+      const setStatus = (message, type = "info") => {
+        if (!message) {
+          statusEl.style.display = "none";
+          statusEl.textContent = "";
+          statusEl.className = "status";
+          return;
+        }
+        statusEl.style.display = "block";
+        statusEl.textContent = message;
+        statusEl.className = `status ${type === "error" ? "error" : ""}`;
+      };
+
+      const apiFetch = async (path, options = {}) => {
+        const base = baseUrlEl.value.trim().replace(/\/$/, "");
+        const response = await fetch(base + path, {
+          ...options,
+          headers: { "Content-Type": "application/json" },
+        });
+        const text = await response.text();
+        let payload;
+        try {
+          payload = text ? JSON.parse(text) : {};
+        } catch (error) {
+          payload = { message: text };
+        }
+        if (!response.ok) throw new Error(payload.message || "Đăng nhập thất bại");
+        return payload;
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setStatus("");
+        const identifier = form.identifier.value.trim();
+        const password = form.password.value;
+        try {
+          const payload = await apiFetch("/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ identifier, password }),
+          });
+          if (payload.user?.role !== "admin") {
+            setStatus("Tài khoản này không phải admin.", "error");
+            return;
+          }
+          localStorage.setItem(storageKeys.base, baseUrlEl.value.trim());
+          localStorage.setItem(storageKeys.token, payload.token);
+          localStorage.setItem(storageKeys.refresh, payload.refresh_token);
+          window.location.href = "/ui/admin/";
+        } catch (error) {
+          setStatus(error.message, "error");
+        }
+      });
+
+      const init = () => {
+        const savedBase = localStorage.getItem(storageKeys.base);
+        if (savedBase) baseUrlEl.value = savedBase;
+      };
+
+      init();
+    </script>
+  </body>
+</html>

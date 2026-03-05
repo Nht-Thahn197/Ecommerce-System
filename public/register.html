@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đăng ký | Bambi</title>
+    <link rel="stylesheet" href="./store.css" />
+    <style>
+      .auth-grid {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 18px;
+      }
+      .auth-card {
+        background: white;
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--line);
+      }
+      .auth-card h2 {
+        margin: 0 0 8px;
+        font-family: "Sora", sans-serif;
+      }
+      .auth-hero {
+        background: linear-gradient(140deg, #ffe7df, #fff5f0);
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        min-height: 320px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .field label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+      }
+      .btn {
+        background: var(--brand);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .status {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--brand-soft);
+        color: var(--brand-dark);
+        display: none;
+      }
+      .status.error {
+        background: #ffe5e5;
+        color: #b91c1c;
+      }
+      @media (max-width: 900px) {
+        .auth-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <span>Kênh Người Bán</span>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <div class="logo">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </div>
+        <div class="search-wrap">
+          <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
+          <button>Tìm</button>
+        </div>
+        <div class="header-actions">
+          <a class="pill" href="/ui/login.html">Đăng nhập</a>
+          <span class="pill">Đăng ký</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="auth-grid">
+        <div class="auth-hero">
+          <h2>Tạo tài khoản Bambi</h2>
+          <p>
+            Tham gia cộng đồng mua bán an toàn, nhận ưu đãi và quản lý đơn hàng
+            dễ dàng.
+          </p>
+          <ul>
+            <li>Ưu đãi độc quyền cho thành viên mới</li>
+            <li>Đăng nhập bằng email hoặc số điện thoại</li>
+            <li>Hỗ trợ mở shop trong vài phút</li>
+          </ul>
+        </div>
+        <div class="auth-card">
+          <h2>Đăng ký</h2>
+          <form id="registerForm">
+            <div class="field">
+              <label>API Base URL</label>
+              <input id="baseUrl" class="input" value="http://localhost:3000" />
+            </div>
+            <div class="field">
+              <label>Họ và tên</label>
+              <input class="input" name="full_name" />
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input class="input" name="email" type="email" required />
+            </div>
+            <div class="field">
+              <label>Số điện thoại (tuỳ chọn)</label>
+              <input class="input" name="phone" />
+            </div>
+            <div class="field">
+              <label>Mật khẩu</label>
+              <input class="input" name="password" type="password" required />
+            </div>
+            <div class="field">
+              <label>Nhập lại mật khẩu</label>
+              <input class="input" name="confirm_password" type="password" required />
+            </div>
+            <button class="btn" type="submit">Tạo tài khoản</button>
+            <div id="status" class="status"></div>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const form = document.querySelector("#registerForm");
+      const statusEl = document.querySelector("#status");
+      const baseUrlEl = document.querySelector("#baseUrl");
+
+      const setStatus = (message, type = "info") => {
+        if (!message) {
+          statusEl.style.display = "none";
+          statusEl.textContent = "";
+          statusEl.className = "status";
+          return;
+        }
+        statusEl.style.display = "block";
+        statusEl.textContent = message;
+        statusEl.className = `status ${type === "error" ? "error" : ""}`;
+      };
+
+      const apiFetch = async (path, options = {}) => {
+        const base = baseUrlEl.value.trim().replace(/\/$/, "");
+        const response = await fetch(base + path, {
+          ...options,
+          headers: { "Content-Type": "application/json" },
+        });
+        const text = await response.text();
+        let payload;
+        try {
+          payload = text ? JSON.parse(text) : {};
+        } catch (error) {
+          payload = { message: text };
+        }
+        if (!response.ok) throw new Error(payload.message || "Đăng ký thất bại");
+        return payload;
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setStatus("");
+        const full_name = form.full_name.value.trim();
+        const email = form.email.value.trim();
+        const phone = form.phone.value.trim();
+        const password = form.password.value;
+        const confirm = form.confirm_password.value;
+
+        if (password !== confirm) {
+          setStatus("Mật khẩu nhập lại không khớp.", "error");
+          return;
+        }
+
+        try {
+          await apiFetch("/auth/register", {
+            method: "POST",
+            body: JSON.stringify({
+              email,
+              password,
+              full_name: full_name || undefined,
+              phone: phone || undefined,
+            }),
+          });
+          setStatus("Đăng ký thành công! Đang chuyển đến trang đăng nhập...");
+          setTimeout(() => {
+            window.location.href = "/ui/login.html";
+          }, 1200);
+        } catch (error) {
+          setStatus(error.message, "error");
+        }
+      });
+    </script>
+  </body>
+</html>
