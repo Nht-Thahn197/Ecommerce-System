@@ -1,0 +1,647 @@
+﻿<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đăng ký shop | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="./store.css" />
+    <style>
+      .seller-shell {
+        margin-top: 24px;
+        padding-bottom: 48px;
+      }
+
+      .seller-hero {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 18px;
+        margin-bottom: 20px;
+      }
+
+      .seller-banner,
+      .seller-steps,
+      .seller-summary,
+      .seller-form-card {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+      }
+
+      .seller-banner {
+        padding: 28px;
+        background:
+          radial-gradient(circle at top right, rgba(255, 178, 102, 0.22), transparent 34%),
+          linear-gradient(140deg, #ffffff, #fff3e6);
+      }
+
+      .seller-kicker {
+        display: inline-flex;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--brand-soft);
+        color: var(--brand-dark);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .seller-banner h1 {
+        margin: 14px 0 10px;
+        font-family: "Sora", sans-serif;
+        font-size: 34px;
+        line-height: 1.15;
+      }
+
+      .seller-banner p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+        max-width: 620px;
+      }
+
+      .seller-banner .hero-actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .seller-banner .hero-actions a,
+      .seller-banner .hero-actions span {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .seller-banner .hero-actions a {
+        background: var(--brand);
+        color: white;
+      }
+
+      .seller-banner .hero-actions span {
+        background: var(--brand-soft);
+        color: var(--brand-dark);
+      }
+
+      .seller-steps {
+        padding: 22px;
+      }
+
+      .seller-steps h2,
+      .seller-summary h2,
+      .seller-form-card h2 {
+        margin: 0 0 10px;
+        font-family: "Sora", sans-serif;
+        font-size: 24px;
+      }
+
+      .steps-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .step-item {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 16px;
+        background: #fff8f1;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+      }
+
+      .step-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: var(--brand-soft);
+        color: var(--brand-dark);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+      }
+
+      .step-item strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .seller-layout {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .seller-summary,
+      .seller-form-card {
+        padding: 22px;
+      }
+
+      .summary-box {
+        display: grid;
+        gap: 14px;
+      }
+
+      .summary-state {
+        padding: 16px;
+        border-radius: 18px;
+        background: #fff8f1;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status-pill.pending {
+        background: #fff0db;
+        color: #b35a00;
+      }
+
+      .status-pill.approved {
+        background: #e9fbef;
+        color: #127a3f;
+      }
+
+      .status-pill.rejected {
+        background: #ffe8e8;
+        color: #b42318;
+      }
+
+      .summary-meta {
+        display: grid;
+        gap: 10px;
+      }
+
+      .summary-meta div {
+        padding: 12px;
+        border-radius: 14px;
+        background: #faf7f2;
+        border: 1px solid rgba(17, 24, 39, 0.06);
+      }
+
+      .summary-meta span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .summary-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .summary-actions a,
+      .summary-actions button {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 12px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+      }
+
+      .summary-actions .primary-link,
+      .summary-actions .primary-btn {
+        background: var(--brand);
+        color: white;
+      }
+
+      .summary-actions .ghost-link {
+        border: 1px solid var(--line);
+        background: white;
+        color: var(--ink);
+      }
+
+      .seller-form-card p {
+        margin-top: 0;
+        color: var(--muted);
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .field-block {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field-block.full {
+        grid-column: 1 / -1;
+      }
+
+      .field-block label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .field-block input,
+      .field-block textarea,
+      .field-block select {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        font: inherit;
+        background: white;
+      }
+
+      .field-block textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .section-caption {
+        grid-column: 1 / -1;
+        margin-top: 6px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(17, 24, 39, 0.08);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .doc-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .doc-item {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 16px;
+        background: #fff8f1;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+      }
+
+      .remove-doc {
+        border: none;
+        background: transparent;
+        color: #b42318;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .doc-upload-panel {
+        display: grid;
+        gap: 10px;
+      }
+
+      .doc-upload-panel input[type="file"] {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: white;
+        font: inherit;
+      }
+
+      .doc-upload-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .doc-status {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .doc-status.error {
+        color: #b42318;
+      }
+
+      .doc-files-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      .doc-files-title {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .doc-files {
+        display: grid;
+        gap: 8px;
+      }
+
+      .doc-file-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: white;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+      }
+
+      .doc-file-chip.pending {
+        background: #fffdf8;
+      }
+
+      .doc-file-chip.uploaded {
+        background: #ffffff;
+      }
+
+      .doc-file-chip.empty {
+        justify-content: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .doc-file-chip div {
+        min-width: 0;
+      }
+
+      .doc-file-chip strong,
+      .doc-file-chip a {
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .doc-file-chip span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .doc-file-chip a {
+        color: var(--brand-dark);
+        font-weight: 600;
+        word-break: break-all;
+      }
+
+      .doc-file-chip button {
+        border: none;
+        background: transparent;
+        color: #b42318;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .form-actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .primary-btn,
+      .secondary-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .primary-btn {
+        background: var(--brand);
+        color: white;
+      }
+
+      .secondary-btn {
+        background: #fff8f1;
+        color: var(--brand-dark);
+        border: 1px solid rgba(17, 24, 39, 0.08);
+      }
+
+      .help-note {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      @media (max-width: 980px) {
+        .seller-hero,
+        .seller-layout,
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .doc-item {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <a href="/ui/shop-register.html">Kênh Người Bán</a>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <a class="logo" href="/ui/">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </a>
+        <div class="search-wrap">
+          <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
+          <button>Tìm</button>
+        </div>
+        <div class="header-actions">
+          <a class="pill" href="/ui/seller/">Seller Studio</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container seller-shell">
+      <section class="seller-hero">
+        <div class="seller-banner">
+          <span class="seller-kicker">Mở shop trên Bambi</span>
+          <h1>Đăng ký bán hàng và đưa shop của bạn lên sàn</h1>
+          <p>
+            Hoàn tất hồ sơ shop, địa chỉ vận hành, tài khoản nhận tiền và thông tin xác minh.
+            Sau khi admin duyệt, bạn có thể vào Seller Studio để đăng sản phẩm và xử lý đơn hàng.
+          </p>
+          <div class="hero-actions">
+            <a href="#shopForm">Bắt đầu đăng ký</a>
+            <span>Escrow 5 ngày · Tự nhận 7 ngày · Trả hàng 15 ngày</span>
+          </div>
+        </div>
+
+        <div class="seller-steps">
+          <h2>Quy trình xét duyệt</h2>
+          <div class="steps-grid">
+            <div class="step-item">
+              <div class="step-badge">1</div>
+              <div>
+                <strong>Tạo hồ sơ shop</strong>
+                <div class="muted">Nhập tên shop, mô tả, địa chỉ và tài khoản nhận tiền.</div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-badge">2</div>
+              <div>
+                <strong>Bổ sung giấy tờ</strong>
+                <div class="muted">Tải lên ảnh hoặc PDF để admin kiểm tra hồ sơ rõ ràng hơn.</div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-badge">3</div>
+              <div>
+                <strong>Chờ admin duyệt</strong>
+                <div class="muted">Khi được chấp thuận, shop sẽ xuất hiện trên sàn và mở Seller Studio.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="pageStatus" class="status hidden"></div>
+
+      <section class="seller-layout">
+        <aside class="seller-summary">
+          <h2>Hồ sơ shop của bạn</h2>
+          <div id="shopSummary" class="summary-box"></div>
+        </aside>
+
+        <section class="seller-form-card">
+          <h2 id="shopFormTitle">Đăng ký shop mới</h2>
+          <p id="shopFormIntro">Điền đầy đủ thông tin để hồ sơ của bạn có thể được duyệt nhanh hơn.</p>
+
+          <form id="shopForm">
+            <div class="form-grid">
+              <div class="field-block full">
+                <label for="shopName">Tên shop</label>
+                <input id="shopName" name="name" placeholder="Ví dụ: Nhà Cam Thủ Công" required />
+              </div>
+
+              <div class="field-block full">
+                <label for="shopDescription">Mô tả shop</label>
+                <textarea
+                  id="shopDescription"
+                  name="description"
+                  placeholder="Mô tả ngắn về ngành hàng, phong cách bán và điểm mạnh của shop"
+                ></textarea>
+              </div>
+
+              <div class="section-caption">Địa chỉ vận hành</div>
+
+              <div class="field-block">
+                <label for="province">Tỉnh / Thành phố</label>
+                <input id="province" name="province" placeholder="Ví dụ: TP. Hồ Chí Minh" required />
+              </div>
+
+              <div class="field-block">
+                <label for="district">Quận / Huyện</label>
+                <input id="district" name="district" placeholder="Ví dụ: Quận 7" required />
+              </div>
+
+              <div class="field-block">
+                <label for="ward">Phường / Xã</label>
+                <input id="ward" name="ward" placeholder="Ví dụ: Tân Phú" />
+              </div>
+
+              <div class="field-block">
+                <label for="detailAddress">Địa chỉ chi tiết</label>
+                <input id="detailAddress" name="detail" placeholder="Số nhà, tên đường..." required />
+              </div>
+
+              <div class="section-caption">Tài khoản nhận tiền</div>
+
+              <div class="field-block">
+                <label for="bankName">Tên ngân hàng</label>
+                <input id="bankName" name="bank_name" placeholder="Ví dụ: Vietcombank" required />
+              </div>
+
+              <div class="field-block">
+                <label for="accountHolder">Chủ tài khoản</label>
+                <input id="accountHolder" name="account_holder" placeholder="Nhập đúng tên chủ tài khoản" required />
+              </div>
+
+              <div class="field-block full">
+                <label for="accountNumber">Số tài khoản</label>
+                <input id="accountNumber" name="account_number" placeholder="Nhập số tài khoản ngân hàng" required />
+              </div>
+
+              <div class="section-caption">Giấy tờ xác minh</div>
+
+              <div class="field-block full">
+                <label>Danh sách giấy tờ</label>
+                <div id="documentList" class="doc-list"></div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="secondary-btn" type="button" id="addDocumentBtn">Thêm giấy tờ</button>
+              <button class="primary-btn" type="submit" id="submitShopBtn">Gửi hồ sơ shop</button>
+              <span class="help-note">
+                Mỗi loại giấy tờ có thể tải nhiều ảnh hoặc PDF. Nếu hồ sơ bị từ chối, bạn có thể sửa rồi nộp lại ngay trên trang này.
+              </span>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Bambi Marketplace - Mở rộng từ tài khoản mua sắm sang kênh bán hàng cho người dùng
+    </footer>
+
+    <script src="/ui/store.js"></script>
+    <script src="/ui/shop-register.js"></script>
+  </body>
+</html>

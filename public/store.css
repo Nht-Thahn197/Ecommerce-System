@@ -62,6 +62,16 @@ a {
   flex-wrap: wrap;
 }
 
+.top-links a,
+.top-actions a {
+  color: inherit;
+}
+
+.top-links a:hover,
+.top-actions a:hover {
+  opacity: 0.92;
+}
+
 .top-actions span {
   display: inline-flex;
   gap: 6px;

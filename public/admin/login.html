@@ -1,64 +1,123 @@
-<!doctype html>
-<html lang="en">
+﻿<!doctype html>
+<html lang="vi">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Đăng nhập Admin | Bambi</title>
+    <title>Đăng nhập quản trị | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="../shared.css" />
     <style>
-      .login-grid {
-        align-items: stretch;
+      .login-shell {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 28px;
       }
+
+      .login-frame {
+        width: min(1080px, 100%);
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 20px;
+      }
+
       .login-hero {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 16px;
-        min-height: 420px;
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at top right, rgba(255, 178, 102, 0.28), transparent 34%),
+          linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(255, 244, 235, 0.94));
       }
-      .login-hero h2 {
-        font-size: 28px;
-        margin: 0;
+
+      .login-hero::after {
+        content: "";
+        position: absolute;
+        right: -70px;
+        bottom: -70px;
+        width: 220px;
+        height: 220px;
+        border-radius: 50px;
+        transform: rotate(14deg);
+        background: linear-gradient(135deg, rgba(255, 122, 0, 0.16), rgba(255, 178, 102, 0.18));
       }
-      .login-hero ul {
-        margin: 0;
-        padding: 0;
-        list-style: none;
+
+      .login-hero > * {
+        position: relative;
+        z-index: 1;
       }
-      .login-hero li {
-        margin-bottom: 8px;
-        color: var(--muted);
+
+      .login-hero h1,
+      .login-card h2 {
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      }
+
+      .login-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 122, 0, 0.12);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .login-points {
+        display: grid;
+        gap: 14px;
+        margin-top: 24px;
+      }
+
+      .login-point {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(51, 51, 51, 0.08);
+      }
+
+      .login-point strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      @media (max-width: 920px) {
+        .login-frame {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="app">
-      <header class="topbar">
-        <div class="brand">
-          <h1>Đăng nhập Admin</h1>
-          <p>Đăng nhập để duyệt shop, xử lý tranh chấp và vận hành hệ thống.</p>
-        </div>
-      </header>
-
-      <div id="status" class="status" style="display: none"></div>
-
-      <section class="grid cols-2 login-grid">
-        <div class="card login-hero">
-          <h2>Giữ cho sàn vận hành ổn định.</h2>
-          <p class="muted">
-            Trang quản trị dành cho kiểm soát vận hành và xử lý khiếu nại.
+    <div class="login-shell">
+      <div class="login-frame">
+        <section class="card login-hero">
+          <span class="login-badge">Bambi Admin</span>
+          <h1 style="margin: 18px 0 10px; font-size: 40px; line-height: 1.05;">Đăng nhập quản trị</h1>
+          <p class="muted" style="max-width: 520px; font-size: 16px; line-height: 1.7;">
+            Dùng tài khoản admin để truy cập bảng điều khiển riêng, duyệt shop, xử lý khiếu nại và theo dõi nhịp vận hành của toàn sàn.
           </p>
-          <ul>
-            <li>Duyệt shop và hồ sơ</li>
-            <li>Xử lý trả hàng và tranh chấp</li>
-            <li>Theo dõi đơn hàng và thanh toán</li>
-          </ul>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Đăng nhập</h2>
+          <div class="login-points">
+            <div class="login-point">
+              <strong>Duyệt shop nhanh</strong>
+              <span class="muted">Tách riêng màn hình quản lý shop để ra quyết định nhanh và rõ ràng.</span>
+            </div>
+            <div class="login-point">
+              <strong>Xử lý trả hàng và tranh chấp</strong>
+              <span class="muted">Theo dõi case mở và thao tác duyệt hoặc từ chối ngay trong trang chuyên dụng.</span>
+            </div>
+            <div class="login-point">
+              <strong>Kiểm soát người dùng và đơn hàng</strong>
+              <span class="muted">Xem toàn bộ tài khoản, các đơn gần đây và tình trạng thanh toán.</span>
+            </div>
           </div>
+        </section>
+
+        <section class="card login-card">
+          <div class="section-title">
+            <h2>Vào khu vực quản trị</h2>
+          </div>
+          <div id="status" class="status" style="display: none; margin-bottom: 16px;"></div>
           <form id="loginForm">
             <div class="field">
               <label>Email hoặc số điện thoại</label>
@@ -68,10 +127,13 @@
               <label>Mật khẩu</label>
               <input class="input" name="password" type="password" required />
             </div>
-            <button class="btn" type="submit">Đăng nhập</button>
+            <div class="row">
+              <button class="btn" type="submit">Đăng nhập</button>
+              <a class="btn ghost" href="/ui/">Về trang mua sắm</a>
+            </div>
           </form>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
 
     <script>
@@ -91,9 +153,10 @@
           statusEl.className = "status";
           return;
         }
+
         statusEl.style.display = "block";
         statusEl.textContent = message;
-        statusEl.className = `status ${type === "error" ? "error" : ""}`;
+        statusEl.className = `status${type === "error" ? " error" : ""}`;
       };
 
       const apiFetch = async (path, options = {}) => {
@@ -103,29 +166,38 @@
         });
         const text = await response.text();
         let payload;
+
         try {
           payload = text ? JSON.parse(text) : {};
-        } catch (error) {
+        } catch (_error) {
           payload = { message: text };
         }
-        if (!response.ok) throw new Error(payload.message || "Đăng nhập thất bại");
+
+        if (!response.ok) {
+          throw new Error(payload.message || "Đăng nhập thất bại.");
+        }
+
         return payload;
       };
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         setStatus("");
-        const identifier = form.identifier.value.trim();
-        const password = form.password.value;
+
         try {
           const payload = await apiFetch("/auth/login", {
             method: "POST",
-            body: JSON.stringify({ identifier, password }),
+            body: JSON.stringify({
+              identifier: form.identifier.value.trim(),
+              password: form.password.value,
+            }),
           });
+
           if (payload.user?.role !== "admin") {
-            setStatus("Tài khoản này không phải admin.", "error");
+            setStatus("Tài khoản này không có quyền quản trị.", "error");
             return;
           }
+
           localStorage.setItem(storageKeys.base, window.location.origin);
           localStorage.setItem(storageKeys.token, payload.token);
           localStorage.setItem(storageKeys.refresh, payload.refresh_token);

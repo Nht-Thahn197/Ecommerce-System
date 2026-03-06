@@ -1,0 +1,97 @@
+﻿<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trả hàng và tranh chấp | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="/ui/admin/"><span class="admin-brand-mark">B</span><div class="admin-brand-copy"><strong>Bambi Admin</strong><span>Hệ thống quản trị sàn</span></div></a>
+        <section class="admin-sidebar-section">
+          <p class="admin-sidebar-heading">Điều hướng</p>
+          <nav class="admin-nav">
+            <a class="admin-nav-link" href="/ui/admin/" data-page="dashboard"><span class="admin-nav-icon">TQ</span><span class="admin-nav-copy"><strong>Tổng quan</strong><span>Chỉ số vận hành</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/shops.html" data-page="shops"><span class="admin-nav-icon">QS</span><span class="admin-nav-copy"><strong>Quản lý shop</strong><span>Duyệt và theo dõi shop</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/users.html" data-page="users"><span class="admin-nav-icon">ND</span><span class="admin-nav-copy"><strong>Quản lý người dùng</strong><span>Danh sách tài khoản</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/returns.html" data-page="returns"><span class="admin-nav-icon">TH</span><span class="admin-nav-copy"><strong>Trả hàng & tranh chấp</strong><span>Xử lý khiếu nại</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/orders.html" data-page="orders"><span class="admin-nav-icon">ĐH</span><span class="admin-nav-copy"><strong>Đơn gần đây</strong><span>Theo dõi dòng đơn mới</span></span></a>
+          </nav>
+        </section>
+
+        <div class="admin-sidebar-foot">
+          <button class="btn secondary" id="logoutAdmin" type="button">Đăng xuất quản trị</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-page-header">
+          <div>
+            <div class="admin-breadcrumb">Trang quản trị / Trả hàng & tranh chấp</div>
+            <h1>Trả hàng và tranh chấp</h1>
+            <p>Tách riêng trang khiếu nại để admin xử lý tập trung: duyệt trả hàng, đọc lý do tranh chấp và quyết định theo từng hồ sơ.</p>
+          </div>
+          <div class="admin-hero-tag">Xử lý case sau bán</div>
+        </header>
+
+        <div id="status" class="status" style="display: none"></div>
+
+        <section class="admin-card hero-card">
+          <div class="admin-section-head">
+            <div>
+              <div class="kicker">Khiếu nại</div>
+              <h2 style="margin-top: 8px;">Hồ sơ trả hàng đang mở</h2>
+              <p>Đếm nhanh số yêu cầu cần duyệt và số tranh chấp đang chờ phán quyết.</p>
+            </div>
+            <button class="btn" id="reloadReturns" type="button">Tải lại</button>
+          </div>
+          <div id="returnStats" class="stats-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));"></div>
+        </section>
+
+        <section class="admin-card">
+          <div class="toolbar-row">
+            <div>
+              <h2>Lọc hồ sơ</h2>
+              <p class="muted">Tìm theo mã trả hàng, mã mục đơn hoặc lý do.</p>
+            </div>
+            <span class="chip gray" id="returnCountLabel">0 trả hàng / 0 tranh chấp</span>
+          </div>
+          <div class="toolbar-form">
+            <input id="returnQuery" class="input" placeholder="Tìm theo mã trả hàng, lý do hoặc mã mục đơn" />
+            <button class="btn" id="applyReturnFilter" type="button">Lọc</button>
+            <button class="btn ghost" id="clearReturnFilter" type="button">Xoá lọc</button>
+          </div>
+        </section>
+
+        <section class="page-grid">
+          <article class="admin-card span-12">
+            <div class="admin-section-head">
+              <div>
+                <h2>Yêu cầu trả hàng chờ xử lý</h2>
+                <p>Admin có thể duyệt hoặc từ chối trực tiếp tại đây.</p>
+              </div>
+            </div>
+            <div id="returnsTable"></div>
+          </article>
+
+          <article class="admin-card span-12">
+            <div class="admin-section-head">
+              <div>
+                <h2>Tranh chấp đang mở</h2>
+                <p>Tranh chấp sẽ được xử lý ở một bảng riêng để tránh nhầm lẫn với yêu cầu hoàn trả thông thường.</p>
+              </div>
+            </div>
+            <div id="disputesTable"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="/ui/admin/admin.js"></script>
+    <script src="/ui/admin/returns.js"></script>
+  </body>
+</html>

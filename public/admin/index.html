@@ -1,531 +1,141 @@
-<!doctype html>
-<html lang="en">
+﻿<!doctype html>
+<html lang="vi">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bambi Quản trị</title>
+    <title>Tổng quan quản trị | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./admin.css" />
   </head>
-  <body>
-    <div class="app">
-      <header class="topbar">
-        <div class="brand">
-          <h1>Bảng điều khiển Admin</h1>
-          <p>Duyệt shop, xử lý trả hàng/tranh chấp và giữ sàn vận hành ổn định.</p>
-        </div>
-        <div class="token-panel">
-          <div class="field">
-            <label for="baseUrl">Địa chỉ API (Base URL)</label>
-            <input id="baseUrl" class="input" value="http://localhost:3000" />
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="/ui/admin/">
+          <span class="admin-brand-mark">B</span>
+          <div class="admin-brand-copy">
+            <strong>Bambi Admin</strong>
+            <span>Hệ thống quản trị sàn</span>
           </div>
-          <div class="field">
-            <label for="token">Token Admin</label>
-            <input id="token" class="input" placeholder="Bearer token" />
-          </div>
-          <div class="row">
-            <button class="btn" id="saveSettings">Lưu</button>
-            <button class="btn ghost" id="clearSettings">Xóa</button>
-          </div>
-          <div class="note">Token được lưu cục bộ trong trình duyệt.</div>
-        </div>
-      </header>
+        </a>
 
-      <div id="status" class="status" style="display: none"></div>
+        <section class="admin-sidebar-section">
+          <p class="admin-sidebar-heading">Điều hướng</p>
+          <nav class="admin-nav">
+            <a class="admin-nav-link" href="/ui/admin/" data-page="dashboard">
+              <span class="admin-nav-icon">TQ</span>
+              <span class="admin-nav-copy">
+                <strong>Tổng quan</strong>
+                <span>Chỉ số vận hành</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/shops.html" data-page="shops">
+              <span class="admin-nav-icon">QS</span>
+              <span class="admin-nav-copy">
+                <strong>Quản lý shop</strong>
+                <span>Duyệt và theo dõi shop</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/users.html" data-page="users">
+              <span class="admin-nav-icon">ND</span>
+              <span class="admin-nav-copy">
+                <strong>Quản lý người dùng</strong>
+                <span>Danh sách tài khoản</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/returns.html" data-page="returns">
+              <span class="admin-nav-icon">TH</span>
+              <span class="admin-nav-copy">
+                <strong>Trả hàng & tranh chấp</strong>
+                <span>Xử lý khiếu nại</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/orders.html" data-page="orders">
+              <span class="admin-nav-icon">ĐH</span>
+              <span class="admin-nav-copy">
+                <strong>Đơn gần đây</strong>
+                <span>Theo dõi dòng đơn mới</span>
+              </span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="grid cols-2">
-        <div class="card">
-          <div class="section-title">
-            <h2>Tổng quan</h2>
-            <button class="btn secondary" id="loadOverview">Tải</button>
+        <div class="admin-sidebar-foot">
+          <button class="btn secondary" id="logoutAdmin" type="button">Đăng xuất quản trị</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-page-header">
+          <div>
+            <div class="admin-breadcrumb">Trang quản trị / Tổng quan</div>
+            <h1>Bảng điều khiển quản trị</h1>
+            <p>Trang này tổng hợp các chỉ số vận hành quan trọng để bạn nhìn nhanh sức khoẻ toàn sàn và quyết định trang nào cần xử lý tiếp theo.</p>
           </div>
-          <div id="overviewMetrics" class="grid cols-2"></div>
-          <div class="divider"></div>
-          <div class="stack">
+          <div class="admin-hero-tag">Luồng điều hành theo thời gian thực</div>
+        </header>
+
+        <div id="status" class="status" style="display: none"></div>
+
+        <section class="admin-card hero-card">
+          <div class="admin-section-head">
             <div>
-              <strong>Trạng thái đơn</strong>
-              <div id="orderStatus" class="pillbar"></div>
+              <div class="kicker">Tổng quan vận hành</div>
+              <h2 style="margin-top: 8px;">Điểm nhìn nhanh cho đội quản trị</h2>
+              <p>Ưu tiên xử lý shop chờ duyệt, tranh chấp đang mở và các đơn mới phát sinh trong ngày.</p>
             </div>
-            <div>
-              <strong>Trạng thái thanh toán</strong>
-              <div id="paymentStatus" class="pillbar"></div>
+            <div class="link-row">
+              <button class="btn" id="reloadDashboard" type="button">Tải lại dữ liệu</button>
+              <a class="btn ghost" href="/ui/admin/shops.html">Đi tới quản lý shop</a>
             </div>
           </div>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Thao tác nhanh</h2>
-          </div>
-          <div class="stack">
-            <button class="btn" id="loadPendingShops">Tải shop chờ duyệt</button>
-            <button class="btn secondary" id="loadPendingReturns">
-              Tải trả hàng chờ duyệt
-            </button>
-            <button class="btn warn" id="loadDisputes">Tải tranh chấp trả hàng</button>
-            <button class="btn ghost" id="loadRecentOrders">Tải đơn gần đây</button>
-          </div>
-          <div class="note">
-            Dùng các nút để làm mới dữ liệu sau khi duyệt/từ chối.
-          </div>
-        </div>
-      </section>
+          <div id="overviewMetrics" class="stats-grid"></div>
+        </section>
 
-      <section class="grid cols-2" style="margin-top: 18px">
-        <div class="card">
-          <div class="section-title">
-            <h2>Shop chờ duyệt</h2>
-            <span class="muted" id="pendingShopsCount">0</span>
-          </div>
-          <div id="pendingShops"></div>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Hàng đợi trả hàng</h2>
-            <span class="muted" id="pendingReturnsCount">0</span>
-          </div>
-          <div id="pendingReturns"></div>
-          <div class="divider"></div>
-          <div class="section-title">
-            <h3>Tranh chấp</h3>
-            <span class="muted" id="pendingDisputesCount">0</span>
-          </div>
-          <div id="pendingDisputes"></div>
-        </div>
-      </section>
+        <section class="page-grid">
+          <article class="admin-card span-7">
+            <div class="admin-section-head">
+              <div>
+                <h2>Trạng thái đơn hàng</h2>
+                <p>Phân bổ đơn theo bước xử lý hiện tại.</p>
+              </div>
+            </div>
+            <div id="orderStatus" class="pillbar"></div>
+            <div class="divider"></div>
+            <div class="admin-section-head" style="margin-bottom: 0;">
+              <div>
+                <h2>Trạng thái thanh toán</h2>
+                <p>So sánh số lượng đơn đã thanh toán và chờ xử lý.</p>
+              </div>
+            </div>
+            <div id="paymentStatus" class="pillbar" style="margin-top: 14px;"></div>
+          </article>
 
-      <section class="card" style="margin-top: 18px">
-        <div class="section-title">
-          <h2>Đơn gần đây</h2>
-          <div class="row">
-            <input id="ordersLimit" class="input" style="max-width: 100px" value="10" />
-            <button class="btn ghost" id="loadRecentOrdersInline">Làm mới</button>
-          </div>
-        </div>
-        <div id="recentOrders"></div>
-      </section>
+          <article class="admin-card span-5">
+            <div class="admin-section-head">
+              <div>
+                <h2>Điểm nóng cần xử lý</h2>
+                <p>Tập trung vào hàng đợi có ảnh hưởng trực tiếp đến vận hành.</p>
+              </div>
+            </div>
+            <div id="queueSummary" class="page-grid"></div>
+          </article>
+
+          <article class="admin-card span-12">
+            <div class="admin-section-head">
+              <div>
+                <h2>Đơn gần đây</h2>
+                <p>Danh sách 5 đơn phát sinh gần nhất để theo dõi nhịp vận hành.</p>
+              </div>
+              <a class="btn ghost" href="/ui/admin/orders.html">Mở trang đơn hàng</a>
+            </div>
+            <div id="recentOrdersPreview"></div>
+          </article>
+        </section>
+      </main>
     </div>
 
-    <script>
-      const $ = (selector) => document.querySelector(selector);
-      const statusEl = $("#status");
-      const baseUrlEl = $("#baseUrl");
-      const tokenEl = $("#token");
-
-      const storageKeys = {
-        base: "bambi_admin_base",
-        token: "bambi_admin_token",
-      };
-
-      const escapeHtml = (value) =>
-        String(value || "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;");
-
-      const setStatus = (message, type = "info") => {
-        if (!message) {
-          statusEl.style.display = "none";
-          statusEl.textContent = "";
-          statusEl.className = "status";
-          return;
-        }
-        statusEl.style.display = "block";
-        statusEl.textContent = message;
-        statusEl.className = `status ${type === "error" ? "error" : ""}`;
-      };
-
-      const getSettings = () => {
-        const base = baseUrlEl.value.trim().replace(/\/$/, "");
-        const token = tokenEl.value.trim();
-        return { base, token };
-      };
-
-      const apiFetch = async (path, options = {}) => {
-        const { base, token } = getSettings();
-        const headers = Object.assign(
-          { "Content-Type": "application/json" },
-          options.headers || {}
-        );
-        if (token) headers.Authorization = `Bearer ${token}`;
-        const response = await fetch(base + path, {
-          ...options,
-          headers,
-        });
-        const text = await response.text();
-        let payload;
-        try {
-          payload = text ? JSON.parse(text) : {};
-        } catch (error) {
-          payload = { message: text };
-        }
-        if (!response.ok) {
-          throw new Error(payload.message || "Yêu cầu thất bại");
-        }
-        return payload;
-      };
-
-      const renderMetrics = (counts) => {
-        const container = $("#overviewMetrics");
-        if (!counts) {
-          container.innerHTML = "<p class='muted'>Chưa có dữ liệu.</p>";
-          return;
-        }
-        const items = [
-          ["Người dùng", counts.users],
-          ["Shop", counts.shops],
-          ["Shop đã duyệt", counts.shops_approved],
-          ["Shop chờ duyệt", counts.shops_pending],
-          ["Sản phẩm", counts.products],
-          ["Đơn hàng", counts.orders],
-          ["Đánh giá", counts.reviews],
-        ];
-        container.innerHTML = items
-          .map(
-            ([label, value]) => `
-            <div class="metric">
-              <span>${escapeHtml(label)}</span>
-              <strong>${escapeHtml(value)}</strong>
-            </div>
-          `
-          )
-          .join("");
-      };
-
-      const renderPills = (containerId, items, color = "chip") => {
-        const container = $(containerId);
-        if (!items || items.length === 0) {
-          container.innerHTML = "<span class='muted'>Không có dữ liệu</span>";
-          return;
-        }
-        container.innerHTML = items
-          .map(
-            (item) => `
-            <span class="chip ${color}">
-              ${escapeHtml(item.status)}: ${escapeHtml(item.count)}
-            </span>
-          `
-          )
-          .join("");
-      };
-
-      const renderPendingShops = (shops) => {
-        const container = $("#pendingShops");
-        const data = shops?.data || [];
-        $("#pendingShopsCount").textContent = data.length;
-        if (!data.length) {
-          container.innerHTML = "<p class='muted'>Không có shop chờ duyệt.</p>";
-          return;
-        }
-        container.innerHTML = `
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Shop</th>
-                <th>Chủ shop</th>
-                <th>Tạo lúc</th>
-                <th>Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (shop) => `
-                <tr>
-                  <td>
-                    <strong>${escapeHtml(shop.name)}</strong><br />
-                    <span class="muted">${escapeHtml(shop.id)}</span>
-                  </td>
-                  <td>${escapeHtml(shop.users?.email || "Không rõ")}</td>
-                  <td>${new Date(shop.created_at).toLocaleString()}</td>
-                  <td>
-                    <button class="btn" data-action="approve-shop" data-id="${shop.id}">
-                      Duyệt
-                    </button>
-                    <button class="btn danger" data-action="reject-shop" data-id="${shop.id}">
-                      Từ chối
-                    </button>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
-      };
-
-      const renderPendingReturns = (returns) => {
-        const container = $("#pendingReturns");
-        const data = returns?.data || [];
-        $("#pendingReturnsCount").textContent = data.length;
-        if (!data.length) {
-          container.innerHTML = "<p class='muted'>Không có yêu cầu trả hàng.</p>";
-          return;
-        }
-        container.innerHTML = `
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Mã trả hàng</th>
-                <th>Lý do</th>
-                <th>Mã item</th>
-                <th>Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (ret) => `
-                <tr>
-                  <td>${escapeHtml(ret.id)}</td>
-                  <td>${escapeHtml(ret.reason || "-")}</td>
-                  <td>${escapeHtml(ret.order_items?.id || "-")}</td>
-                  <td>
-                    <button class="btn" data-action="approve-return" data-id="${ret.id}">
-                      Duyệt
-                    </button>
-                    <button class="btn danger" data-action="reject-return" data-id="${ret.id}">
-                      Từ chối
-                    </button>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
-      };
-
-      const renderDisputes = (returns) => {
-        const container = $("#pendingDisputes");
-        const data = returns?.data || [];
-        $("#pendingDisputesCount").textContent = data.length;
-        if (!data.length) {
-          container.innerHTML = "<p class='muted'>Không có tranh chấp.</p>";
-          return;
-        }
-        container.innerHTML = `
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Mã trả hàng</th>
-                <th>Lý do tranh chấp</th>
-                <th>Mã item</th>
-                <th>Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (ret) => `
-                <tr>
-                  <td>${escapeHtml(ret.id)}</td>
-                  <td>${escapeHtml(ret.dispute_reason || "-")}</td>
-                  <td>${escapeHtml(ret.order_items?.id || "-")}</td>
-                  <td>
-                    <button class="btn" data-action="approve-dispute" data-id="${ret.id}">
-                      Duyệt
-                    </button>
-                    <button class="btn danger" data-action="reject-dispute" data-id="${ret.id}">
-                      Từ chối
-                    </button>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
-      };
-
-      const renderOrders = (orders) => {
-        const container = $("#recentOrders");
-        const data = orders?.data || [];
-        if (!data.length) {
-          container.innerHTML = "<p class='muted'>Không có đơn gần đây.</p>";
-          return;
-        }
-        container.innerHTML = `
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Đơn</th>
-                <th>Khách hàng</th>
-                <th>Tổng tiền</th>
-                <th>Thanh toán</th>
-                <th>Trạng thái</th>
-                <th>Tạo lúc</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (order) => `
-                <tr>
-                  <td>${escapeHtml(order.id)}</td>
-                  <td>${escapeHtml(order.users?.email || "-")}</td>
-                  <td>${escapeHtml(order.total_amount)}</td>
-                  <td>
-                    <span class="chip blue">${escapeHtml(order.payment_status)}</span>
-                  </td>
-                  <td>
-                    <span class="chip gray">${escapeHtml(order.order_status)}</span>
-                  </td>
-                  <td>${new Date(order.created_at).toLocaleString()}</td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
-      };
-
-      const loadOverview = async () => {
-        setStatus("");
-        const payload = await apiFetch("/admin/overview");
-        renderMetrics(payload.overview?.counts);
-        renderPills("#orderStatus", payload.overview?.order_status || [], "chip");
-        renderPills(
-          "#paymentStatus",
-          payload.overview?.payment_status || [],
-          "chip blue"
-        );
-      };
-
-      const loadPendingShops = async () => {
-        setStatus("");
-        const payload = await apiFetch("/admin/shops/pending");
-        renderPendingShops(payload.shops);
-      };
-
-      const loadPendingReturns = async () => {
-        setStatus("");
-        const payload = await apiFetch("/returns/pending");
-        renderPendingReturns(payload.returns);
-      };
-
-      const loadDisputes = async () => {
-        setStatus("");
-        const payload = await apiFetch("/returns/disputes");
-        renderDisputes(payload.returns);
-      };
-
-      const loadRecentOrders = async () => {
-        setStatus("");
-        const limit = Number($("#ordersLimit").value || 10);
-        const payload = await apiFetch(`/admin/orders/recent?limit=${limit}`);
-        renderOrders(payload.orders);
-      };
-
-      $("#saveSettings").addEventListener("click", () => {
-        const { base, token } = getSettings();
-        localStorage.setItem(storageKeys.base, base);
-        localStorage.setItem(storageKeys.token, token);
-        setStatus("Đã lưu cài đặt.");
-      });
-
-      $("#clearSettings").addEventListener("click", () => {
-        localStorage.removeItem(storageKeys.base);
-        localStorage.removeItem(storageKeys.token);
-        baseUrlEl.value = "http://localhost:3000";
-        tokenEl.value = "";
-        setStatus("Đã xóa cài đặt.");
-      });
-
-      $("#loadOverview").addEventListener("click", () =>
-        loadOverview().catch((err) => setStatus(err.message, "error"))
-      );
-      $("#loadPendingShops").addEventListener("click", () =>
-        loadPendingShops().catch((err) => setStatus(err.message, "error"))
-      );
-      $("#loadPendingReturns").addEventListener("click", () =>
-        loadPendingReturns().catch((err) => setStatus(err.message, "error"))
-      );
-      $("#loadDisputes").addEventListener("click", () =>
-        loadDisputes().catch((err) => setStatus(err.message, "error"))
-      );
-      $("#loadRecentOrders").addEventListener("click", () =>
-        loadRecentOrders().catch((err) => setStatus(err.message, "error"))
-      );
-      $("#loadRecentOrdersInline").addEventListener("click", () =>
-        loadRecentOrders().catch((err) => setStatus(err.message, "error"))
-      );
-
-      $("#pendingShops").addEventListener("click", async (event) => {
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
-        const id = button.dataset.id;
-        if (button.dataset.action === "approve-shop") {
-          await apiFetch(`/shops/${id}/status`, {
-            method: "PATCH",
-            body: JSON.stringify({ status: "approved" }),
-          });
-          loadPendingShops();
-        }
-        if (button.dataset.action === "reject-shop") {
-          const reason = prompt("Lý do từ chối?") || "Từ chối";
-          await apiFetch(`/shops/${id}/status`, {
-            method: "PATCH",
-            body: JSON.stringify({ status: "rejected", rejected_reason: reason }),
-          });
-          loadPendingShops();
-        }
-      });
-
-      $("#pendingReturns").addEventListener("click", async (event) => {
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
-        const id = button.dataset.id;
-        if (button.dataset.action === "approve-return") {
-          await apiFetch(`/returns/${id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ status: "approved" }),
-          });
-          loadPendingReturns();
-        }
-        if (button.dataset.action === "reject-return") {
-          const reason = prompt("Lý do từ chối?") || "Từ chối";
-          await apiFetch(`/returns/${id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ status: "rejected", rejected_reason: reason }),
-          });
-          loadPendingReturns();
-        }
-      });
-
-      $("#pendingDisputes").addEventListener("click", async (event) => {
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
-        const id = button.dataset.id;
-        if (button.dataset.action === "approve-dispute") {
-          const resolution = prompt("Ghi chú xử lý?") || "Duyệt";
-          await apiFetch(`/returns/${id}/dispute`, {
-            method: "PATCH",
-            body: JSON.stringify({ action: "approve", resolution }),
-          });
-          loadDisputes();
-        }
-        if (button.dataset.action === "reject-dispute") {
-          const resolution = prompt("Ghi chú xử lý?") || "Từ chối";
-          await apiFetch(`/returns/${id}/dispute`, {
-            method: "PATCH",
-            body: JSON.stringify({ action: "reject", resolution }),
-          });
-          loadDisputes();
-        }
-      });
-
-      const init = () => {
-        const savedBase = localStorage.getItem(storageKeys.base);
-        const savedToken = localStorage.getItem(storageKeys.token);
-        if (savedBase) baseUrlEl.value = savedBase;
-        if (savedToken) tokenEl.value = savedToken;
-      };
-
-      init();
-    </script>
+    <script src="/ui/admin/admin.js"></script>
+    <script src="/ui/admin/dashboard.js"></script>
   </body>
 </html>

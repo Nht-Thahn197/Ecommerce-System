@@ -75,3 +75,33 @@ export const updateStatus = async (
     res.status(400).json({ message: error.message });
   }
 };
+
+export const uploadDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const validationError = (req as any).fileValidationError as
+      | string
+      | undefined;
+
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const files = ((req as any).files || []) as Express.Multer.File[];
+    if (!files.length) {
+      return res.status(400).json({ message: "Khong co file giay to" });
+    }
+
+    res.json({
+      documents: files.map((file) => ({
+        doc_url: `/ui/uploads/shop-documents/${file.filename}`,
+        original_name: file.originalname,
+        mime_type: file.mimetype,
+        size: file.size,
+      })),
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};

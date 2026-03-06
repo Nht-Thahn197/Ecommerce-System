@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../libs/prisma";
 import {
   ListShopsQuery,
@@ -32,6 +33,51 @@ const buildDocuments = (docs?: ShopDocumentInput[]) => {
     }));
 };
 
+const saveShopDetails = async (
+  tx: Prisma.TransactionClient,
+  shopId: string,
+  input: RegisterShopInput,
+  documents: ReturnType<typeof buildDocuments>
+) => {
+  await tx.shop_addresses.deleteMany({ where: { shop_id: shopId } });
+  await tx.shop_payment_accounts.deleteMany({ where: { shop_id: shopId } });
+  await tx.shop_documents.deleteMany({ where: { shop_id: shopId } });
+
+  if (input.address) {
+    await tx.shop_addresses.create({
+      data: {
+        shop_id: shopId,
+        province: input.address.province || null,
+        district: input.address.district || null,
+        ward: input.address.ward || null,
+        detail: input.address.detail || null,
+      },
+    });
+  }
+
+  if (input.payment_account) {
+    await tx.shop_payment_accounts.create({
+      data: {
+        shop_id: shopId,
+        bank_name: input.payment_account.bank_name || null,
+        account_number: input.payment_account.account_number || null,
+        account_holder: input.payment_account.account_holder || null,
+      },
+    });
+  }
+
+  if (documents.length) {
+    await tx.shop_documents.createMany({
+      data: documents.map((doc) => ({
+        shop_id: shopId,
+        doc_type: doc.doc_type,
+        doc_url: doc.doc_url,
+        status: doc.status,
+      })),
+    });
+  }
+};
+
 export const registerShop = async (userId: string, input: RegisterShopInput) => {
   if (!input.name?.trim()) {
     throw new Error("Shop name is required");
@@ -42,13 +88,30 @@ export const registerShop = async (userId: string, input: RegisterShopInput) => 
     select: { id: true, status: true },
   });
 
-  if (existing) {
+  if (existing && existing.status !== "rejected") {
     throw new Error("Shop already exists");
   }
 
   const documents = buildDocuments(input.documents);
 
   const shop = await prisma.$transaction(async (tx) => {
+    if (existing?.status === "rejected") {
+      const updated = await tx.shops.update({
+        where: { id: existing.id },
+        data: {
+          name: input.name.trim(),
+          description: input.description?.trim() || null,
+          status: "pending",
+          rejected_reason: null,
+          approved_at: null,
+          approved_by: null,
+        },
+      });
+
+      await saveShopDetails(tx, existing.id, input, documents);
+      return updated;
+    }
+
     const created = await tx.shops.create({
       data: {
         owner_id: userId,
@@ -58,39 +121,7 @@ export const registerShop = async (userId: string, input: RegisterShopInput) => 
       },
     });
 
-    if (input.address) {
-      await tx.shop_addresses.create({
-        data: {
-          shop_id: created.id,
-          province: input.address.province || null,
-          district: input.address.district || null,
-          ward: input.address.ward || null,
-          detail: input.address.detail || null,
-        },
-      });
-    }
-
-    if (input.payment_account) {
-      await tx.shop_payment_accounts.create({
-        data: {
-          shop_id: created.id,
-          bank_name: input.payment_account.bank_name || null,
-          account_number: input.payment_account.account_number || null,
-          account_holder: input.payment_account.account_holder || null,
-        },
-      });
-    }
-
-    if (documents.length) {
-      await tx.shop_documents.createMany({
-        data: documents.map((doc) => ({
-          shop_id: created.id,
-          doc_type: doc.doc_type,
-          doc_url: doc.doc_url,
-          status: doc.status,
-        })),
-      });
-    }
+    await saveShopDetails(tx, created.id, input, documents);
 
     return created;
   });

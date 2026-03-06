@@ -1,0 +1,84 @@
+﻿<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quản lý shop | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="/ui/admin/">
+          <span class="admin-brand-mark">B</span>
+          <div class="admin-brand-copy">
+            <strong>Bambi Admin</strong>
+            <span>Hệ thống quản trị sàn</span>
+          </div>
+        </a>
+
+        <section class="admin-sidebar-section">
+          <p class="admin-sidebar-heading">Điều hướng</p>
+          <nav class="admin-nav">
+            <a class="admin-nav-link" href="/ui/admin/" data-page="dashboard"><span class="admin-nav-icon">TQ</span><span class="admin-nav-copy"><strong>Tổng quan</strong><span>Chỉ số vận hành</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/shops.html" data-page="shops"><span class="admin-nav-icon">QS</span><span class="admin-nav-copy"><strong>Quản lý shop</strong><span>Duyệt và theo dõi shop</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/users.html" data-page="users"><span class="admin-nav-icon">ND</span><span class="admin-nav-copy"><strong>Quản lý người dùng</strong><span>Danh sách tài khoản</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/returns.html" data-page="returns"><span class="admin-nav-icon">TH</span><span class="admin-nav-copy"><strong>Trả hàng & tranh chấp</strong><span>Xử lý khiếu nại</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/orders.html" data-page="orders"><span class="admin-nav-icon">ĐH</span><span class="admin-nav-copy"><strong>Đơn gần đây</strong><span>Theo dõi dòng đơn mới</span></span></a>
+          </nav>
+        </section>
+
+        <div class="admin-sidebar-foot">
+          <button class="btn secondary" id="logoutAdmin" type="button">Đăng xuất quản trị</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-page-header">
+          <div>
+            <div class="admin-breadcrumb">Trang quản trị / Quản lý shop</div>
+            <h1>Quản lý shop</h1>
+            <p>Tách riêng trang shop để duyệt hồ sơ nhanh, lọc theo tên hoặc chủ shop và giảm nhiễu từ các phần vận hành khác.</p>
+          </div>
+          <div class="admin-hero-tag">Duyệt hồ sơ shop theo hàng đợi</div>
+        </header>
+
+        <div id="status" class="status" style="display: none"></div>
+
+        <section class="admin-card hero-card">
+          <div class="admin-section-head">
+            <div>
+              <div class="kicker">Shop đăng ký</div>
+              <h2 style="margin-top: 8px;">Hàng đợi duyệt shop</h2>
+              <p>Dữ liệu trên trang này tập trung vào các shop đang chờ admin ra quyết định.</p>
+            </div>
+            <button class="btn" id="reloadShops" type="button">Tải lại</button>
+          </div>
+          <div id="shopStats" class="stats-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));"></div>
+        </section>
+
+        <section class="admin-card">
+          <div class="toolbar-row">
+            <div>
+              <h2>Danh sách shop chờ duyệt</h2>
+              <p class="muted">Lọc theo tên shop, mã shop, chủ shop hoặc trạng thái.</p>
+            </div>
+            <span class="chip gray" id="shopCountLabel">0 shop</span>
+          </div>
+          <div class="toolbar-form">
+            <input id="shopQuery" class="input" placeholder="Tìm theo tên shop, email chủ shop hoặc mã shop" />
+            <button class="btn" id="applyShopFilter" type="button">Lọc</button>
+            <button class="btn ghost" id="clearShopFilter" type="button">Xoá lọc</button>
+          </div>
+          <div class="divider"></div>
+          <div id="shopsTable"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/ui/admin/admin.js"></script>
+    <script src="/ui/admin/shops.js"></script>
+  </body>
+</html>
