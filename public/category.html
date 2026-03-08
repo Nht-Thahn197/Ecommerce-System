@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bambi - Danh mục</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="/ui/store.css" />
+  </head>
+  <body data-page="category">
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <a href="/ui/shop-register.html">Kênh Người Bán</a>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <a class="logo" href="/ui/">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </a>
+        <div class="search-wrap">
+          <input
+            type="text"
+            placeholder="Tìm sản phẩm, thương hiệu và tên shop"
+          />
+          <button type="button">Tìm</button>
+        </div>
+        <div class="header-actions">
+          <a class="pill" href="/ui/">Về trang chủ</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container hero catalog-page">
+      <div class="catalog-breadcrumb">
+        <a href="/ui/">Trang chủ</a>
+        <span>/</span>
+        <span id="catalogTrailLabel">Danh mục</span>
+      </div>
+
+      <section class="catalog-hero">
+        <div class="catalog-intro">
+          <span class="promo-tag">Danh mục</span>
+          <h1 id="catalogTitle">Đang tải danh mục...</h1>
+          <p id="catalogDescription" class="section-subtitle">
+            Bambi sẽ hiển thị sản phẩm đúng theo danh mục bạn đang chọn.
+          </p>
+          <div id="catalogChildLinks" class="catalog-chip-list"></div>
+        </div>
+
+        <div class="catalog-summary">
+          <div class="catalog-stat">
+            <span>Sản phẩm đang bán</span>
+            <strong id="catalogProductCount">0</strong>
+          </div>
+          <div class="catalog-stat">
+            <span>Nhánh con</span>
+            <strong id="catalogBranchCount">0</strong>
+          </div>
+          <div class="catalog-stat">
+            <span>Danh mục lá</span>
+            <strong id="catalogLeafCount">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h3 id="catalogSectionTitle">Sản phẩm trong danh mục</h3>
+          <span id="catalogCountLabel" class="section-link">0 sản phẩm</span>
+        </div>
+        <div id="catalogStatus" class="status" hidden></div>
+        <div id="catalogProductGrid" class="product-grid"></div>
+        <div id="catalogEmpty" class="catalog-empty" hidden>
+          Chưa có sản phẩm đang bán trong danh mục này.
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Bambi Marketplace - Duyệt sản phẩm theo danh mục gốc và toàn bộ nhánh con.
+    </footer>
+
+    <script src="/ui/store.js"></script>
+    <script src="/ui/storefront.js"></script>
+    <script src="/ui/custom-select.js"></script>
+  </body>
+</html>

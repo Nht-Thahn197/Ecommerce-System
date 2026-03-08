@@ -13,6 +13,7 @@ import adminRoutes from "./modules/admin/admin.route";
 import searchRoutes from "./modules/search/search.route";
 import paymentRoutes from "./modules/payments/payment.route";
 import returnRoutes from "./modules/returns/return.route";
+import categoryRoutes from "./modules/categories/category.route";
 
 const app = express();
 
@@ -36,4 +37,5 @@ app.use("/admin", adminRoutes);
 app.use("/search", searchRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/returns", returnRoutes);
+app.use("/categories", categoryRoutes);
 export default app;

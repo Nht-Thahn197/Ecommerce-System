@@ -1431,9 +1431,14 @@
 
     try {
       const shopPayload = await StoreAuth.apiFetch("/shops/me", {}, { redirectOn401: true });
-      state.shop = shopPayload.shops?.data?.[0] || null;
+      const shops = shopPayload.shops?.data || [];
+      state.shop = shops.find((shop) => shop?.status === "approved") || shops[0] || null;
       if (state.shop) {
         mergeShopIntoDraft(state.shop);
+        if (state.shop.status === "approved") {
+          window.location.href = "/ui/seller/";
+          return;
+        }
       }
     } catch (error) {
       updatePageAlert(error.message || "Không thể tải trạng thái hồ sơ shop.", "error");

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Thao tác danh mục | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="/ui/admin/">
+          <span class="admin-brand-mark">B</span>
+          <div class="admin-brand-copy">
+            <strong>Bambi Admin</strong>
+            <span>Hệ thống quản trị sàn</span>
+          </div>
+        </a>
+
+        <section class="admin-sidebar-section">
+          <p class="admin-sidebar-heading">Điều hướng</p>
+          <nav class="admin-nav">
+            <a class="admin-nav-link" href="/ui/admin/" data-page="dashboard"><span class="admin-nav-icon">TQ</span><span class="admin-nav-copy"><strong>Tổng quan</strong><span>Chỉ số vận hành</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/categories.html" data-page="categories"><span class="admin-nav-icon">DM</span><span class="admin-nav-copy"><strong>Quản lý danh mục</strong><span>Cây danh mục sản phẩm</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/shops.html" data-page="shops"><span class="admin-nav-icon">QS</span><span class="admin-nav-copy"><strong>Quản lý shop</strong><span>Duyệt và theo dõi shop</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/users.html" data-page="users"><span class="admin-nav-icon">ND</span><span class="admin-nav-copy"><strong>Quản lý người dùng</strong><span>Danh sách tài khoản</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/returns.html" data-page="returns"><span class="admin-nav-icon">TH</span><span class="admin-nav-copy"><strong>Trả hàng & tranh chấp</strong><span>Xử lý khiếu nại</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/orders.html" data-page="orders"><span class="admin-nav-icon">ĐH</span><span class="admin-nav-copy"><strong>Đơn gần đây</strong><span>Theo dõi dòng đơn mới</span></span></a>
+          </nav>
+        </section>
+
+        <div class="admin-sidebar-foot">
+          <button class="btn secondary" id="logoutAdmin" type="button">Đăng xuất quản trị</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-page-header">
+          <div>
+            <div class="admin-breadcrumb" id="categoryFormBreadcrumb">Trang quản trị / Quản lý danh mục / Tạo mới</div>
+            <h1 id="categoryFormTitle">Tạo danh mục</h1>
+            <p id="categoryFormDescription">Thao tác thêm, sửa hoặc xóa được tách sang trang riêng để màn hình danh sách luôn gọn hơn.</p>
+          </div>
+          <div class="stack-actions">
+            <a class="btn ghost" href="/ui/admin/categories.html">Quay lại danh sách</a>
+            <button class="btn" id="reloadCategoryForm" type="button">Tải lại</button>
+          </div>
+        </header>
+
+        <div id="status" class="status" style="display: none"></div>
+
+        <section class="admin-card hero-card">
+          <div class="admin-section-head">
+            <div>
+              <div class="kicker" id="categoryFormKicker">Tạo mới</div>
+              <h2 id="categoryFormHeading" style="margin-top: 8px">Điền thông tin danh mục</h2>
+              <p id="categoryFormHelp">Bạn có thể tạo danh mục gốc hoặc gắn danh mục vào một nhánh cha đã có sẵn.</p>
+            </div>
+            <span class="chip" id="categoryFormModeTag">Tạo mới</span>
+          </div>
+          <div class="path-preview" id="categoryPathPreview">Điền tên danh mục để xem đường dẫn dự kiến.</div>
+        </section>
+
+        <section class="page-grid">
+          <section class="admin-card span-7">
+            <div class="toolbar-row">
+              <div>
+                <h2>Thông tin danh mục</h2>
+                <p class="muted">Mọi thay đổi sẽ được áp dụng trực tiếp vào cây danh mục sản phẩm.</p>
+              </div>
+              <span class="chip gray" id="categoryFormSelection">Chưa lưu</span>
+            </div>
+            <form id="categoryForm" class="category-form-grid">
+              <input id="categoryId" name="id" type="hidden" />
+              <div class="field">
+                <label for="categoryName">Tên danh mục</label>
+                <input id="categoryName" class="input" name="name" placeholder="Ví dụ: Áo ba lỗ" required />
+              </div>
+              <div class="field">
+                <label for="categoryParentTrigger">Danh mục cha</label>
+                <div class="custom-select" id="categoryParentSelect">
+                  <input id="categoryParentId" name="parent_id" type="hidden" value="" />
+                  <button
+                    class="custom-select-trigger"
+                    id="categoryParentTrigger"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="categoryParentOptions"
+                  >
+                    <span id="categoryParentLabel">Không có danh mục cha</span>
+                    <span class="custom-select-arrow" aria-hidden="true"></span>
+                  </button>
+                  <div class="custom-select-panel" id="categoryParentPanel" hidden>
+                    <div class="custom-select-options" id="categoryParentOptions" role="listbox"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="stack-actions">
+                <button class="btn" id="submitCategoryForm" type="submit">Tạo danh mục</button>
+                <button class="btn ghost" id="resetCategoryForm" type="button">Khôi phục</button>
+                <button class="btn danger" id="deleteCategory" type="button">Xóa danh mục</button>
+              </div>
+            </form>
+          </section>
+
+          <aside class="admin-card span-5">
+            <div class="toolbar-row">
+              <div>
+                <h2>Ngữ cảnh</h2>
+                <p class="muted">Theo dõi nhanh vị trí và ràng buộc của danh mục trước khi lưu.</p>
+              </div>
+            </div>
+            <div id="categoryContext" class="stack"></div>
+          </aside>
+        </section>
+
+        <section class="admin-card">
+          <div class="toolbar-row">
+            <div>
+              <h2>Xem nhanh cây danh mục</h2>
+              <p class="muted">Giúp kiểm tra cấp cha - con trước khi lưu thay đổi.</p>
+            </div>
+          </div>
+          <div id="categoryTree"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/ui/admin/admin.js"></script>
+    <script src="/ui/admin/category-form.js"></script>
+    <script src="/ui/custom-select.js"></script>
+  </body>
+</html>

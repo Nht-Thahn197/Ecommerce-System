@@ -4,6 +4,9 @@ const userName = document.querySelector("#userName");
 const logoutBtn = document.querySelector("#logoutBtn");
 const avatarImg = document.querySelector(".user-avatar .avatar-img");
 const avatarInitial = document.querySelector(".user-avatar .avatar-initial");
+const sellerChannelLinks = Array.from(
+  document.querySelectorAll('a[href="/ui/shop-register.html"]')
+);
 
 const customerStorageKeys = {
   userBase: "bambi_user_base",
@@ -18,6 +21,9 @@ const getLoginRedirect = () => {
   const next = `${window.location.pathname}${window.location.search}`;
   return `/ui/login.html?next=${encodeURIComponent(next)}`;
 };
+
+const SELLER_CHANNEL_FALLBACK = "/ui/shop-register.html";
+const SELLER_CHANNEL_TARGET = "/ui/seller/";
 
 const getSessionCandidates = () => [
   {
@@ -85,6 +91,7 @@ const clearAuth = () => {
   localStorage.removeItem(customerStorageKeys.sellerToken);
   localStorage.removeItem(customerStorageKeys.sellerRefresh);
   localStorage.removeItem(customerStorageKeys.sellerBase);
+  sellerChannelPromise = null;
 };
 
 const saveSession = (source, token, refreshToken) => {
@@ -114,6 +121,7 @@ const parseResponsePayload = async (response) => {
 };
 
 let refreshPromise = null;
+let sellerChannelPromise = null;
 
 const refreshSession = async (preferredSource) => {
   if (refreshPromise) {
@@ -255,20 +263,75 @@ const fetchMe = async () => {
   }
 };
 
+const setSellerChannelLinks = (href) => {
+  sellerChannelLinks.forEach((link) => {
+    link.href = href;
+  });
+};
+
+const resolveSellerChannelTarget = async () => {
+  if (!getToken()) {
+    return SELLER_CHANNEL_FALLBACK;
+  }
+
+  if (!sellerChannelPromise) {
+    sellerChannelPromise = (async () => {
+      try {
+        const payload = await apiFetch("/shops/me", {}, { redirectOn401: false });
+        const shops = payload.shops?.data || [];
+        const approvedShop = shops.find((shop) => shop?.status === "approved");
+        return approvedShop ? SELLER_CHANNEL_TARGET : SELLER_CHANNEL_FALLBACK;
+      } catch (_error) {
+        return SELLER_CHANNEL_FALLBACK;
+      }
+    })();
+  }
+
+  return sellerChannelPromise;
+};
+
+const bindSellerChannelLinks = () => {
+  if (!sellerChannelLinks.length) return;
+
+  setSellerChannelLinks(SELLER_CHANNEL_FALLBACK);
+
+  sellerChannelLinks.forEach((link) => {
+    link.addEventListener("click", async (event) => {
+      if (!getToken()) return;
+
+      event.preventDefault();
+
+      const target = await resolveSellerChannelTarget();
+      setSellerChannelLinks(target);
+      window.location.href = target;
+    });
+  });
+
+  if (!getToken()) return;
+
+  resolveSellerChannelTarget().then((target) => {
+    setSellerChannelLinks(target);
+  });
+};
+
 window.BambiStoreAuth = {
   getToken,
   clearAuth,
   redirectToLogin,
   refreshSession,
   apiFetch,
+  resolveSellerChannelTarget,
 };
 
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     clearAuth();
     hideUser();
+    sellerChannelPromise = null;
+    setSellerChannelLinks(SELLER_CHANNEL_FALLBACK);
     redirectToLogin();
   });
 }
 
+bindSellerChannelLinks();
 fetchMe();

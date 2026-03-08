@@ -73,6 +73,14 @@ model products {
   category_id      Int?
   name             String             @db.VarChar(255)
   description      String?
+  gtin             String?            @db.VarChar(100)
+  condition        String?            @default("new") @db.VarChar(20)
+  length_cm        Int?
+  width_cm         Int?
+  height_cm        Int?
+  cover_image_url  String?            @db.VarChar(500)
+  video_url        String?            @db.VarChar(500)
+  media_gallery    Json?
   status           String?            @default("active") @db.VarChar(20)
   created_at       DateTime?          @default(now()) @db.Timestamp(6)
   product_variants product_variants[]

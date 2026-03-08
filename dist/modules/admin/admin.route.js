@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+const admin_controller_1 = require("./admin.controller");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authMiddleware, auth_middleware_1.requireAdmin);
+router.get("/overview", admin_controller_1.overview);
+router.get("/orders/recent", admin_controller_1.recentOrders);
+router.get("/shops/pending", admin_controller_1.pendingShops);
+router.get("/shops/:id", admin_controller_1.shopDetail);
+exports.default = router;

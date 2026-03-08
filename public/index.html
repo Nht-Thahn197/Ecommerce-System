@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bambi - Trang chủ</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="./store.css" />
+    <link rel="stylesheet" href="/ui/store.css" />
   </head>
-  <body>
+  <body data-page="home">
     <div class="topbar">
       <div class="container">
         <div class="top-links">
@@ -48,11 +48,14 @@
           <span>Bambi</span>
         </a>
         <div class="search-wrap">
-          <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
-          <button>Tìm</button>
+          <input
+            type="text"
+            placeholder="Tìm sản phẩm, thương hiệu và tên shop"
+          />
+          <button type="button">Tìm</button>
         </div>
         <div class="header-actions">
-          <span class="pill">Giỏ hàng (2)</span>
+          <span class="pill">Giỏ hàng</span>
         </div>
       </div>
     </header>
@@ -61,14 +64,17 @@
       <div class="hero-grid">
         <div class="hero-banner">
           <h2>Sale giữa tuần - Giảm tới 50%</h2>
-          <p>Ưu đãi lớn cho đồ gia dụng, phụ kiện và thiết bị điện tử.</p>
+          <p>
+            Ưu đãi lớn cho đồ gia dụng, phụ kiện và thiết bị điện tử từ các
+            shop đang bán trên Bambi.
+          </p>
           <span class="cta">Mua ngay</span>
         </div>
         <div class="hero-side">
           <div class="promo-card">
             <span class="promo-tag">Flash Deal</span>
             <h4>Khung giờ vàng 12:00 - 14:00</h4>
-            <p class="muted">Giảm mạnh cho phụ kiện công nghệ.</p>
+            <p class="muted">Giảm mạnh cho phụ kiện công nghệ và thời trang.</p>
           </div>
           <div class="promo-card">
             <span class="promo-tag">Freeship</span>
@@ -82,163 +88,37 @@
         <div class="section-title">
           <h3>Danh mục</h3>
         </div>
-        <div class="category-grid">
-          <div class="category-card">
-            <div class="category-icon">👕</div>
-            Thời trang nam
-          </div>
-          <div class="category-card">
-            <div class="category-icon">📱</div>
-            Điện thoại
-          </div>
-          <div class="category-card">
-            <div class="category-icon">💻</div>
-            Laptop
-          </div>
-          <div class="category-card">
-            <div class="category-icon">📷</div>
-            Máy ảnh
-          </div>
-          <div class="category-card">
-            <div class="category-icon">⌚</div>
-            Đồng hồ
-          </div>
-          <div class="category-card">
-            <div class="category-icon">👟</div>
-            Giày dép
-          </div>
-          <div class="category-card">
-            <div class="category-icon">🧴</div>
-            Làm đẹp
-          </div>
-          <div class="category-card">
-            <div class="category-icon">🍲</div>
-            Nhà bếp
-          </div>
-          <div class="category-card">
-            <div class="category-icon">🚲</div>
-            Thể thao
-          </div>
-          <div class="category-card">
-            <div class="category-icon">🧸</div>
-            Mẹ & Bé
-          </div>
-        </div>
+        <p class="section-subtitle">
+          Lấy từ danh mục gốc hiện có. Chọn một danh mục để xem tất cả sản phẩm
+          thuộc nhánh đó.
+        </p>
+        <div id="storeCategoryStatus" class="status" hidden></div>
+        <div id="storeCategoryGrid" class="category-grid"></div>
       </section>
 
       <section class="section">
         <div class="section-title">
           <h3>Gợi ý hôm nay</h3>
+          <span class="section-link">Sản phẩm đang hiển thị</span>
         </div>
-        <div class="product-grid">
-          <div class="product-card">
-            <div class="badge">Yêu thích</div>
-            <div class="discount">-36%</div>
-            <div class="product-thumb thumb-2"><span>Chuột gaming</span></div>
-            <div class="product-body">
-              <div class="product-title">Chuột không dây Mchose A7</div>
-              <div class="price">954.000đ</div>
-              <div class="sold">Đã bán 3k+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Mall</div>
-            <div class="discount">-28%</div>
-            <div class="product-thumb thumb-3"><span>Loa bluetooth</span></div>
-            <div class="product-body">
-              <div class="product-title">Loa bluetooth JBL Flip 7</div>
-              <div class="price">1.075.000đ</div>
-              <div class="sold">Đã bán 300+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Yêu thích</div>
-            <div class="discount">-33%</div>
-            <div class="product-thumb thumb-4"><span>Màn hình</span></div>
-            <div class="product-body">
-              <div class="product-title">Màn hình AOC 24G2</div>
-              <div class="price">2.538.000đ</div>
-              <div class="sold">Đã bán 410+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Mall</div>
-            <div class="discount">-29%</div>
-            <div class="product-thumb thumb-5"><span>Bàn phím cơ</span></div>
-            <div class="product-body">
-              <div class="product-title">Bàn phím cơ G87 v2</div>
-              <div class="price">1.069.000đ</div>
-              <div class="sold">Đã bán 1k+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Yêu thích</div>
-            <div class="discount">-35%</div>
-            <div class="product-thumb"><span>Loa kiểm âm</span></div>
-            <div class="product-body">
-              <div class="product-title">Loa kiểm âm MR4</div>
-              <div class="price">1.935.000đ</div>
-              <div class="sold">Đã bán 10k+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Mall</div>
-            <div class="discount">-39%</div>
-            <div class="product-thumb thumb-2"><span>Ghế công thái</span></div>
-            <div class="product-body">
-              <div class="product-title">Ghế công thái học văn phòng</div>
-              <div class="price">2.059.000đ</div>
-              <div class="sold">Đã bán 1k+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Yêu thích</div>
-            <div class="discount">-33%</div>
-            <div class="product-thumb thumb-3"><span>Skincare</span></div>
-            <div class="product-body">
-              <div class="product-title">Bộ dưỡng da 2 bước</div>
-              <div class="price">318.000đ</div>
-              <div class="sold">Đã bán 100k+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Yêu thích</div>
-            <div class="discount">-27%</div>
-            <div class="product-thumb thumb-4"><span>Quần jeans</span></div>
-            <div class="product-body">
-              <div class="product-title">Quần jeans dáng rộng</div>
-              <div class="price">181.000đ</div>
-              <div class="sold">Đã bán 5k+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Mall</div>
-            <div class="discount">-22%</div>
-            <div class="product-thumb thumb-5"><span>Ổ cắm</span></div>
-            <div class="product-body">
-              <div class="product-title">Ổ cắm điện 3250W</div>
-              <div class="price">249.000đ</div>
-              <div class="sold">Đã bán 60k+</div>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="badge">Yêu thích</div>
-            <div class="discount">-32%</div>
-            <div class="product-thumb"><span>Túi chống sốc</span></div>
-            <div class="product-body">
-              <div class="product-title">Túi chống sốc laptop</div>
-              <div class="price">301.000đ</div>
-              <div class="sold">Đã bán 20k+</div>
-            </div>
-          </div>
+        <p class="section-subtitle">
+          Lấy trực tiếp từ các shop đã bật bán trên Bambi.
+        </p>
+        <div id="storeFeaturedStatus" class="status" hidden></div>
+        <div id="storeFeaturedProducts" class="product-grid"></div>
+        <div id="storeFeaturedEmpty" class="catalog-empty" hidden>
+          Chưa có sản phẩm nào đang hiển thị trên Bambi.
         </div>
-        <button class="load-more">Xem thêm</button>
       </section>
     </main>
 
     <footer class="footer">
-      Bambi Marketplace - Tham khảo giao diện theo phong cách Shopee
+      Bambi Marketplace - Giao diện storefront kết nối dữ liệu danh mục và sản
+      phẩm thật.
     </footer>
+
     <script src="/ui/store.js"></script>
+    <script src="/ui/storefront.js"></script>
+    <script src="/ui/custom-select.js"></script>
   </body>
 </html>

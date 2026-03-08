@@ -51,6 +51,46 @@ export const getProduct = async (
   }
 };
 
+export const uploadProductMedia = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const validationError = (req as any).fileValidationError as
+      | string
+      | undefined;
+
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const files = ((req as any).files || {}) as Record<
+      string,
+      Express.Multer.File[]
+    >;
+    const gallery = files.gallery || [];
+    const cover = files.cover?.[0] || null;
+    const video = files.video?.[0] || null;
+
+    if (!gallery.length && !cover && !video) {
+      return res.status(400).json({ message: "Khong co file media" });
+    }
+
+    res.json({
+      media: {
+        gallery: gallery.map(
+          (file) => `/ui/uploads/products/${file.filename}`
+        ),
+        cover_image_url: cover
+          ? `/ui/uploads/products/${cover.filename}`
+          : null,
+        video_url: video ? `/ui/uploads/products/${video.filename}` : null,
+      },
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 export const updateStock = async (
   req: AuthRequest<{ id: string }, {}, UpdateVariantStockInput>,
   res: Response

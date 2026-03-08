@@ -3,819 +3,513 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bambi Khu vực Người bán</title>
+    <title>Bambi Seller Studio</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./seller.css" />
   </head>
-  <body>
-    <div class="app">
-      <header class="topbar">
-        <div class="brand">
-          <h1>Khu vực Người bán</h1>
-          <p>Quản lý sản phẩm, biến thể, đơn hàng và vận chuyển tại một nơi.</p>
+  <body class="seller-body">
+    <div class="seller-shell">
+      <aside class="seller-sidebar">
+        <a class="seller-brand" href="/ui/">
+          <span class="seller-brand-mark">B</span>
+          <span class="seller-brand-copy">
+            <strong>Bambi Seller</strong>
+            <span>Studio quản lý bán hàng</span>
+          </span>
+        </a>
+
+        <section class="seller-shop-card">
+          <span class="seller-card-label">Shop đang vận hành</span>
+          <strong id="sellerShopSummaryName">Đang tải shop...</strong>
+          <p id="sellerShopSummaryMeta" class="muted">Đồng bộ dữ liệu sản phẩm và đơn hàng cho shop đã duyệt.</p>
+        </section>
+
+        <section class="seller-nav-section">
+          <p class="seller-nav-heading">Trang chính</p>
+          <button class="seller-nav-link active" type="button" data-view-target="dashboard">
+            <span class="seller-nav-icon">TC</span>
+            <span class="seller-nav-copy">
+              <strong>Trang chủ</strong>
+              <span>Tổng quan vận hành</span>
+            </span>
+          </button>
+        </section>
+
+        <section class="seller-nav-section">
+          <p class="seller-nav-heading">Quản lý sản phẩm</p>
+          <button class="seller-nav-link" type="button" data-view-target="products">
+            <span class="seller-nav-icon">SP</span>
+            <span class="seller-nav-copy">
+              <strong>Tất cả sản phẩm</strong>
+              <span>Danh sách đang bán và đã ẩn</span>
+            </span>
+          </button>
+          <button class="seller-nav-link accent" type="button" data-view-target="new-product">
+            <span class="seller-nav-icon">+</span>
+            <span class="seller-nav-copy">
+              <strong>Thêm sản phẩm</strong>
+              <span>Soạn sản phẩm mới theo từng bước</span>
+            </span>
+          </button>
+        </section>
+
+        <section class="seller-nav-section">
+          <p class="seller-nav-heading">Hỗ trợ bán hàng</p>
+          <div class="seller-note-list">
+            <div class="seller-note-item">
+              <strong>Biến thể đầu tiên</strong>
+              <span>Tạo cùng sản phẩm để có giá và tồn kho ngay.</span>
+            </div>
+            <div class="seller-note-item">
+              <strong>Đơn gần đây</strong>
+              <span>Xử lý nhanh từ bảng tổng quan mà không cần rời trang.</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="seller-sidebar-foot">
+          <button class="btn ghost" id="logoutSeller" type="button">Đăng xuất</button>
         </div>
-        <div class="token-panel">
-          <div class="field">
-            <label for="baseUrl">Địa chỉ API (Base URL)</label>
-            <input id="baseUrl" class="input" value="http://localhost:3000" />
+      </aside>
+
+      <main class="seller-main">
+        <header class="seller-topbar">
+          <div>
+            <div class="seller-breadcrumb" id="sellerBreadcrumb">Trang chủ / Tổng quan</div>
+            <h1 id="sellerPageTitle">Kênh Người Bán</h1>
+            <p id="sellerPageSubtitle" class="seller-topbar-copy">
+              Theo dõi shop, quản lý sản phẩm và tạo sản phẩm mới trong một màn hình gọn hơn.
+            </p>
           </div>
-          <div class="field">
-            <label for="token">Token Seller</label>
-            <input id="token" class="input" placeholder="Bearer token" />
-          </div>
-          <div class="row">
-            <button class="btn" id="saveSettings">Lưu</button>
-            <button class="btn ghost" id="clearSettings">Xóa</button>
-          </div>
-          <div class="note">Token và shop đã chọn được lưu cục bộ.</div>
-        </div>
-      </header>
 
-      <div id="status" class="status" style="display: none"></div>
-
-      <section class="grid cols-2">
-        <div class="card">
-          <div class="section-title">
-            <h2>Shop của tôi</h2>
-            <button class="btn secondary" id="loadShops">Tải</button>
-          </div>
-          <div id="shopsList"></div>
-          <div class="divider"></div>
-          <div class="stack">
-            <div>
-              <strong>Shop đang chọn</strong>
-              <div id="selectedShop" class="chip gray">Chưa chọn</div>
+          <div class="seller-topbar-actions">
+            <div class="field seller-compact-field">
+              <label for="sellerShopSelect">Shop</label>
+              <select class="select" id="sellerShopSelect"></select>
             </div>
-            <button class="btn ghost" id="refreshProducts">Tải sản phẩm</button>
-          </div>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Sản phẩm</h2>
-          </div>
-          <div id="productList"></div>
-        </div>
-      </section>
-
-      <section class="grid cols-2" style="margin-top: 18px">
-        <div class="card">
-          <div class="section-title">
-            <h2>Tạo sản phẩm</h2>
-          </div>
-          <form id="createProductForm">
-            <div class="field">
-              <label>Tên</label>
-              <input class="input" name="name" required />
-            </div>
-            <div class="field">
-              <label>Mô tả</label>
-              <textarea class="textarea" name="description"></textarea>
-            </div>
-            <div class="row">
-              <div class="field" style="flex: 1">
-                <label>Mã danh mục</label>
-                <input class="input" name="category_id" type="number" />
-              </div>
-              <div class="field" style="flex: 1">
-                <label>Trạng thái</label>
-                <select class="select" name="status">
-                  <option value="active">Hoạt động</option>
-                  <option value="inactive">Ẩn</option>
-                </select>
-              </div>
-            </div>
-            <button class="btn" type="submit">Tạo sản phẩm</button>
-          </form>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Cập nhật sản phẩm</h2>
-          </div>
-          <form id="updateProductForm">
-            <div class="field">
-              <label>Mã sản phẩm</label>
-              <input class="input" name="product_id" id="updateProductId" required />
-            </div>
-            <div class="field">
-              <label>Tên</label>
-              <input class="input" name="name" />
-            </div>
-            <div class="field">
-              <label>Mô tả</label>
-              <textarea class="textarea" name="description"></textarea>
-            </div>
-            <div class="row">
-              <div class="field" style="flex: 1">
-                <label>Mã danh mục</label>
-                <input class="input" name="category_id" type="number" />
-              </div>
-              <div class="field" style="flex: 1">
-                <label>Trạng thái</label>
-                <select class="select" name="status">
-                  <option value="">Giữ nguyên</option>
-                  <option value="active">Hoạt động</option>
-                  <option value="inactive">Ẩn</option>
-                </select>
-              </div>
-            </div>
-            <div class="row">
-              <button class="btn secondary" type="submit">Cập nhật</button>
-              <button class="btn danger" type="button" id="deleteProduct">
-                Xóa (Ẩn)
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <section class="grid cols-2" style="margin-top: 18px">
-        <div class="card">
-          <div class="section-title">
-            <h2>Tạo biến thể</h2>
-          </div>
-          <form id="createVariantForm">
-            <div class="field">
-              <label>Mã sản phẩm</label>
-              <input class="input" name="product_id" id="variantProductId" required />
-            </div>
-            <div class="row">
-              <div class="field" style="flex: 1">
-                <label>SKU</label>
-                <input class="input" name="sku" />
-              </div>
-              <div class="field" style="flex: 1">
-                <label>Giá</label>
-                <input class="input" name="price" type="number" step="0.01" required />
-              </div>
-            </div>
-            <div class="row">
-              <div class="field" style="flex: 1">
-                <label>Tồn kho</label>
-                <input class="input" name="stock" type="number" />
-              </div>
-              <div class="field" style="flex: 1">
-                <label>Cân nặng</label>
-                <input class="input" name="weight" type="number" step="0.01" />
-              </div>
-            </div>
-            <button class="btn" type="submit">Tạo biến thể</button>
-          </form>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Cập nhật biến thể</h2>
-          </div>
-          <form id="updateVariantForm">
-            <div class="field">
-              <label>Mã biến thể</label>
-              <input class="input" name="variant_id" id="updateVariantId" required />
-            </div>
-            <div class="row">
-              <div class="field" style="flex: 1">
-                <label>SKU</label>
-                <input class="input" name="sku" />
-              </div>
-              <div class="field" style="flex: 1">
-                <label>Giá</label>
-                <input class="input" name="price" type="number" step="0.01" />
-              </div>
-            </div>
-            <div class="row">
-              <div class="field" style="flex: 1">
-                <label>Tồn kho</label>
-                <input class="input" name="stock" type="number" />
-              </div>
-              <div class="field" style="flex: 1">
-                <label>Cân nặng</label>
-                <input class="input" name="weight" type="number" step="0.01" />
-              </div>
-            </div>
-            <div class="row">
-              <button class="btn secondary" type="submit">Cập nhật biến thể</button>
-              <button class="btn danger" type="button" id="deleteVariant">
-                Xóa biến thể
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <section class="grid cols-2" style="margin-top: 18px">
-        <div class="card">
-          <div class="section-title">
-            <h2>Cập nhật tồn kho</h2>
-          </div>
-          <form id="stockForm">
-            <div class="field">
-              <label>Mã biến thể</label>
-              <input class="input" name="variant_id" id="stockVariantId" required />
-            </div>
-            <div class="field">
-              <label>Tồn kho</label>
-              <input class="input" name="stock" type="number" required />
-            </div>
-            <button class="btn warn" type="submit">Cập nhật tồn</button>
-          </form>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Đơn của shop</h2>
-            <button class="btn secondary" id="loadOrders">Tải</button>
-          </div>
-          <div id="orderItems"></div>
-        </div>
-      </section>
-
-      <section class="grid cols-2" style="margin-top: 18px">
-        <div class="card">
-          <div class="section-title">
-            <h2>Cập nhật trạng thái item</h2>
-          </div>
-          <form id="orderStatusForm">
-            <div class="field">
-              <label>Mã item</label>
-              <input class="input" name="item_id" id="orderItemId" required />
-            </div>
-            <div class="field">
-              <label>Trạng thái mới</label>
-              <select class="select" name="status" required>
-                <option value="confirmed">Đã xác nhận</option>
-                <option value="shipping">Đang giao</option>
-                <option value="delivered">Đã giao</option>
-                <option value="cancelled">Hủy</option>
-              </select>
-            </div>
-            <button class="btn" type="submit">Cập nhật trạng thái</button>
-          </form>
-        </div>
-        <div class="card">
-          <div class="section-title">
-            <h2>Cập nhật vận chuyển</h2>
-          </div>
-          <form id="shipmentForm">
-            <div class="field">
-              <label>Mã item</label>
-              <input class="input" name="item_id" id="shipmentItemId" required />
-            </div>
-            <div class="field">
-              <label>Mã vận đơn</label>
-              <input class="input" name="tracking_code" />
-            </div>
-            <div class="field">
-              <label>Trạng thái vận chuyển</label>
-              <select class="select" name="shipping_status">
-                <option value="waiting_pickup">Chờ lấy hàng</option>
-                <option value="shipping">Đang giao</option>
-                <option value="delivered">Đã giao</option>
-              </select>
-            </div>
-            <button class="btn secondary" type="submit">Cập nhật vận chuyển</button>
-          </form>
-        </div>
-      </section>
-    </div>
-
-    <script>
-      const $ = (selector) => document.querySelector(selector);
-      const statusEl = $("#status");
-      const baseUrlEl = $("#baseUrl");
-      const tokenEl = $("#token");
-      const selectedShopEl = $("#selectedShop");
-
-      const storageKeys = {
-        base: "bambi_seller_base",
-        token: "bambi_seller_token",
-        refresh: "bambi_seller_refresh",
-        shop: "bambi_seller_shop",
-      };
-
-      let refreshPromise = null;
-      let redirectingToLogin = false;
-
-      const escapeHtml = (value) =>
-        String(value || "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;");
-
-      const setStatus = (message, type = "info") => {
-        if (!message) {
-          statusEl.style.display = "none";
-          statusEl.textContent = "";
-          statusEl.className = "status";
-          return;
-        }
-        statusEl.style.display = "block";
-        statusEl.textContent = message;
-        statusEl.className = `status ${type === "error" ? "error" : ""}`;
-      };
-
-      const getSettings = () => {
-        const base = (
-          baseUrlEl.value.trim() ||
-          localStorage.getItem(storageKeys.base) ||
-          localStorage.getItem("bambi_user_base") ||
-          window.location.origin
-        ).replace(/\/$/, "");
-        const token =
-          tokenEl.value.trim() ||
-          localStorage.getItem(storageKeys.token) ||
-          localStorage.getItem("bambi_user_token") ||
-          "";
-        const refresh =
-          localStorage.getItem(storageKeys.refresh) ||
-          localStorage.getItem("bambi_user_refresh") ||
-          "";
-        return { base, token, refresh };
-      };
-
-      const getLoginRedirect = () => {
-        const next = `${window.location.pathname}${window.location.search}`;
-        return `/ui/login.html?next=${encodeURIComponent(next)}`;
-      };
-
-      const clearSession = () => {
-        localStorage.removeItem(storageKeys.base);
-        localStorage.removeItem(storageKeys.token);
-        localStorage.removeItem(storageKeys.refresh);
-        localStorage.removeItem(storageKeys.shop);
-        localStorage.removeItem("bambi_user_base");
-        localStorage.removeItem("bambi_user_token");
-        localStorage.removeItem("bambi_user_refresh");
-      };
-
-      const redirectToLogin = () => {
-        if (redirectingToLogin) return;
-        redirectingToLogin = true;
-        window.location.href = getLoginRedirect();
-      };
-
-      const parsePayload = async (response) => {
-        const text = await response.text();
-        try {
-          return text ? JSON.parse(text) : {};
-        } catch (_error) {
-          return { message: text };
-        }
-      };
-
-      const refreshSession = async () => {
-        if (refreshPromise) {
-          return refreshPromise;
-        }
-
-        const { base, refresh } = getSettings();
-        if (!refresh) {
-          throw new Error("Không có refresh token.");
-        }
-
-        refreshPromise = (async () => {
-          const response = await fetch(`${base}/auth/refresh`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refresh_token: refresh }),
-          });
-
-          const payload = await parsePayload(response);
-          if (!response.ok || !payload.token || !payload.refresh_token) {
-            throw new Error(payload.message || "Không thể làm mới phiên đăng nhập.");
-          }
-
-          localStorage.setItem(storageKeys.base, base);
-          localStorage.setItem(storageKeys.token, payload.token);
-          localStorage.setItem(storageKeys.refresh, payload.refresh_token);
-          localStorage.setItem("bambi_user_base", base);
-          localStorage.setItem("bambi_user_token", payload.token);
-          localStorage.setItem("bambi_user_refresh", payload.refresh_token);
-
-          if (tokenEl) {
-            tokenEl.value = payload.token;
-          }
-
-          return { base, token: payload.token };
-        })();
-
-        try {
-          return await refreshPromise;
-        } finally {
-          refreshPromise = null;
-        }
-      };
-
-      const apiFetch = async (path, options = {}, retryOn401 = true) => {
-        const { base, token } = getSettings();
-        const headers = Object.assign({}, options.headers || {});
-        let body = options.body;
-
-        if (body && typeof body !== "string" && !(body instanceof FormData)) {
-          headers["Content-Type"] = "application/json";
-          body = JSON.stringify(body);
-        }
-
-        if (token) headers.Authorization = `Bearer ${token}`;
-
-        const response = await fetch(base + path, {
-          ...options,
-          headers,
-          body,
-        });
-
-        const payload = await parsePayload(response);
-
-        if (response.status === 401 && retryOn401 && token) {
-          try {
-            await refreshSession();
-            return apiFetch(path, options, false);
-          } catch (_error) {
-            clearSession();
-            setStatus("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", "error");
-            redirectToLogin();
-            throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-          }
-        }
-
-        if (!response.ok) {
-          throw new Error(payload.message || "Yêu cầu thất bại");
-        }
-
-        return payload;
-      };
-
-      let selectedShopId = null;
-
-      const setSelectedShop = (shopId) => {
-        selectedShopId = shopId;
-        if (shopId) {
-          selectedShopEl.textContent = shopId;
-          selectedShopEl.className = "chip";
-          localStorage.setItem(storageKeys.shop, shopId);
-        } else {
-          selectedShopEl.textContent = "Chưa chọn";
-          selectedShopEl.className = "chip gray";
-          localStorage.removeItem(storageKeys.shop);
-        }
-      };
-
-      const loadShops = async () => {
-        setStatus("");
-        const payload = await apiFetch("/shops/me");
-        const data = payload.shops?.data || [];
-        const container = $("#shopsList");
-        if (!data.length) {
-          container.innerHTML = "<p class='muted'>Chưa có shop.</p>";
-          return;
-        }
-        container.innerHTML = `
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Shop</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (shop) => `
-                <tr>
-                  <td>
-                    <strong>${escapeHtml(shop.name)}</strong><br />
-                    <span class="muted">${escapeHtml(shop.id)}</span>
-                  </td>
-                  <td><span class="chip gray">${escapeHtml(shop.status)}</span></td>
-                  <td>
-                    <button class="btn" data-action="select-shop" data-id="${shop.id}">
-                      Dùng
-                    </button>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
-      };
-
-      const loadProducts = async () => {
-        if (!selectedShopId) {
-          setStatus("Vui lòng chọn shop trước.", "error");
-          return;
-        }
-        setStatus("");
-        const payload = await apiFetch(
-          `/products?shop_id=${selectedShopId}&status=active&limit=50`
-        );
-        const data = payload.data || [];
-        const container = $("#productList");
-        if (!data.length) {
-          container.innerHTML = "<p class='muted'>Chưa có sản phẩm.</p>";
-          return;
-        }
-        container.innerHTML = data
-          .map(
-            (product) => `
-          <div class="card" style="margin-bottom: 12px">
-            <div class="section-title">
+            <button class="btn ghost" id="reloadSellerData" type="button">Tải lại</button>
+            <div class="seller-user-pill">
+              <span class="seller-user-avatar" id="sellerUserAvatar">B</span>
               <div>
-                <strong>${escapeHtml(product.name)}</strong>
-                <div class="muted">${escapeHtml(product.id)}</div>
-              </div>
-              <div class="row">
-                <button class="btn ghost" data-action="select-product" data-id="${product.id}">
-                  Chọn
-                </button>
+                <strong id="sellerUserName">Đang tải tài khoản...</strong>
+                <span id="sellerUserRole">Seller Studio</span>
               </div>
             </div>
-            <div class="pillbar">
-              <span class="chip">${escapeHtml(product.status)}</span>
-              <span class="chip blue">Biến thể: ${product.product_variants.length}</span>
+          </div>
+        </header>
+
+        <div id="sellerStatus" class="status" style="display: none"></div>
+
+        <section id="sellerEmptyState" class="seller-empty-state hidden">
+          <span class="chip orange">Chưa có shop đã duyệt</span>
+          <h2>Bạn chưa có shop đủ điều kiện để bán hàng</h2>
+          <p>
+            Hoàn tất hồ sơ seller và chờ admin duyệt shop. Sau khi được duyệt,
+            Seller Studio sẽ mở thẳng để bạn thêm sản phẩm và bắt đầu bán.
+          </p>
+          <div class="stack-actions">
+            <a class="btn" href="/ui/shop-register.html">Đi tới đăng ký shop</a>
+            <a class="btn ghost" href="/ui/">Quay lại trang chủ</a>
+          </div>
+        </section>
+
+        <section class="seller-view" data-view="dashboard">
+          <article class="seller-hero-panel">
+            <div>
+              <span class="seller-eyebrow">Seller cockpit</span>
+              <h2>Bảng điều phối bán hàng cho shop đã duyệt</h2>
+              <p>
+                Màn này gom nhanh tình trạng sản phẩm, đơn cần xử lý và lối vào form thêm sản phẩm
+                mới theo kiểu marketplace.
+              </p>
+              <div class="stack-actions">
+                <button class="seller-btn primary" type="button" data-view-target="products">Xem sản phẩm</button>
+                <button class="seller-btn subtle" type="button" data-view-target="new-product">Thêm 1 sản phẩm mới</button>
+              </div>
             </div>
-            <div class="divider"></div>
-            <div class="stack">
-              ${product.product_variants
-                .map(
-                  (variant) => `
-                <div class="metric">
-                  <div>
-                    <div><strong>${escapeHtml(variant.sku || "không-sku")}</strong></div>
-                    <div class="muted">${escapeHtml(variant.id)}</div>
+            <div id="dashboardHeroStats" class="seller-hero-stats"></div>
+          </article>
+
+          <section id="dashboardSummaryCards" class="seller-stat-grid"></section>
+
+          <section class="seller-dashboard-grid">
+            <article class="seller-panel">
+              <div class="seller-panel-head">
+                <div>
+                  <h2>Hiệu quả bán hàng</h2>
+                  <p class="muted">Tổng hợp từ sản phẩm đang có và đơn hàng seller đang xử lý.</p>
+                </div>
+              </div>
+              <div id="dashboardPerformance" class="seller-metric-grid"></div>
+            </article>
+
+            <aside class="seller-panel">
+              <div class="seller-panel-head">
+                <div>
+                  <h2>Gợi ý kinh doanh</h2>
+                  <p class="muted">Các việc nên làm tiếp theo để đưa shop vào nhịp bán hàng.</p>
+                </div>
+              </div>
+              <div id="dashboardSuggestions" class="seller-suggestion-stack"></div>
+            </aside>
+
+            <article class="seller-panel seller-wide-panel">
+              <div class="seller-panel-head">
+                <div>
+                  <h2>Đơn gần đây</h2>
+                  <p class="muted">Xử lý nhanh các item cần xác nhận hoặc bàn giao.</p>
+                </div>
+              </div>
+              <div id="recentOrdersTable"></div>
+            </article>
+          </section>
+        </section>
+
+        <section class="seller-view hidden" data-view="products">
+          <article class="seller-panel">
+            <div class="seller-panel-head seller-panel-head-wrap">
+              <div>
+                <h2>Sản phẩm</h2>
+                <p class="muted">Lọc theo trạng thái, ngành hàng hoặc tên sản phẩm để tìm và thao tác nhanh.</p>
+              </div>
+              <div class="stack-actions">
+                <button class="seller-btn ghost" id="reloadProductsView" type="button">Tải lại</button>
+                <button class="seller-btn primary" type="button" data-view-target="new-product">+ Thêm 1 sản phẩm mới</button>
+              </div>
+            </div>
+
+            <div id="productStatusTabs" class="seller-tab-row"></div>
+
+            <div class="seller-toolbar">
+              <input
+                id="productSearch"
+                class="input"
+                placeholder="Tìm tên sản phẩm, mã sản phẩm hoặc SKU"
+              />
+              <select id="productCategoryFilter" class="select"></select>
+              <select id="productSort" class="select">
+                <option value="recent">Mới cập nhật</option>
+                <option value="price_desc">Giá cao trước</option>
+                <option value="stock_desc">Tồn kho nhiều trước</option>
+                <option value="name_asc">Tên A-Z</option>
+              </select>
+              <button class="seller-btn subtle" id="clearProductFilters" type="button">Đặt lại</button>
+            </div>
+
+            <div class="seller-toolbar-meta">
+              <span id="productsSummary">0 sản phẩm</span>
+              <span class="chip gray">Danh mục lá được đồng bộ từ admin taxonomy</span>
+            </div>
+
+            <div id="productsTable"></div>
+          </article>
+        </section>
+
+        <section class="seller-view hidden" data-view="new-product">
+          <div class="seller-add-layout">
+            <aside class="seller-panel seller-checklist-panel">
+              <div class="seller-panel-head">
+                <div>
+                  <h2>Gợi ý điền thông tin</h2>
+                  <p class="muted">Checklist kiểu marketplace để bạn biết form đã đủ độ rõ hay chưa.</p>
+                </div>
+              </div>
+              <div id="draftChecklist" class="seller-checklist"></div>
+            </aside>
+
+            <div class="seller-add-main">
+              <div id="sellerFormTabs" class="seller-form-tabs">
+                <button type="button" class="seller-form-tab active" data-scroll-target="productBasicSection">Thông tin cơ bản</button>
+                <button type="button" class="seller-form-tab" data-scroll-target="productDescriptionSection">Mô tả</button>
+                <button type="button" class="seller-form-tab" data-scroll-target="productSalesSection">Thông tin bán hàng</button>
+                <button type="button" class="seller-form-tab" data-scroll-target="productShippingSection">Vận chuyển</button>
+                <button type="button" class="seller-form-tab" data-scroll-target="productOtherSection">Thông tin khác</button>
+              </div>
+
+              <form id="newProductForm" class="seller-add-form">
+                <section id="productBasicSection" class="seller-panel seller-form-card">
+                  <div class="seller-panel-head">
+                    <div>
+                      <h2>Thông tin cơ bản</h2>
+                      <p class="muted">Bám layout của sàn: hình ảnh, tên, ngành hàng và mã định danh sản phẩm.</p>
+                    </div>
                   </div>
-                  <div>
-                    <span class="chip orange">Tồn ${escapeHtml(variant.stock)}</span>
-                    <span class="chip blue">${escapeHtml(variant.price)}</span>
-                    <button class="btn ghost" data-action="select-variant" data-id="${variant.id}">
-                      Dùng
-                    </button>
+
+                  <div class="field">
+                    <label>Hình ảnh sản phẩm</label>
+                    <div class="seller-upload-group">
+                      <button id="triggerGalleryUpload" class="seller-upload-slot" type="button">
+                        <strong>Thêm hình ảnh</strong>
+                        <span>0/9 ảnh · sẽ được tải lên và lưu cùng sản phẩm</span>
+                      </button>
+                      <input id="galleryInput" type="file" accept="image/*" multiple hidden />
+                      <div id="galleryPreview" class="seller-media-grid"></div>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label>Ảnh bìa</label>
+                    <div class="seller-upload-row">
+                      <button id="triggerCoverUpload" class="seller-upload-slot compact" type="button">
+                        <strong>Thêm ảnh bìa</strong>
+                        <span>Ảnh bìa sẽ được lưu vào dữ liệu sản phẩm</span>
+                      </button>
+                      <input id="coverInput" type="file" accept="image/*" hidden />
+                      <div id="coverPreview" class="seller-single-media"></div>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label>Video sản phẩm</label>
+                    <div class="seller-upload-row">
+                      <button id="triggerVideoUpload" class="seller-upload-slot compact" type="button">
+                        <strong>Thêm video</strong>
+                        <span>Video sẽ được tải lên và gắn vào sản phẩm</span>
+                      </button>
+                      <input id="videoInput" type="file" accept="video/*" hidden />
+                      <div id="videoPreview" class="seller-video-pill muted">Chưa có video</div>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="productNameInput">Tên sản phẩm</label>
+                    <input
+                      id="productNameInput"
+                      class="input"
+                      maxlength="120"
+                      placeholder="Tên sản phẩm + thương hiệu + model + thông số kỹ thuật"
+                    />
+                    <div class="seller-inline-meta">
+                      <span>Gợi ý từ 25 đến 120 ký tự để tiêu đề dễ hiểu hơn.</span>
+                      <strong id="productNameCount">0/120</strong>
+                    </div>
+                  </div>
+
+                  <div class="seller-two-column">
+                    <div class="field">
+                      <label for="productCategoryInput">Ngành hàng</label>
+                      <select id="productCategoryInput" class="select"></select>
+                    </div>
+                    <div class="field">
+                      <label for="productGtinInput">GTIN</label>
+                      <input id="productGtinInput" class="input" placeholder="Nhập mã vạch hoặc để trống" />
+                    </div>
+                  </div>
+                </section>
+
+                <section id="productDescriptionSection" class="seller-panel seller-form-card">
+                  <div class="seller-panel-head">
+                    <div>
+                      <h2>Mô tả</h2>
+                      <p class="muted">Nội dung mô tả hiện được gửi lên API và dùng cho preview sản phẩm bên phải.</p>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="productDescriptionInput">Mô tả sản phẩm</label>
+                    <textarea
+                      id="productDescriptionInput"
+                      class="textarea seller-description-box"
+                      placeholder="Nhập mô tả sản phẩm hoặc các điểm nổi bật, chất liệu, kích thước, cách sử dụng..."
+                    ></textarea>
+                  </div>
+                </section>
+
+                <section id="productSalesSection" class="seller-panel seller-form-card">
+                  <div class="seller-panel-head">
+                    <div>
+                      <h2>Thông tin bán hàng</h2>
+                      <p class="muted">Biến thể đầu tiên sẽ được tạo cùng sản phẩm để có giá và tồn kho ngay.</p>
+                    </div>
+                  </div>
+
+                  <div class="seller-tip-card">
+                    <strong>Phân loại hàng</strong>
+                    <p>
+                      API hiện tại hỗ trợ tạo biến thể đầu tiên ngay khi lưu. Sau khi sản phẩm đã tạo,
+                      bạn có thể bổ sung thêm biến thể khác trong các bước quản lý tiếp theo.
+                    </p>
+                  </div>
+
+                  <div class="seller-two-column">
+                    <div class="field">
+                      <label for="productPriceInput">Giá</label>
+                      <input id="productPriceInput" class="input" type="number" min="0" step="1000" placeholder="Nhập giá bán" />
+                    </div>
+                    <div class="field">
+                      <label for="productStockInput">Kho hàng</label>
+                      <input id="productStockInput" class="input" type="number" min="0" step="1" value="0" />
+                    </div>
+                  </div>
+
+                  <div class="seller-two-column">
+                    <div class="field">
+                      <label for="productSkuInput">SKU sản phẩm</label>
+                      <input id="productSkuInput" class="input" placeholder="Ví dụ: BAMBI-TEE-001" />
+                    </div>
+                    <div class="field">
+                      <label>Mua nhiều giảm giá</label>
+                      <div class="seller-tip-card muted">
+                        Màn này đang ưu tiên luồng tạo sản phẩm gốc. Khoảng giá khuyến mãi có thể thêm sau.
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section id="productShippingSection" class="seller-panel seller-form-card">
+                  <div class="seller-panel-head">
+                    <div>
+                      <h2>Vận chuyển</h2>
+                      <p class="muted">Phần này mô phỏng cấu trúc seller center: cân nặng, kích thước và dịch vụ giao hàng.</p>
+                    </div>
+                  </div>
+
+                  <div class="seller-three-column">
+                    <div class="field">
+                      <label for="productWeightInput">Cân nặng (g)</label>
+                      <input id="productWeightInput" class="input" type="number" min="0" step="1" placeholder="Ví dụ: 350" />
+                    </div>
+                    <div class="field">
+                      <label for="productLengthInput">Dài (cm)</label>
+                      <input id="productLengthInput" class="input" type="number" min="0" step="1" placeholder="30" />
+                    </div>
+                    <div class="field">
+                      <label for="productWidthInput">Rộng (cm)</label>
+                      <input id="productWidthInput" class="input" type="number" min="0" step="1" placeholder="20" />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="productHeightInput">Cao (cm)</label>
+                    <input id="productHeightInput" class="input" type="number" min="0" step="1" placeholder="10" />
+                  </div>
+
+                  <div class="seller-shipping-card">
+                    <div class="seller-shipping-head">
+                      <strong>Phí vận chuyển</strong>
+                      <span class="muted">Bật các dịch vụ muốn xuất hiện trong preview.</span>
+                    </div>
+
+                    <label class="seller-switch-row">
+                      <span>
+                        <strong>Tự nhận hàng</strong>
+                        <small>Phù hợp nếu shop tự xử lý vận chuyển nội bộ.</small>
+                      </span>
+                      <input id="shippingSelfPickup" type="checkbox" />
+                      <span class="seller-switch"></span>
+                    </label>
+
+                    <label class="seller-switch-row">
+                      <span>
+                        <strong>Trong ngày</strong>
+                        <small>Dành cho các đơn cần giao nhanh trong khu vực gần.</small>
+                      </span>
+                      <input id="shippingSameDay" type="checkbox" />
+                      <span class="seller-switch"></span>
+                    </label>
+
+                    <label class="seller-switch-row">
+                      <span>
+                        <strong>Nhanh</strong>
+                        <small>Luồng vận chuyển tiêu chuẩn cho đa số đơn hàng.</small>
+                      </span>
+                      <input id="shippingFast" type="checkbox" checked />
+                      <span class="seller-switch"></span>
+                    </label>
+
+                    <label class="seller-switch-row">
+                      <span>
+                        <strong>Hỏa tốc</strong>
+                        <small>Chỉ nên bật khi sản phẩm có thể giao nội thành tức thời.</small>
+                      </span>
+                      <input id="shippingExpress" type="checkbox" />
+                      <span class="seller-switch"></span>
+                    </label>
+                  </div>
+
+                  <div class="field">
+                    <label>Hàng đặt trước</label>
+                    <div class="seller-radio-row">
+                      <label><input type="radio" name="productPreorder" value="none" checked /> Không</label>
+                      <label><input type="radio" name="productPreorder" value="2days" /> Có, xử lý trong 2 ngày</label>
+                    </div>
+                  </div>
+                </section>
+
+                <section id="productOtherSection" class="seller-panel seller-form-card">
+                  <div class="seller-panel-head">
+                    <div>
+                      <h2>Thông tin khác</h2>
+                      <p class="muted">Các trường này được lưu cùng sản phẩm để dùng lại ở seller và storefront.</p>
+                    </div>
+                  </div>
+
+                  <div class="seller-two-column">
+                    <div class="field">
+                      <label for="productConditionInput">Tình trạng</label>
+                      <select id="productConditionInput" class="select">
+                        <option value="new">Mới</option>
+                        <option value="like_new">Gần như mới</option>
+                        <option value="used">Đã qua sử dụng</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Bản nháp hiện tại</label>
+                      <div class="seller-tip-card muted">
+                        Ảnh, video, GTIN, kích thước và tình trạng giờ đã được lưu vào dữ liệu sản phẩm.
+                        Bạn có thể sao chép hoặc dùng lại các thông tin này ở các lần tạo listing tiếp theo.
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="seller-submit-bar">
+                  <button id="cancelProductDraft" class="seller-btn ghost" type="button">Hủy</button>
+                  <button id="resetProductDraft" class="seller-btn subtle" type="button">Làm lại form</button>
+                  <button id="saveProductHidden" class="seller-btn ghost" type="button">Lưu & Ẩn</button>
+                  <button id="saveProductVisible" class="seller-btn primary" type="button">Lưu & Hiển thị</button>
+                </div>
+              </form>
+            </div>
+
+            <aside class="seller-panel seller-preview-panel">
+              <div class="seller-panel-head">
+                <div>
+                  <h2>Xem trước</h2>
+                  <p class="muted">Ảnh và video bên dưới phản ánh dữ liệu sẽ được lưu cùng sản phẩm.</p>
+                </div>
+              </div>
+
+              <div class="seller-preview-phone">
+                <div class="seller-preview-image" id="previewImageWrap">
+                  <img id="previewImage" alt="Preview sản phẩm" />
+                  <div id="previewImagePlaceholder" class="seller-preview-placeholder">Ảnh sản phẩm sẽ hiện ở đây</div>
+                </div>
+                <div class="seller-preview-copy">
+                  <div class="seller-preview-category" id="previewCategory">Chưa chọn ngành hàng</div>
+                  <h3 id="previewName">Tên sản phẩm sẽ hiển thị tại đây</h3>
+                  <strong id="previewPrice">đ0</strong>
+                  <div class="seller-preview-meta">
+                    <span id="previewShopName">Shop</span>
+                    <span id="previewStock">Kho 0</span>
+                  </div>
+                  <p id="previewDescription">Mô tả ngắn của sản phẩm sẽ được cắt gọn để xem trước.</p>
+                  <div class="seller-preview-badges" id="previewBadges"></div>
+                  <div class="seller-preview-actions">
+                    <button type="button">Chat</button>
+                    <button type="button">Thêm vào giỏ</button>
+                    <button type="button" class="primary">Mua ngay</button>
                   </div>
                 </div>
-              `
-                )
-                .join("")}
-            </div>
+              </div>
+            </aside>
           </div>
-        `
-          )
-          .join("");
-      };
+        </section>
+      </main>
+    </div>
 
-      const loadOrders = async () => {
-        setStatus("");
-        const payload = await apiFetch("/orders/seller/items?limit=20");
-        const data = payload.items?.data || payload.data || [];
-        const container = $("#orderItems");
-        if (!data.length) {
-          container.innerHTML = "<p class='muted'>Chưa có item đơn.</p>";
-          return;
-        }
-        container.innerHTML = `
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Mã item</th>
-                <th>Sản phẩm</th>
-                <th>Trạng thái</th>
-                <th>Đơn</th>
-                <th>Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (item) => `
-                <tr>
-                  <td>${escapeHtml(item.id)}</td>
-                  <td>${escapeHtml(item.product_variants?.products?.name || "-")}</td>
-                  <td><span class="chip gray">${escapeHtml(item.status)}</span></td>
-                  <td>${escapeHtml(item.orders?.id || "-")}</td>
-                  <td>
-                    <button class="btn ghost" data-action="use-item" data-id="${item.id}">
-                      Dùng
-                    </button>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
-      };
-
-      $("#shopsList").addEventListener("click", (event) => {
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "select-shop") {
-          setSelectedShop(button.dataset.id);
-          loadProducts().catch((err) => setStatus(err.message, "error"));
-        }
-      });
-
-      $("#productList").addEventListener("click", (event) => {
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "select-product") {
-          $("#updateProductId").value = button.dataset.id;
-          $("#variantProductId").value = button.dataset.id;
-        }
-        if (button.dataset.action === "select-variant") {
-          $("#updateVariantId").value = button.dataset.id;
-          $("#stockVariantId").value = button.dataset.id;
-        }
-      });
-
-      $("#orderItems").addEventListener("click", (event) => {
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "use-item") {
-          $("#orderItemId").value = button.dataset.id;
-          $("#shipmentItemId").value = button.dataset.id;
-        }
-      });
-
-      $("#saveSettings").addEventListener("click", () => {
-        const { base, token } = getSettings();
-        localStorage.setItem(storageKeys.base, base);
-        localStorage.setItem(storageKeys.token, token);
-        setStatus("Đã lưu cài đặt.");
-      });
-
-      $("#clearSettings").addEventListener("click", () => {
-        clearSession();
-        baseUrlEl.value = "http://localhost:3000";
-        tokenEl.value = "";
-        setSelectedShop(null);
-        setStatus("Đã xóa cài đặt.");
-      });
-
-      $("#loadShops").addEventListener("click", () =>
-        loadShops().catch((err) => setStatus(err.message, "error"))
-      );
-
-      $("#refreshProducts").addEventListener("click", () =>
-        loadProducts().catch((err) => setStatus(err.message, "error"))
-      );
-
-      $("#loadOrders").addEventListener("click", () =>
-        loadOrders().catch((err) => setStatus(err.message, "error"))
-      );
-
-      $("#createProductForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const body = {
-          name: form.name.value.trim(),
-          description: form.description.value.trim() || undefined,
-          category_id: form.category_id.value
-            ? Number(form.category_id.value)
-            : undefined,
-          status: form.status.value,
-          shop_id: selectedShopId || undefined,
-        };
-        await apiFetch("/products", {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
-        form.reset();
-        setStatus("Đã tạo sản phẩm.");
-        loadProducts();
-      });
-
-      $("#updateProductForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const productId = form.product_id.value.trim();
-        const body = {};
-        if (form.name.value.trim()) body.name = form.name.value.trim();
-        if (form.description.value.trim())
-          body.description = form.description.value.trim();
-        if (form.category_id.value)
-          body.category_id = Number(form.category_id.value);
-        if (form.status.value) body.status = form.status.value;
-        await apiFetch(`/products/${productId}`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
-        setStatus("Đã cập nhật sản phẩm.");
-        loadProducts();
-      });
-
-      $("#deleteProduct").addEventListener("click", async () => {
-        const productId = $("#updateProductId").value.trim();
-        if (!productId) {
-          setStatus("Cần mã sản phẩm.", "error");
-          return;
-        }
-        await apiFetch(`/products/${productId}`, { method: "DELETE" });
-        setStatus("Đã ẩn sản phẩm.");
-        loadProducts();
-      });
-
-      $("#createVariantForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const productId = form.product_id.value.trim();
-        const body = {
-          sku: form.sku.value.trim() || undefined,
-          price: Number(form.price.value),
-          stock: form.stock.value ? Number(form.stock.value) : undefined,
-          weight: form.weight.value ? Number(form.weight.value) : undefined,
-        };
-        await apiFetch(`/products/${productId}/variants`, {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
-        form.reset();
-        setStatus("Đã tạo biến thể.");
-        loadProducts();
-      });
-
-      $("#updateVariantForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const variantId = form.variant_id.value.trim();
-        const body = {};
-        if (form.sku.value.trim()) body.sku = form.sku.value.trim();
-        if (form.price.value) body.price = Number(form.price.value);
-        if (form.stock.value) body.stock = Number(form.stock.value);
-        if (form.weight.value) body.weight = Number(form.weight.value);
-        await apiFetch(`/products/variants/${variantId}`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
-        setStatus("Đã cập nhật biến thể.");
-        loadProducts();
-      });
-
-      $("#deleteVariant").addEventListener("click", async () => {
-        const variantId = $("#updateVariantId").value.trim();
-        if (!variantId) {
-          setStatus("Cần mã biến thể.", "error");
-          return;
-        }
-        await apiFetch(`/products/variants/${variantId}`, { method: "DELETE" });
-        setStatus("Đã xóa biến thể.");
-        loadProducts();
-      });
-
-      $("#stockForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const variantId = form.variant_id.value.trim();
-        const body = { stock: Number(form.stock.value) };
-        await apiFetch(`/products/variants/${variantId}/stock`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
-        setStatus("Đã cập nhật tồn kho.");
-        loadProducts();
-      });
-
-      $("#orderStatusForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const itemId = form.item_id.value.trim();
-        const body = { status: form.status.value };
-        await apiFetch(`/orders/items/${itemId}/status`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
-        setStatus("Đã cập nhật item.");
-        loadOrders();
-      });
-
-      $("#shipmentForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const itemId = form.item_id.value.trim();
-        const body = {
-          tracking_code: form.tracking_code.value.trim() || undefined,
-          shipping_status: form.shipping_status.value || undefined,
-        };
-        await apiFetch(`/shipments/items/${itemId}`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
-        setStatus("Đã cập nhật vận chuyển.");
-        loadOrders();
-      });
-
-      const init = () => {
-        const savedBase =
-          localStorage.getItem(storageKeys.base) ||
-          localStorage.getItem("bambi_user_base");
-        const savedToken =
-          localStorage.getItem(storageKeys.token) ||
-          localStorage.getItem("bambi_user_token");
-        const savedShop = localStorage.getItem(storageKeys.shop);
-        if (savedBase) baseUrlEl.value = savedBase;
-        if (savedToken) tokenEl.value = savedToken;
-        if (savedShop) setSelectedShop(savedShop);
-      };
-
-      init();
-    </script>
+    <script src="/ui/custom-select.js"></script>
+    <script src="/ui/seller/seller.js"></script>
   </body>
 </html>
-
