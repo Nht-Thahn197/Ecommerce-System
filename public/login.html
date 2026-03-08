@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Đăng nhập | Bambi</title>
+    <title>ÄÄƒng nháº­p | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="./shared.css" />
     <style>
@@ -104,8 +104,8 @@
   <body>
     <div class="login-shell">
       <header class="brand" style="margin-bottom: 18px">
-        <h1>Đăng nhập</h1>
-        <p>Truy cập nhanh vào mua sắm, đơn hàng và tài khoản.</p>
+        <h1>ÄÄƒng nháº­p</h1>
+        <p>Truy cáº­p nhanh vÃ o mua sáº¯m, Ä‘Æ¡n hÃ ng vÃ  tÃ i khoáº£n.</p>
       </header>
 
       <div id="status" class="status" style="display: none"></div>
@@ -114,30 +114,30 @@
         <div class="brand-panel">
           <div>
             <h2 class="brand-title">Bambi Member</h2>
-            <p class="brand-sub">Tích điểm, theo dõi đơn và ưu đãi riêng cho bạn.</p>
+            <p class="brand-sub">TÃ­ch Ä‘iá»ƒm, theo dÃµi Ä‘Æ¡n vÃ  Æ°u Ä‘Ã£i riÃªng cho báº¡n.</p>
           </div>
           <div class="badge-row">
-            <span class="badge">Freeship 0đ</span>
-            <span class="badge">Ưu đãi mỗi ngày</span>
-            <span class="badge">Hỗ trợ 24/7</span>
+            <span class="badge">Freeship 0Ä‘</span>
+            <span class="badge">Æ¯u Ä‘Ã£i má»—i ngÃ y</span>
+            <span class="badge">Há»— trá»£ 24/7</span>
           </div>
         </div>
         <div class="form-panel">
-          <h2>Đăng nhập tài khoản</h2>
-          <p class="hint">Dùng email hoặc số điện thoại đã đăng ký.</p>
+          <h2>ÄÄƒng nháº­p tÃ i khoáº£n</h2>
+          <p class="hint">DÃ¹ng email hoáº·c sá»‘ Ä‘iá»‡n thoáº¡i Ä‘Ã£ Ä‘Äƒng kÃ½.</p>
           <form id="loginForm">
             <div class="field">
-              <label>Email hoặc số điện thoại</label>
+              <label>Email hoáº·c sá»‘ Ä‘iá»‡n thoáº¡i</label>
               <input class="input" name="identifier" required />
             </div>
             <div class="field">
-              <label>Mật khẩu</label>
+              <label>Máº­t kháº©u</label>
               <input class="input" name="password" type="password" required />
             </div>
-            <button class="btn" type="submit">Đăng nhập</button>
+            <button class="btn" type="submit">ÄÄƒng nháº­p</button>
           </form>
           <p class="note">
-            Chưa có tài khoản? <a class="link" href="/ui/register.html">Đăng ký ngay</a>
+            ChÆ°a cÃ³ tÃ i khoáº£n? <a class="link" href="/ui/register.html">ÄÄƒng kÃ½ ngay</a>
           </p>
         </div>
       </section>
@@ -177,7 +177,7 @@
         } catch (error) {
           payload = { message: text };
         }
-        if (!response.ok) throw new Error(payload.message || "Đăng nhập thất bại");
+        if (!response.ok) throw new Error(payload.message || "ÄÄƒng nháº­p tháº¥t báº¡i");
         return payload;
       };
 
@@ -194,9 +194,11 @@
           localStorage.setItem(storageKeys.base, window.location.origin);
           localStorage.setItem(storageKeys.token, payload.token);
           localStorage.setItem(storageKeys.refresh, payload.refresh_token);
-          setStatus("Đăng nhập thành công. Đang chuyển về trang chủ...");
+          setStatus("ÄÄƒng nháº­p thÃ nh cÃ´ng. Äang chuyá»ƒn vá» trang chá»§...");
+          const next = new URLSearchParams(window.location.search).get("next");
+          const safeNext = next && next.startsWith("/ui/") ? next : "/ui/";
           setTimeout(() => {
-            window.location.href = "/ui/";
+            window.location.href = safeNext;
           }, 800);
         } catch (error) {
           setStatus(error.message, "error");
@@ -205,3 +207,4 @@
     </script>
   </body>
 </html>
+

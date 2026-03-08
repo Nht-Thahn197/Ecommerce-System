@@ -126,12 +126,17 @@ model shipments {
 model shop_addresses {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shop_id    String?   @db.Uuid
+  address_type String? @default("pickup") @db.VarChar(30)
+  contact_name String? @db.VarChar(255)
+  contact_phone String? @db.VarChar(20)
   province   String?   @db.VarChar(100)
   district   String?   @db.VarChar(100)
   ward       String?   @db.VarChar(100)
   detail     String?
   created_at DateTime? @default(now()) @db.Timestamp(6)
   shops      shops?    @relation(fields: [shop_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([shop_id, address_type])
 }
 
 model shop_payment_accounts {
@@ -164,6 +169,9 @@ model shops {
   owner_id              String?                 @db.Uuid
   name                  String                  @db.VarChar(255)
   description           String?
+  contact_email         String?                 @db.VarChar(255)
+  contact_phone         String?                 @db.VarChar(20)
+  onboarding_data       Json?
   status                String?                 @default("pending") @db.VarChar(20)
   approved_by           String?                 @db.Uuid
   rejected_reason       String?                 @db.VarChar(255)

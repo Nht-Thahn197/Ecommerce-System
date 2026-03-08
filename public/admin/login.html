@@ -201,7 +201,10 @@
           localStorage.setItem(storageKeys.base, window.location.origin);
           localStorage.setItem(storageKeys.token, payload.token);
           localStorage.setItem(storageKeys.refresh, payload.refresh_token);
-          window.location.href = "/ui/admin/";
+          const next = new URLSearchParams(window.location.search).get("next");
+          const safeNext =
+            next && next.startsWith("/ui/admin/") ? next : "/ui/admin/";
+          window.location.href = safeNext;
         } catch (error) {
           setStatus(error.message, "error");
         }

@@ -40,7 +40,7 @@
               <th>Shop</th>
               <th>Chủ shop</th>
               <th>Trạng thái</th>
-              <th>Danh mục</th>
+              <th>Liên hệ</th>
               <th>Tạo lúc</th>
               <th>Hành động</th>
             </tr>
@@ -56,12 +56,17 @@
                     </td>
                     <td>
                       ${Admin.escapeHtml(shop.users?.full_name || "-")}<br />
-                      <span class="muted">${Admin.escapeHtml(shop.users?.email || "-")}</span>
+                      <span class="muted">${Admin.escapeHtml(shop.users?.email || "-")}</span><br />
+                      <span class="muted">${Admin.escapeHtml(shop.users?.phone || "-")}</span>
                     </td>
                     <td><span class="chip gray">${Admin.escapeHtml(shop.status || "pending")}</span></td>
-                    <td>${Admin.escapeHtml(shop.category || "Chưa khai báo")}</td>
+                    <td>
+                      ${Admin.escapeHtml(shop.contact_email || shop.users?.email || "-")}<br />
+                      <span class="muted">${Admin.escapeHtml(shop.contact_phone || shop.users?.phone || "-")}</span>
+                    </td>
                     <td>${Admin.escapeHtml(Admin.formatDateTime(shop.created_at))}</td>
                     <td class="actions">
+                      <a class="btn ghost" href="/ui/admin/shop-detail.html?id=${Admin.escapeHtml(shop.id)}">Chi tiết</a>
                       <button class="btn" data-action="approve-shop" data-id="${Admin.escapeHtml(shop.id)}">Duyệt</button>
                       <button class="btn danger" data-action="reject-shop" data-id="${Admin.escapeHtml(shop.id)}">Từ chối</button>
                     </td>
@@ -82,9 +87,11 @@
         shop.name,
         shop.id,
         shop.status,
-        shop.category,
+        shop.contact_email,
+        shop.contact_phone,
         shop.users?.full_name,
         shop.users?.email,
+        shop.users?.phone,
       ]
         .join(" ")
         .toLowerCase();

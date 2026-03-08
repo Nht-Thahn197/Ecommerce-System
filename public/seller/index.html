@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -285,8 +285,12 @@
       const storageKeys = {
         base: "bambi_seller_base",
         token: "bambi_seller_token",
+        refresh: "bambi_seller_refresh",
         shop: "bambi_seller_shop",
       };
+
+      let refreshPromise = null;
+      let redirectingToLogin = false;
 
       const escapeHtml = (value) =>
         String(value || "")
@@ -307,32 +311,133 @@
       };
 
       const getSettings = () => {
-        const base = baseUrlEl.value.trim().replace(/\/$/, "");
-        const token = tokenEl.value.trim();
-        return { base, token };
+        const base = (
+          baseUrlEl.value.trim() ||
+          localStorage.getItem(storageKeys.base) ||
+          localStorage.getItem("bambi_user_base") ||
+          window.location.origin
+        ).replace(/\/$/, "");
+        const token =
+          tokenEl.value.trim() ||
+          localStorage.getItem(storageKeys.token) ||
+          localStorage.getItem("bambi_user_token") ||
+          "";
+        const refresh =
+          localStorage.getItem(storageKeys.refresh) ||
+          localStorage.getItem("bambi_user_refresh") ||
+          "";
+        return { base, token, refresh };
       };
 
-      const apiFetch = async (path, options = {}) => {
+      const getLoginRedirect = () => {
+        const next = `${window.location.pathname}${window.location.search}`;
+        return `/ui/login.html?next=${encodeURIComponent(next)}`;
+      };
+
+      const clearSession = () => {
+        localStorage.removeItem(storageKeys.base);
+        localStorage.removeItem(storageKeys.token);
+        localStorage.removeItem(storageKeys.refresh);
+        localStorage.removeItem(storageKeys.shop);
+        localStorage.removeItem("bambi_user_base");
+        localStorage.removeItem("bambi_user_token");
+        localStorage.removeItem("bambi_user_refresh");
+      };
+
+      const redirectToLogin = () => {
+        if (redirectingToLogin) return;
+        redirectingToLogin = true;
+        window.location.href = getLoginRedirect();
+      };
+
+      const parsePayload = async (response) => {
+        const text = await response.text();
+        try {
+          return text ? JSON.parse(text) : {};
+        } catch (_error) {
+          return { message: text };
+        }
+      };
+
+      const refreshSession = async () => {
+        if (refreshPromise) {
+          return refreshPromise;
+        }
+
+        const { base, refresh } = getSettings();
+        if (!refresh) {
+          throw new Error("Không có refresh token.");
+        }
+
+        refreshPromise = (async () => {
+          const response = await fetch(`${base}/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refresh }),
+          });
+
+          const payload = await parsePayload(response);
+          if (!response.ok || !payload.token || !payload.refresh_token) {
+            throw new Error(payload.message || "Không thể làm mới phiên đăng nhập.");
+          }
+
+          localStorage.setItem(storageKeys.base, base);
+          localStorage.setItem(storageKeys.token, payload.token);
+          localStorage.setItem(storageKeys.refresh, payload.refresh_token);
+          localStorage.setItem("bambi_user_base", base);
+          localStorage.setItem("bambi_user_token", payload.token);
+          localStorage.setItem("bambi_user_refresh", payload.refresh_token);
+
+          if (tokenEl) {
+            tokenEl.value = payload.token;
+          }
+
+          return { base, token: payload.token };
+        })();
+
+        try {
+          return await refreshPromise;
+        } finally {
+          refreshPromise = null;
+        }
+      };
+
+      const apiFetch = async (path, options = {}, retryOn401 = true) => {
         const { base, token } = getSettings();
-        const headers = Object.assign(
-          { "Content-Type": "application/json" },
-          options.headers || {}
-        );
+        const headers = Object.assign({}, options.headers || {});
+        let body = options.body;
+
+        if (body && typeof body !== "string" && !(body instanceof FormData)) {
+          headers["Content-Type"] = "application/json";
+          body = JSON.stringify(body);
+        }
+
         if (token) headers.Authorization = `Bearer ${token}`;
+
         const response = await fetch(base + path, {
           ...options,
           headers,
+          body,
         });
-        const text = await response.text();
-        let payload;
-        try {
-          payload = text ? JSON.parse(text) : {};
-        } catch (error) {
-          payload = { message: text };
+
+        const payload = await parsePayload(response);
+
+        if (response.status === 401 && retryOn401 && token) {
+          try {
+            await refreshSession();
+            return apiFetch(path, options, false);
+          } catch (_error) {
+            clearSession();
+            setStatus("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", "error");
+            redirectToLogin();
+            throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          }
         }
+
         if (!response.ok) {
           throw new Error(payload.message || "Yêu cầu thất bại");
         }
+
         return payload;
       };
 
@@ -537,9 +642,7 @@
       });
 
       $("#clearSettings").addEventListener("click", () => {
-        localStorage.removeItem(storageKeys.base);
-        localStorage.removeItem(storageKeys.token);
-        localStorage.removeItem(storageKeys.shop);
+        clearSession();
         baseUrlEl.value = "http://localhost:3000";
         tokenEl.value = "";
         setSelectedShop(null);
@@ -699,8 +802,12 @@
       });
 
       const init = () => {
-        const savedBase = localStorage.getItem(storageKeys.base);
-        const savedToken = localStorage.getItem(storageKeys.token);
+        const savedBase =
+          localStorage.getItem(storageKeys.base) ||
+          localStorage.getItem("bambi_user_base");
+        const savedToken =
+          localStorage.getItem(storageKeys.token) ||
+          localStorage.getItem("bambi_user_token");
         const savedShop = localStorage.getItem(storageKeys.shop);
         if (savedBase) baseUrlEl.value = savedBase;
         if (savedToken) tokenEl.value = savedToken;
@@ -711,3 +818,4 @@
     </script>
   </body>
 </html>
+

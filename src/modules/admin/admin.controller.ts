@@ -4,6 +4,7 @@ import {
   getOverview,
   getPendingShops,
   getRecentOrders,
+  getShopDetail,
 } from "./admin.service";
 import { RecentOrdersQuery } from "./admin.types";
 
@@ -35,6 +36,18 @@ export const pendingShops = async (
   try {
     const shops = await getPendingShops(req.query);
     res.json({ shops });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const shopDetail = async (
+  req: AuthRequest<{ id: string }>,
+  res: Response
+) => {
+  try {
+    const shop = await getShopDetail(req.params.id);
+    res.json({ shop });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

@@ -1,0 +1,104 @@
+﻿<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chi tiết hồ sơ shop | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="/ui/admin/">
+          <span class="admin-brand-mark">B</span>
+          <div class="admin-brand-copy">
+            <strong>Bambi Admin</strong>
+            <span>Hệ thống quản trị sàn</span>
+          </div>
+        </a>
+
+        <section class="admin-sidebar-section">
+          <p class="admin-sidebar-heading">Điều hướng</p>
+          <nav class="admin-nav">
+            <a class="admin-nav-link" href="/ui/admin/" data-page="dashboard"><span class="admin-nav-icon">TQ</span><span class="admin-nav-copy"><strong>Tổng quan</strong><span>Chỉ số vận hành</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/shops.html" data-page="shops"><span class="admin-nav-icon">QS</span><span class="admin-nav-copy"><strong>Quản lý shop</strong><span>Duyệt và theo dõi shop</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/users.html" data-page="users"><span class="admin-nav-icon">ND</span><span class="admin-nav-copy"><strong>Quản lý người dùng</strong><span>Danh sách tài khoản</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/returns.html" data-page="returns"><span class="admin-nav-icon">TH</span><span class="admin-nav-copy"><strong>Trả hàng & tranh chấp</strong><span>Xử lý khiếu nại</span></span></a>
+            <a class="admin-nav-link" href="/ui/admin/orders.html" data-page="orders"><span class="admin-nav-icon">ĐH</span><span class="admin-nav-copy"><strong>Đơn gần đây</strong><span>Theo dõi dòng đơn mới</span></span></a>
+          </nav>
+        </section>
+
+        <div class="admin-sidebar-foot">
+          <button class="btn secondary" id="logoutAdmin" type="button">Đăng xuất quản trị</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-page-header">
+          <div>
+            <div class="admin-breadcrumb">Trang quản trị / Quản lý shop / Chi tiết hồ sơ</div>
+            <h1>Chi tiết hồ sơ shop</h1>
+            <p>Xem đầy đủ hồ sơ onboarding theo đúng các bước mà seller đã điền, kèm khả năng duyệt hoặc từ chối ngay tại đây.</p>
+          </div>
+          <div class="stack-actions">
+            <a class="btn ghost" href="/ui/admin/shops.html">Quay lại danh sách shop</a>
+            <button class="btn" id="reloadDetail" type="button">Tải lại chi tiết</button>
+          </div>
+        </header>
+
+        <div id="status" class="status" style="display: none"></div>
+
+        <section class="admin-card hero-card" id="shopHeroCard">
+          <div class="empty-state">Đang tải chi tiết shop...</div>
+        </section>
+
+        <section class="admin-card">
+          <div class="toolbar-row">
+            <div>
+              <div class="kicker">Theo bước onboarding</div>
+              <h2 style="margin-top: 8px;">Tóm tắt 4 bước đăng ký</h2>
+            </div>
+          </div>
+          <div id="stepSummary" class="detail-step-grid"></div>
+        </section>
+
+        <section class="page-grid">
+          <section class="admin-card span-6" id="stepShopInfo">
+            <h2>1. Thông tin shop</h2>
+            <div class="divider"></div>
+            <div class="detail-info-grid"></div>
+          </section>
+
+          <section class="admin-card span-6" id="stepShipping">
+            <h2>2. Cài đặt vận chuyển</h2>
+            <div class="divider"></div>
+            <div class="detail-info-grid"></div>
+          </section>
+
+          <section class="admin-card span-6" id="stepTax">
+            <h2>3. Thông tin thuế</h2>
+            <div class="divider"></div>
+            <div class="detail-info-grid"></div>
+          </section>
+
+          <section class="admin-card span-6" id="stepIdentity">
+            <h2>4. Thông tin định danh</h2>
+            <div class="divider"></div>
+            <div class="detail-info-grid"></div>
+          </section>
+
+          <section class="admin-card span-12" id="documentsSection">
+            <h2>Giấy tờ đã tải lên</h2>
+            <div class="divider"></div>
+            <div id="documentsGrid" class="detail-doc-grid"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/ui/admin/admin.js"></script>
+    <script src="/ui/admin/shop-detail.js"></script>
+  </body>
+</html>

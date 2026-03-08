@@ -1,5 +1,5 @@
 import prisma from "../../libs/prisma";
-import { listPendingShops } from "../shops/shop.service";
+import { getShopDetailById, listPendingShops } from "../shops/shop.service";
 import { RecentOrdersQuery } from "./admin.types";
 
 const MAX_LIMIT = 100;
@@ -114,4 +114,8 @@ export const getRecentOrders = async (query: RecentOrdersQuery) => {
 
 export const getPendingShops = async (query?: { page?: string; limit?: string }) => {
   return listPendingShops(query || {});
+};
+
+export const getShopDetail = async (shopId: string) => {
+  return getShopDetailById(shopId);
 };
