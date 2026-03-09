@@ -2,8 +2,30 @@ const AdminCategoriesPage = (() => {
   const Admin = window.BambiAdmin;
   const { $, escapeHtml, formatDateTime } = Admin;
 
+  const pageSizeOptions = [20, 25, 30];
+
   let categories = [];
   let currentQuery = "";
+  let currentPage = 1;
+  let currentPageSize = 25;
+
+  const getCreateChildHref = (categoryId) =>
+    `/ui/admin/category-form.html?mode=create&parent_id=${encodeURIComponent(categoryId)}`;
+
+  const paginationEls = {
+    shell: () => $("#categoriesPagination"),
+    summary: () => $("#categoriesPaginationSummary"),
+    pageSize: () => $("#categoryPageSize"),
+    prev: () => $("#categoryPrevPage"),
+    next: () => $("#categoryNextPage"),
+    label: () => $("#categoryPageLabel"),
+  };
+
+  const clampPage = (page, totalPages) =>
+    Math.min(Math.max(page, 1), Math.max(totalPages, 1));
+
+  const normalizePageSize = (value) =>
+    pageSizeOptions.includes(Number(value)) ? Number(value) : 25;
 
   const renderStats = (meta) => {
     const stats = [
@@ -49,6 +71,29 @@ const AdminCategoriesPage = (() => {
     });
   };
 
+  const renderPagination = ({ totalItems, startIndex = 0, endIndex = 0, totalPages = 1 }) => {
+    const shell = paginationEls.shell();
+    const summary = paginationEls.summary();
+    const pageSize = paginationEls.pageSize();
+    const prevButton = paginationEls.prev();
+    const nextButton = paginationEls.next();
+    const label = paginationEls.label();
+
+    if (!shell || !summary || !pageSize || !prevButton || !nextButton || !label) return;
+
+    if (!totalItems) {
+      shell.hidden = true;
+      return;
+    }
+
+    shell.hidden = false;
+    summary.textContent = `Hiển thị ${startIndex + 1}-${endIndex} trong ${totalItems} danh mục`;
+    pageSize.value = String(currentPageSize);
+    label.textContent = `Trang ${currentPage}/${totalPages}`;
+    prevButton.disabled = currentPage <= 1;
+    nextButton.disabled = currentPage >= totalPages;
+  };
+
   const renderTable = () => {
     const filtered = getFilteredCategories();
     $("#categoryCountLabel").textContent = `${filtered.length} danh mục`;
@@ -56,8 +101,15 @@ const AdminCategoriesPage = (() => {
     if (!filtered.length) {
       $("#categoriesTable").innerHTML =
         '<div class="empty-state">Chưa có danh mục phù hợp với bộ lọc hiện tại.</div>';
+      renderPagination({ totalItems: 0 });
       return;
     }
+
+    const totalPages = Math.ceil(filtered.length / currentPageSize);
+    currentPage = clampPage(currentPage, totalPages);
+
+    const startIndex = (currentPage - 1) * currentPageSize;
+    const visibleCategories = filtered.slice(startIndex, startIndex + currentPageSize);
 
     $("#categoriesTable").innerHTML = `
       <div class="table-wrap">
@@ -73,7 +125,7 @@ const AdminCategoriesPage = (() => {
             </tr>
           </thead>
           <tbody>
-            ${filtered
+            ${visibleCategories
               .map(
                 (category) => `
                   <tr>
@@ -91,6 +143,7 @@ const AdminCategoriesPage = (() => {
                     <td>${escapeHtml(category.children_count)}</td>
                     <td>${escapeHtml(formatDateTime(category.created_at))}</td>
                     <td class="actions">
+                      <a class="btn secondary" href="${getCreateChildHref(category.id)}">Thêm con</a>
                       <a class="btn ghost" href="/ui/admin/category-form.html?id=${category.id}">Sửa</a>
                     </td>
                   </tr>
@@ -101,15 +154,24 @@ const AdminCategoriesPage = (() => {
         </table>
       </div>
     `;
+
+    renderPagination({
+      totalItems: filtered.length,
+      startIndex,
+      endIndex: startIndex + visibleCategories.length,
+      totalPages,
+    });
   };
 
   const applyFilter = () => {
     currentQuery = $("#categoryQuery").value.trim();
+    currentPage = 1;
     renderTable();
   };
 
   const clearFilter = () => {
     currentQuery = "";
+    currentPage = 1;
     $("#categoryQuery").value = "";
     renderTable();
   };
@@ -134,15 +196,33 @@ const AdminCategoriesPage = (() => {
 
     $("#applyCategoryFilter").addEventListener("click", applyFilter);
     $("#clearCategoryFilter").addEventListener("click", clearFilter);
+    $("#categoryQuery").addEventListener("input", applyFilter);
     $("#categoryQuery").addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       event.preventDefault();
       applyFilter();
     });
+
+    paginationEls.pageSize()?.addEventListener("change", (event) => {
+      currentPageSize = normalizePageSize(event.target.value);
+      currentPage = 1;
+      renderTable();
+    });
+
+    paginationEls.prev()?.addEventListener("click", () => {
+      currentPage -= 1;
+      renderTable();
+    });
+
+    paginationEls.next()?.addEventListener("click", () => {
+      currentPage += 1;
+      renderTable();
+    });
   };
 
   const init = async () => {
     Admin.initShell("categories");
+    currentPageSize = normalizePageSize(paginationEls.pageSize()?.value);
     bindActions();
 
     try {

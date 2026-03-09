@@ -1,14 +1,15 @@
-﻿<!doctype html>
-<html lang="en">
+<!doctype html>
+<html lang="vi">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ÄÄƒng nháº­p | Bambi</title>
+    <title>Đăng nhập | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="./shared.css" />
+    <link rel="stylesheet" href="/ui/shared.css?v=20260310-2" />
     <style>
       body {
-        background: radial-gradient(1000px 700px at 10% 10%, #fff6ed, transparent 60%),
+        background:
+          radial-gradient(1000px 700px at 10% 10%, #fff6ed, transparent 60%),
           radial-gradient(900px 700px at 90% 5%, #ffe8d5, transparent 60%),
           #fff6ed;
       }
@@ -104,8 +105,8 @@
   <body>
     <div class="login-shell">
       <header class="brand" style="margin-bottom: 18px">
-        <h1>ÄÄƒng nháº­p</h1>
-        <p>Truy cáº­p nhanh vÃ o mua sáº¯m, Ä‘Æ¡n hÃ ng vÃ  tÃ i khoáº£n.</p>
+        <h1>Đăng nhập</h1>
+        <p>Truy cập nhanh vào mua sắm, đơn hàng và tài khoản.</p>
       </header>
 
       <div id="status" class="status" style="display: none"></div>
@@ -114,30 +115,30 @@
         <div class="brand-panel">
           <div>
             <h2 class="brand-title">Bambi Member</h2>
-            <p class="brand-sub">TÃ­ch Ä‘iá»ƒm, theo dÃµi Ä‘Æ¡n vÃ  Æ°u Ä‘Ã£i riÃªng cho báº¡n.</p>
+            <p class="brand-sub">Tích điểm, theo dõi đơn và ưu đãi riêng cho bạn.</p>
           </div>
           <div class="badge-row">
-            <span class="badge">Freeship 0Ä‘</span>
-            <span class="badge">Æ¯u Ä‘Ã£i má»—i ngÃ y</span>
-            <span class="badge">Há»— trá»£ 24/7</span>
+            <span class="badge">Freeship 0đ</span>
+            <span class="badge">Ưu đãi mỗi ngày</span>
+            <span class="badge">Hỗ trợ 24/7</span>
           </div>
         </div>
         <div class="form-panel">
-          <h2>ÄÄƒng nháº­p tÃ i khoáº£n</h2>
-          <p class="hint">DÃ¹ng email hoáº·c sá»‘ Ä‘iá»‡n thoáº¡i Ä‘Ã£ Ä‘Äƒng kÃ½.</p>
+          <h2>Đăng nhập tài khoản</h2>
+          <p class="hint">Dùng email hoặc số điện thoại đã đăng ký.</p>
           <form id="loginForm">
             <div class="field">
-              <label>Email hoáº·c sá»‘ Ä‘iá»‡n thoáº¡i</label>
+              <label>Email hoặc số điện thoại</label>
               <input class="input" name="identifier" required />
             </div>
             <div class="field">
-              <label>Máº­t kháº©u</label>
+              <label>Mật khẩu</label>
               <input class="input" name="password" type="password" required />
             </div>
-            <button class="btn" type="submit">ÄÄƒng nháº­p</button>
+            <button class="btn" type="submit">Đăng nhập</button>
           </form>
           <p class="note">
-            ChÆ°a cÃ³ tÃ i khoáº£n? <a class="link" href="/ui/register.html">ÄÄƒng kÃ½ ngay</a>
+            Chưa có tài khoản? <a class="link" href="/ui/register.html">Đăng ký ngay</a>
           </p>
         </div>
       </section>
@@ -160,6 +161,7 @@
           statusEl.className = "status";
           return;
         }
+
         statusEl.style.display = "block";
         statusEl.textContent = message;
         statusEl.className = `status ${type === "error" ? "error" : ""}`;
@@ -170,33 +172,44 @@
           ...options,
           headers: { "Content-Type": "application/json" },
         });
+
         const text = await response.text();
         let payload;
+
         try {
           payload = text ? JSON.parse(text) : {};
-        } catch (error) {
+        } catch (_error) {
           payload = { message: text };
         }
-        if (!response.ok) throw new Error(payload.message || "ÄÄƒng nháº­p tháº¥t báº¡i");
+
+        if (!response.ok) {
+          throw new Error(payload.message || "Đăng nhập thất bại");
+        }
+
         return payload;
       };
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         setStatus("");
+
         const identifier = form.identifier.value.trim();
         const password = form.password.value;
+
         try {
           const payload = await apiFetch("/auth/login", {
             method: "POST",
             body: JSON.stringify({ identifier, password }),
           });
+
           localStorage.setItem(storageKeys.base, window.location.origin);
           localStorage.setItem(storageKeys.token, payload.token);
           localStorage.setItem(storageKeys.refresh, payload.refresh_token);
-          setStatus("ÄÄƒng nháº­p thÃ nh cÃ´ng. Äang chuyá»ƒn vá» trang chá»§...");
+          setStatus("Đăng nhập thành công. Đang chuyển về trang chủ...");
+
           const next = new URLSearchParams(window.location.search).get("next");
           const safeNext = next && next.startsWith("/ui/") ? next : "/ui/";
+
           setTimeout(() => {
             window.location.href = safeNext;
           }, 800);
@@ -205,7 +218,6 @@
         }
       });
     </script>
-    <script src="/ui/custom-select.js"></script>
+    <script src="/ui/custom-select.js?v=20260310-2"></script>
   </body>
 </html>
-

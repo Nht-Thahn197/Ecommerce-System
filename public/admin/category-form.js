@@ -20,11 +20,32 @@ const AdminCategoryFormPage = (() => {
   let categoriesById = new Map();
   let blockedParentIds = new Set();
   let parentOptions = [];
+  let parentSearchQuery = "";
+  let createParentId = requestedParentId;
+  let currentTreePage = 1;
+  let currentTreePageSize = 3;
+
+  const treePageSizeOptions = [2, 3];
 
   const buildPathOption = (category) => {
     const prefix = "— ".repeat(category.depth || 0);
     return `${prefix}${category.breadcrumb || category.name}`;
   };
+
+  const treePaginationEls = {
+    shell: () => $("#categoryTreePagination"),
+    summary: () => $("#categoryTreePaginationSummary"),
+    pageSize: () => $("#categoryTreePageSize"),
+    prev: () => $("#categoryTreePrevPage"),
+    next: () => $("#categoryTreeNextPage"),
+    label: () => $("#categoryTreePageLabel"),
+  };
+
+  const clampPage = (page, totalPages) =>
+    Math.min(Math.max(page, 1), Math.max(totalPages, 1));
+
+  const normalizeTreePageSize = (value) =>
+    treePageSizeOptions.includes(Number(value)) ? Number(value) : 3;
 
   const parentSelectEls = {
     root: () => $("#categoryParentSelect"),
@@ -33,6 +54,9 @@ const AdminCategoryFormPage = (() => {
     label: () => $("#categoryParentLabel"),
     panel: () => $("#categoryParentPanel"),
     options: () => $("#categoryParentOptions"),
+    search: () => $("#categoryParentSearch"),
+    searchClear: () => $("#categoryParentSearchClear"),
+    resultCount: () => $("#categoryParentResultCount"),
   };
 
   const collectBlockedParentIds = (categoryId) => {
@@ -62,6 +86,7 @@ const AdminCategoryFormPage = (() => {
     return [
       {
         value: "",
+        keywords: "khong co danh muc cha cap goc root",
         label: "Không có danh mục cha",
         note: "Tạo danh mục ở cấp gốc",
       },
@@ -69,13 +94,93 @@ const AdminCategoryFormPage = (() => {
         .filter((category) => !blockedParentIds.has(category.id))
         .map((category) => ({
           value: String(category.id),
+          keywords: [category.name, category.breadcrumb, category.parent_name, String(category.id)]
+            .filter(Boolean)
+            .join(" "),
           label: buildPathOption(category),
           note: category.breadcrumb,
         })),
     ];
   };
 
-  const closeParentSelect = () => {
+  const getParentSearchTerms = () =>
+    parentSearchQuery
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  const getVisibleParentOptions = () => {
+    const searchTerms = getParentSearchTerms();
+    if (!searchTerms.length) return parentOptions;
+
+    return parentOptions.filter((option) => {
+      const haystack = [option.label, option.note, option.keywords, option.value]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return searchTerms.every((term) => haystack.includes(term));
+    });
+  };
+
+  const renderParentOptions = () => {
+    const optionsRoot = parentSelectEls.options();
+    const resultCount = parentSelectEls.resultCount();
+    const searchClear = parentSelectEls.searchClear();
+    if (!optionsRoot) return;
+
+    const visibleOptions = getVisibleParentOptions();
+
+    optionsRoot.innerHTML = visibleOptions.length
+      ? visibleOptions
+          .map(
+            (option, index) => `
+              <button
+                class="custom-select-option"
+                id="categoryParentOption-${index}"
+                type="button"
+                role="option"
+                data-value="${escapeHtml(option.value)}"
+                aria-selected="false"
+              >
+                <span class="custom-select-option-label">${escapeHtml(option.label)}</span>
+                <small class="custom-select-option-note">${escapeHtml(option.note)}</small>
+              </button>
+            `
+          )
+          .join("")
+      : '<div class="custom-select-empty">Không tìm thấy danh mục cha phù hợp. Hãy thử theo tên ngắn hơn hoặc một phần đường dẫn.</div>';
+
+    if (resultCount) {
+      resultCount.textContent = getParentSearchTerms().length
+        ? `Hiển thị ${visibleOptions.length}/${parentOptions.length} lựa chọn phù hợp`
+        : `Hiển thị ${parentOptions.length} lựa chọn có thể chọn`;
+    }
+
+    if (searchClear) {
+      searchClear.hidden = !parentSearchQuery.trim();
+    }
+
+    updateParentSelectState();
+  };
+
+  const setParentSearchQuery = (value, { preserveFocus = false } = {}) => {
+    parentSearchQuery = value || "";
+
+    const searchInput = parentSelectEls.search();
+    if (searchInput && searchInput.value !== parentSearchQuery) {
+      searchInput.value = parentSearchQuery;
+    }
+
+    renderParentOptions();
+
+    if (preserveFocus) {
+      searchInput?.focus();
+      searchInput?.setSelectionRange(parentSearchQuery.length, parentSearchQuery.length);
+    }
+  };
+
+  const closeParentSelect = ({ resetSearch = true } = {}) => {
     const root = parentSelectEls.root();
     const trigger = parentSelectEls.trigger();
     const panel = parentSelectEls.panel();
@@ -84,6 +189,10 @@ const AdminCategoryFormPage = (() => {
     root.classList.remove("is-open");
     trigger.setAttribute("aria-expanded", "false");
     panel.hidden = true;
+
+    if (resetSearch && parentSearchQuery) {
+      setParentSearchQuery("");
+    }
   };
 
   const focusSelectedParentOption = () => {
@@ -95,7 +204,12 @@ const AdminCategoryFormPage = (() => {
       Array.from(options.querySelectorAll(".custom-select-option")).find(
         (button) => button.dataset.value === input.value
       ) || options.querySelector(".custom-select-option");
-    selectedButton?.focus();
+    if (selectedButton) {
+      selectedButton.focus();
+      return;
+    }
+
+    parentSelectEls.search()?.focus();
   };
 
   const openParentSelect = () => {
@@ -107,7 +221,15 @@ const AdminCategoryFormPage = (() => {
     root.classList.add("is-open");
     trigger.setAttribute("aria-expanded", "true");
     panel.hidden = false;
-    window.requestAnimationFrame(focusSelectedParentOption);
+    window.requestAnimationFrame(() => {
+      const searchInput = parentSelectEls.search();
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+        return;
+      }
+      focusSelectedParentOption();
+    });
   };
 
   const updateParentSelectState = () => {
@@ -132,6 +254,9 @@ const AdminCategoryFormPage = (() => {
 
     const normalized = parentOptions.some((option) => option.value === value) ? value : "";
     input.value = normalized;
+    if (!isEditMode) {
+      createParentId = parsePositiveInt(normalized);
+    }
     updateParentSelectState();
 
     if (close) {
@@ -143,30 +268,12 @@ const AdminCategoryFormPage = (() => {
   const getSelectedParentId = () => parsePositiveInt($("#categoryParentId").value);
 
   const syncParentOptions = (selectedParentId = null) => {
-    const optionsRoot = parentSelectEls.options();
     const nextValue = selectedParentId ? String(selectedParentId) : "";
 
     parentOptions = buildParentOptions();
-    optionsRoot.innerHTML = parentOptions
-      .map(
-        (option, index) => `
-          <button
-            class="custom-select-option"
-            id="categoryParentOption-${index}"
-            type="button"
-            role="option"
-            data-value="${escapeHtml(option.value)}"
-            aria-selected="false"
-          >
-            <span class="custom-select-option-label">${escapeHtml(option.label)}</span>
-            <small class="custom-select-option-note">${escapeHtml(option.note)}</small>
-          </button>
-        `
-      )
-      .join("");
-
+    setParentSearchQuery("");
     setParentValue(nextValue, { close: false });
-    closeParentSelect();
+    closeParentSelect({ resetSearch: false });
   };
 
   const buildPreviewPath = () => {
@@ -195,6 +302,12 @@ const AdminCategoryFormPage = (() => {
 
   const renderPreview = () => {
     $("#categoryPathPreview").textContent = buildPreviewPath();
+  };
+
+  const syncParentDependentViews = () => {
+    renderPreview();
+    renderContext();
+    renderTree({ syncToFocus: true });
   };
 
   const renderMode = () => {
@@ -233,6 +346,11 @@ const AdminCategoryFormPage = (() => {
       "Bạn có thể tạo danh mục gốc hoặc gắn danh mục vào một nhánh cha đã có sẵn.";
     $("#categoryFormModeTag").textContent = "Tạo mới";
     submitButton.textContent = "Tạo danh mục";
+    const prefilledParent = categoriesById.get(getSelectedParentId());
+    if (prefilledParent) {
+      $("#categoryFormHelp").textContent =
+        `Đã chọn sẵn danh mục cha: ${prefilledParent.breadcrumb}. Bạn có thể giữ nguyên hoặc đổi lại trước khi lưu.`;
+    }
     deleteButton.style.display = "none";
     selection.textContent = "Chưa lưu";
     selection.className = "chip gray";
@@ -299,6 +417,52 @@ const AdminCategoryFormPage = (() => {
     }
 
     deleteButton.disabled = true;
+    const selectedParent = categoriesById.get(getSelectedParentId());
+
+    if (selectedParent) {
+      container.innerHTML = `
+        <article class="detail-info-card">
+          <h3>Danh mục cha đang chọn</h3>
+          <dl>
+            <div>
+              <dt>Đường dẫn</dt>
+              <dd>${escapeHtml(selectedParent.breadcrumb)}</dd>
+            </div>
+            <div>
+              <dt>Cấp hiện tại</dt>
+              <dd>Cấp ${escapeHtml(selectedParent.depth + 1)}</dd>
+            </div>
+            <div>
+              <dt>Danh mục con hiện có</dt>
+              <dd>${escapeHtml(selectedParent.children_count)}</dd>
+            </div>
+            <div>
+              <dt>Gợi ý</dt>
+              <dd>Danh mục mới sẽ nằm ngay dưới nhánh này. Bạn vẫn có thể đổi lại trước khi lưu.</dd>
+            </div>
+          </dl>
+        </article>
+        <article class="detail-info-card">
+          <h3>Tổng quan hiện có</h3>
+          <dl>
+            <div>
+              <dt>Tổng danh mục</dt>
+              <dd>${escapeHtml(meta.total || 0)}</dd>
+            </div>
+            <div>
+              <dt>Danh mục gốc</dt>
+              <dd>${escapeHtml(meta.root_count || 0)}</dd>
+            </div>
+            <div>
+              <dt>Danh mục lá</dt>
+              <dd>${escapeHtml(meta.leaf_count || 0)}</dd>
+            </div>
+          </dl>
+        </article>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <article class="detail-info-card">
         <h3>Gợi ý cấu trúc</h3>
@@ -391,18 +555,86 @@ const AdminCategoryFormPage = (() => {
     `;
   };
 
-  const renderTree = () => {
-    $("#categoryTree").innerHTML = renderTreeNodes(tree, getSelectedParentId());
+  const getTreeFocusId = () => getSelectedParentId() || currentCategory?.id || null;
+
+  const getRootIdForCategory = (categoryId) => {
+    let currentId = categoryId;
+    const visited = new Set();
+
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const category = categoriesById.get(currentId);
+      if (!category) return currentId;
+      if (!category.parent_id) return category.id;
+      currentId = category.parent_id;
+    }
+
+    return categoryId;
+  };
+
+  const syncTreePageToFocus = () => {
+    const focusId = getTreeFocusId();
+    if (!focusId || !tree.length) return;
+
+    const rootId = getRootIdForCategory(focusId);
+    const rootIndex = tree.findIndex((node) => node.id === rootId);
+    if (rootIndex === -1) return;
+
+    currentTreePage = Math.floor(rootIndex / currentTreePageSize) + 1;
+  };
+
+  const renderTreePagination = ({ totalRoots, startIndex = 0, endIndex = 0, totalPages = 1 }) => {
+    const shell = treePaginationEls.shell();
+    const summary = treePaginationEls.summary();
+    const pageSize = treePaginationEls.pageSize();
+    const prevButton = treePaginationEls.prev();
+    const nextButton = treePaginationEls.next();
+    const label = treePaginationEls.label();
+
+    if (!shell || !summary || !pageSize || !prevButton || !nextButton || !label) return;
+
+    if (!totalRoots) {
+      shell.hidden = true;
+      return;
+    }
+
+    shell.hidden = false;
+    summary.textContent = `Hiển thị ${startIndex + 1}-${endIndex} trong ${totalRoots} cây danh mục gốc`;
+    pageSize.value = String(currentTreePageSize);
+    label.textContent = `Trang ${currentTreePage}/${totalPages}`;
+    prevButton.disabled = currentTreePage <= 1;
+    nextButton.disabled = currentTreePage >= totalPages;
+  };
+
+  const renderTree = ({ syncToFocus = false } = {}) => {
+    if (syncToFocus) {
+      syncTreePageToFocus();
+    }
+
+    const totalRoots = tree.length;
+    const totalPages = Math.max(1, Math.ceil(totalRoots / currentTreePageSize));
+    currentTreePage = clampPage(currentTreePage, totalPages);
+
+    const startIndex = totalRoots ? (currentTreePage - 1) * currentTreePageSize : 0;
+    const visibleRoots = tree.slice(startIndex, startIndex + currentTreePageSize);
+
+    $("#categoryTree").innerHTML = renderTreeNodes(visibleRoots, getSelectedParentId());
+    renderTreePagination({
+      totalRoots,
+      startIndex,
+      endIndex: startIndex + visibleRoots.length,
+      totalPages,
+    });
   };
 
   const fillForm = () => {
     $("#categoryId").value = currentCategory ? String(currentCategory.id) : "";
     $("#categoryName").value = currentCategory?.name || "";
-    syncParentOptions(currentCategory?.parent_id ?? requestedParentId);
+    syncParentOptions(currentCategory?.parent_id ?? createParentId);
     renderMode();
     renderContext();
     renderPreview();
-    renderTree();
+    renderTree({ syncToFocus: true });
   };
 
   const loadData = async () => {
@@ -438,11 +670,11 @@ const AdminCategoryFormPage = (() => {
     }
 
     $("#categoryForm").reset();
-    syncParentOptions(requestedParentId);
+    syncParentOptions(createParentId);
     renderMode();
     renderContext();
     renderPreview();
-    renderTree();
+    renderTree({ syncToFocus: true });
     Admin.setStatus("Đã làm trống form tạo danh mục.");
   };
 
@@ -525,9 +757,49 @@ const AdminCategoryFormPage = (() => {
     });
 
     parentSelectEls.trigger().addEventListener("keydown", (event) => {
-      if (!["Enter", " ", "ArrowDown"].includes(event.key)) return;
+      if (!["Enter", " ", "ArrowDown", "ArrowUp"].includes(event.key)) return;
       event.preventDefault();
       openParentSelect();
+    });
+
+    parentSelectEls.search()?.addEventListener("input", (event) => {
+      setParentSearchQuery(event.target.value);
+    });
+
+    parentSelectEls.search()?.addEventListener("keydown", (event) => {
+      const optionButtons = Array.from(
+        parentSelectEls.options().querySelectorAll(".custom-select-option")
+      );
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (!optionButtons.length) return;
+        optionButtons[event.key === "ArrowDown" ? 0 : optionButtons.length - 1].focus();
+        return;
+      }
+
+      if (event.key === "Enter") {
+        const [firstOption] = optionButtons;
+        if (!firstOption) return;
+        event.preventDefault();
+        setParentValue(firstOption.dataset.value || "");
+        syncParentDependentViews();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (parentSearchQuery.trim()) {
+          setParentSearchQuery("", { preserveFocus: true });
+          return;
+        }
+        closeParentSelect();
+        parentSelectEls.trigger().focus();
+      }
+    });
+
+    parentSelectEls.searchClear()?.addEventListener("click", () => {
+      setParentSearchQuery("", { preserveFocus: true });
     });
 
     parentSelectEls.options().addEventListener("click", (event) => {
@@ -535,8 +807,7 @@ const AdminCategoryFormPage = (() => {
       if (!optionButton) return;
 
       setParentValue(optionButton.dataset.value || "");
-      renderPreview();
-      renderTree();
+      syncParentDependentViews();
     });
 
     parentSelectEls.options().addEventListener("keydown", (event) => {
@@ -570,8 +841,7 @@ const AdminCategoryFormPage = (() => {
         if (!optionButton) return;
         event.preventDefault();
         setParentValue(optionButton.dataset.value || "");
-        renderPreview();
-        renderTree();
+        syncParentDependentViews();
       }
     });
 
@@ -579,10 +849,26 @@ const AdminCategoryFormPage = (() => {
       if (parentSelectEls.root().contains(event.target)) return;
       closeParentSelect();
     });
+
+    treePaginationEls.pageSize()?.addEventListener("change", (event) => {
+      currentTreePageSize = normalizeTreePageSize(event.target.value);
+      renderTree({ syncToFocus: true });
+    });
+
+    treePaginationEls.prev()?.addEventListener("click", () => {
+      currentTreePage -= 1;
+      renderTree();
+    });
+
+    treePaginationEls.next()?.addEventListener("click", () => {
+      currentTreePage += 1;
+      renderTree();
+    });
   };
 
   const init = async () => {
     Admin.initShell("categories");
+    currentTreePageSize = normalizeTreePageSize(treePaginationEls.pageSize()?.value);
     bindActions();
     renderMode();
     renderContext();

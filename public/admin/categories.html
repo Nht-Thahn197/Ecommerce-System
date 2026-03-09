@@ -60,11 +60,12 @@
           <div class="toolbar-row">
             <div>
               <h2>Danh sách danh mục</h2>
-              </div>
+              <p class="muted">Dùng "Thêm nhánh con" để tạo nhanh ngay dưới đúng danh mục cha.</p>
+            </div>
             <span class="chip gray" id="categoryCountLabel">0 danh mục</span>
           </div>
           <div class="stack-actions">
-            <a class="btn" href="/ui/admin/category-form.html?mode=create">Thêm danh mục</a>
+            <a class="btn" href="/ui/admin/category-form.html?mode=create">Thêm danh mục gốc</a>
             <button class="btn ghost" id="reloadCategories" type="button">Tải lại</button>
           </div>
           <div class="divider"></div>
@@ -75,6 +76,24 @@
           </div>
           <div class="divider"></div>
           <div id="categoriesTable"></div>
+          <div id="categoriesPagination" class="pagination-shell" hidden>
+            <div class="pagination-summary" id="categoriesPaginationSummary"></div>
+            <div class="pagination-controls">
+              <label class="pagination-size" for="categoryPageSize">
+                <span>Mỗi trang</span>
+                <select id="categoryPageSize" class="select">
+                  <option value="20">20</option>
+                  <option value="25" selected>25</option>
+                  <option value="30">30</option>
+                </select>
+              </label>
+              <div class="pagination-buttons">
+                <button class="btn ghost" id="categoryPrevPage" type="button">Trang trước</button>
+                <span class="chip gray" id="categoryPageLabel">Trang 1/1</span>
+                <button class="btn ghost" id="categoryNextPage" type="button">Trang sau</button>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
     </div>

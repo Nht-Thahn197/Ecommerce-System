@@ -1,7 +1,10 @@
 (function () {
   const page = document.body?.dataset?.page || "";
+  const homeCategoryCarousel = document.querySelector("#storeCategoryCarousel");
   const homeCategoryGrid = document.querySelector("#storeCategoryGrid");
   const homeCategoryStatus = document.querySelector("#storeCategoryStatus");
+  const homeCategoryPrev = document.querySelector("#storeCategoryPrev");
+  const homeCategoryNext = document.querySelector("#storeCategoryNext");
   const homeFeaturedGrid = document.querySelector("#storeFeaturedProducts");
   const homeFeaturedStatus = document.querySelector("#storeFeaturedStatus");
   const homeFeaturedEmpty = document.querySelector("#storeFeaturedEmpty");
@@ -17,6 +20,15 @@
   const catalogStatus = document.querySelector("#catalogStatus");
   const catalogProductGrid = document.querySelector("#catalogProductGrid");
   const catalogEmpty = document.querySelector("#catalogEmpty");
+
+  const categoryCarouselState = {
+    roots: [],
+    columns: 10,
+    pageSize: 20,
+    slideIndex: 0,
+  };
+
+  let categoryResizeFrame = 0;
 
   const CONDITION_LABELS = {
     new: "Mới",
@@ -75,8 +87,7 @@
 
   const getCategoryHref = (id) => `/ui/category.html?id=${encodeURIComponent(id)}`;
 
-  const getChildren = (node) =>
-    Array.isArray(node?.children) ? node.children : [];
+  const getChildren = (node) => (Array.isArray(node?.children) ? node.children : []);
 
   const getProductImage = (product) => {
     if (product?.cover_image_url) return product.cover_image_url;
@@ -94,14 +105,6 @@
       : [];
     return prices.length ? Math.min(...prices) : 0;
   };
-
-  const getProductStock = (product) =>
-    Array.isArray(product?.product_variants)
-      ? product.product_variants.reduce((total, variant) => {
-          const stock = Number(variant?.stock);
-          return total + (Number.isFinite(stock) ? stock : 0);
-        }, 0)
-      : 0;
 
   const getInitials = (value) => {
     const parts = String(value || "")
@@ -122,8 +125,7 @@
     );
 
   const getSubtreeNodeCount = (node) =>
-    1 +
-    getChildren(node).reduce((total, child) => total + getSubtreeNodeCount(child), 0);
+    1 + getChildren(node).reduce((total, child) => total + getSubtreeNodeCount(child), 0);
 
   const getSubtreeLeafCount = (node) => {
     const children = getChildren(node);
@@ -145,33 +147,99 @@
     return null;
   };
 
-  const renderCategoryCards = (roots) => {
+  const chunkItems = (items, size) => {
+    const chunks = [];
+
+    for (let index = 0; index < items.length; index += size) {
+      chunks.push(items.slice(index, index + size));
+    }
+
+    return chunks;
+  };
+
+  const getCategoryColumns = () => {
+    const width = homeCategoryCarousel?.clientWidth || window.innerWidth;
+
+    if (width >= 1160) return 10;
+    if (width >= 980) return 8;
+    if (width >= 780) return 6;
+    if (width >= 620) return 4;
+    return 3;
+  };
+
+  const getCategorySlidesCount = () =>
+    Math.ceil(categoryCarouselState.roots.length / categoryCarouselState.pageSize);
+
+  const syncCategoryCarousel = () => {
     if (!homeCategoryGrid) return;
 
-    if (!Array.isArray(roots) || !roots.length) {
+    const slideCount = getCategorySlidesCount();
+    const maxSlideIndex = Math.max(0, slideCount - 1);
+    categoryCarouselState.slideIndex = Math.min(
+      Math.max(categoryCarouselState.slideIndex, 0),
+      maxSlideIndex
+    );
+
+    homeCategoryGrid.style.transform = `translateX(-${categoryCarouselState.slideIndex * 100}%)`;
+
+    if (homeCategoryPrev) {
+      homeCategoryPrev.hidden =
+        slideCount <= 1 || categoryCarouselState.slideIndex <= 0;
+    }
+
+    if (homeCategoryNext) {
+      homeCategoryNext.hidden =
+        slideCount <= 1 || categoryCarouselState.slideIndex >= maxSlideIndex;
+    }
+  };
+
+  const renderCategoryCards = (roots, { preserveAnchor = false } = {}) => {
+    if (!homeCategoryGrid || !homeCategoryCarousel) return;
+
+    categoryCarouselState.roots = Array.isArray(roots) ? roots : [];
+
+    if (!categoryCarouselState.roots.length) {
       homeCategoryGrid.innerHTML = "";
+      homeCategoryCarousel.hidden = true;
       showStatus(homeCategoryStatus, "Chưa có danh mục gốc nào để hiển thị.");
       return;
     }
 
-    hideStatus(homeCategoryStatus);
-    homeCategoryGrid.innerHTML = roots
-      .map((node) => {
-        const childCount = getChildren(node).length;
-        const totalProducts = getSubtreeProductCount(node);
+    const currentStartIndex = preserveAnchor
+      ? categoryCarouselState.slideIndex * categoryCarouselState.pageSize
+      : 0;
+    const columns = getCategoryColumns();
+    const pageSize = columns * 2;
+    const slides = chunkItems(categoryCarouselState.roots, pageSize);
 
-        return `
-          <a class="category-card category-link" href="${getCategoryHref(node.id)}">
-            <div class="category-icon">${escapeHtml(getInitials(node.name))}</div>
-            <div class="category-name">${escapeHtml(node.name)}</div>
-            <div class="category-meta">
-              ${childCount} nhánh con<br />
-              ${totalProducts} sản phẩm đang bán
-            </div>
-          </a>
-        `;
-      })
+    categoryCarouselState.columns = columns;
+    categoryCarouselState.pageSize = pageSize;
+    categoryCarouselState.slideIndex = preserveAnchor
+      ? Math.floor(currentStartIndex / pageSize)
+      : 0;
+
+    hideStatus(homeCategoryStatus);
+    homeCategoryCarousel.hidden = false;
+    homeCategoryGrid.innerHTML = slides
+      .map(
+        (slide) => `
+          <div class="category-slide" style="--category-columns: ${columns};">
+            ${slide
+              .map(
+                (node) => `
+                  <a class="category-card category-link" href="${getCategoryHref(node.id)}">
+                    <div class="category-icon">${escapeHtml(getInitials(node.name))}</div>
+                    <div class="category-name">${escapeHtml(node.name)}</div>
+                  </a>
+                `
+              )
+              .join("")}
+          </div>
+        `
+      )
       .join("");
+
+    syncCategoryCarousel();
   };
 
   const renderProducts = (products, target, emptyElement, emptyMessage) => {
@@ -194,10 +262,7 @@
       .map((product) => {
         const imageUrl = getProductImage(product);
         const price = getProductPrice(product);
-        const stock = getProductStock(product);
-        const stockLabel = stock > 0 ? `Kho ${stock}` : "Liên hệ shop";
         const shopName = product?.shops?.name || "Shop Bambi";
-        const categoryName = product?.categories?.name || "Chưa phân loại";
         const conditionLabel =
           CONDITION_LABELS[product?.condition] || CONDITION_LABELS.new;
 
@@ -217,7 +282,6 @@
               <div class="product-title">${escapeHtml(product?.name || "Sản phẩm")}</div>
               <div class="price">${escapeHtml(formatCurrency(price))}</div>
               <div class="product-shop">${escapeHtml(shopName)}</div>
-              <div class="sold">${escapeHtml(categoryName)} • ${escapeHtml(stockLabel)}</div>
             </div>
           </article>
         `;
@@ -252,11 +316,44 @@
     ].join("");
   };
 
+  const bindCategoryCarousel = () => {
+    if (!homeCategoryCarousel || homeCategoryCarousel.dataset.bound === "true") return;
+
+    homeCategoryCarousel.dataset.bound = "true";
+
+    homeCategoryPrev?.addEventListener("click", () => {
+      if (categoryCarouselState.slideIndex <= 0) return;
+      categoryCarouselState.slideIndex -= 1;
+      syncCategoryCarousel();
+    });
+
+    homeCategoryNext?.addEventListener("click", () => {
+      if (categoryCarouselState.slideIndex >= getCategorySlidesCount() - 1) return;
+      categoryCarouselState.slideIndex += 1;
+      syncCategoryCarousel();
+    });
+
+    window.addEventListener("resize", () => {
+      if (!categoryCarouselState.roots.length) return;
+
+      if (categoryResizeFrame) {
+        window.cancelAnimationFrame(categoryResizeFrame);
+      }
+
+      categoryResizeFrame = window.requestAnimationFrame(() => {
+        categoryResizeFrame = 0;
+        const nextColumns = getCategoryColumns();
+        if (nextColumns === categoryCarouselState.columns) return;
+        renderCategoryCards(categoryCarouselState.roots, { preserveAnchor: true });
+      });
+    });
+  };
+
   const loadHomePage = async () => {
     try {
       const [categoriesPayload, productsPayload] = await Promise.all([
         fetchJson("/categories"),
-        fetchJson("/products?status=active&limit=8"),
+        fetchJson("/products?status=active&limit=6"),
       ]);
 
       renderCategoryCards(categoriesPayload.tree || []);
@@ -268,7 +365,18 @@
         "Chưa có sản phẩm nào đang hiển thị trên Bambi."
       );
     } catch (error) {
-      renderCategoryCards([]);
+      if (homeCategoryGrid) {
+        homeCategoryGrid.innerHTML = "";
+      }
+      if (homeCategoryCarousel) {
+        homeCategoryCarousel.hidden = true;
+      }
+      showStatus(
+        homeCategoryStatus,
+        error instanceof Error ? error.message : "Không thể tải danh mục.",
+        true
+      );
+
       if (homeFeaturedGrid) homeFeaturedGrid.innerHTML = "";
       showStatus(
         homeFeaturedStatus,
@@ -351,6 +459,7 @@
   };
 
   if (page === "home") {
+    bindCategoryCarousel();
     loadHomePage();
   }
 

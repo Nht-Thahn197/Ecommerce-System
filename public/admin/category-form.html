@@ -94,6 +94,22 @@
                     <span class="custom-select-arrow" aria-hidden="true"></span>
                   </button>
                   <div class="custom-select-panel" id="categoryParentPanel" hidden>
+                    <div class="category-parent-tools">
+                      <input
+                        id="categoryParentSearch"
+                        class="input category-parent-search"
+                        type="search"
+                        placeholder="Tìm nhanh theo tên, ID hoặc đường dẫn"
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      <div class="category-parent-meta">
+                        <span class="note" id="categoryParentResultCount" aria-live="polite">Đang tải danh mục...</span>
+                        <button class="category-parent-clear" id="categoryParentSearchClear" type="button" hidden>
+                          Xóa lọc
+                        </button>
+                      </div>
+                    </div>
                     <div class="custom-select-options" id="categoryParentOptions" role="listbox"></div>
                   </div>
                 </div>
@@ -125,6 +141,23 @@
             </div>
           </div>
           <div id="categoryTree"></div>
+          <div id="categoryTreePagination" class="pagination-shell" hidden>
+            <div class="pagination-summary" id="categoryTreePaginationSummary"></div>
+            <div class="pagination-controls">
+              <label class="pagination-size" for="categoryTreePageSize">
+                <span>Số cây / trang</span>
+                <select id="categoryTreePageSize" class="select">
+                  <option value="2">2</option>
+                  <option value="3" selected>3</option>
+                </select>
+              </label>
+              <div class="pagination-buttons">
+                <button class="btn ghost" id="categoryTreePrevPage" type="button">Trang trước</button>
+                <span class="chip gray" id="categoryTreePageLabel">Trang 1/1</span>
+                <button class="btn ghost" id="categoryTreeNextPage" type="button">Trang sau</button>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
     </div>

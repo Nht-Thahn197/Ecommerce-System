@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bambi - Trang chủ</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260310-2" />
   </head>
   <body data-page="home">
     <div class="topbar">
@@ -84,16 +84,34 @@
         </div>
       </div>
 
-      <section class="section">
+      <section class="section category-section">
         <div class="section-title">
           <h3>Danh mục</h3>
         </div>
-        <p class="section-subtitle">
-          Lấy từ danh mục gốc hiện có. Chọn một danh mục để xem tất cả sản phẩm
-          thuộc nhánh đó.
-        </p>
         <div id="storeCategoryStatus" class="status" hidden></div>
-        <div id="storeCategoryGrid" class="category-grid"></div>
+        <div id="storeCategoryCarousel" class="category-carousel" hidden>
+          <button
+            id="storeCategoryPrev"
+            class="category-carousel-arrow category-carousel-arrow-prev"
+            type="button"
+            aria-label="Xem trang danh mục trước"
+            hidden
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+          <div class="category-carousel-viewport">
+            <div id="storeCategoryGrid" class="category-grid"></div>
+          </div>
+          <button
+            id="storeCategoryNext"
+            class="category-carousel-arrow category-carousel-arrow-next"
+            type="button"
+            aria-label="Xem trang danh mục sau"
+            hidden
+          >
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
       </section>
 
       <section class="section">
@@ -101,9 +119,6 @@
           <h3>Gợi ý hôm nay</h3>
           <span class="section-link">Sản phẩm đang hiển thị</span>
         </div>
-        <p class="section-subtitle">
-          Lấy trực tiếp từ các shop đã bật bán trên Bambi.
-        </p>
         <div id="storeFeaturedStatus" class="status" hidden></div>
         <div id="storeFeaturedProducts" class="product-grid"></div>
         <div id="storeFeaturedEmpty" class="catalog-empty" hidden>
@@ -117,8 +132,8 @@
       phẩm thật.
     </footer>
 
-    <script src="/ui/store.js"></script>
-    <script src="/ui/storefront.js"></script>
-    <script src="/ui/custom-select.js"></script>
+    <script src="/ui/store.js?v=20260310-2"></script>
+    <script src="/ui/storefront.js?v=20260310-2"></script>
+    <script src="/ui/custom-select.js?v=20260310-2"></script>
   </body>
 </html>
