@@ -11,6 +11,7 @@ import {
   listPublic,
   myShops,
   register,
+  updateProfile,
   uploadDocument,
   updateStatus,
 } from "./shop.controller";
@@ -68,6 +69,7 @@ router.post(
   uploadDocument
 );
 router.get("/me", authMiddleware, myShops);
+router.patch("/:id/profile", authMiddleware, updateProfile);
 router.get("/pending", authMiddleware, requireAdmin, listPending);
 router.patch(
   "/:id/status",

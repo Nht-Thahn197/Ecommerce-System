@@ -8,6 +8,7 @@ import {
   ListShopsQuery,
   RegisterShopInput,
   ShopDocumentInput,
+  UpdateShopProfileInput,
   UpdateShopStatusInput,
 } from "./shop.types";
 
@@ -252,6 +253,65 @@ export const getMyShops = async (userId: string, query: ListShopsQuery) => {
       total_pages: Math.ceil(total / limit),
     },
   };
+};
+
+export const updateShopProfile = async (
+  userId: string,
+  shopId: string,
+  input: UpdateShopProfileInput
+) => {
+  const shop = await prisma.shops.findFirst({
+    where: { id: shopId, owner_id: userId },
+    select: { id: true },
+  });
+
+  if (!shop) {
+    throw new Error("Shop not found");
+  }
+
+  const data: Prisma.shopsUncheckedUpdateInput = {};
+
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (!name) {
+      throw new Error("Shop name is required");
+    }
+    data.name = name;
+  }
+
+  if (input.description !== undefined) {
+    data.description = sanitizeString(input.description);
+  }
+
+  await prisma.shops.update({
+    where: { id: shopId },
+    data,
+  });
+
+  const updatedShop = await prisma.shops.findFirst({
+    where: { id: shopId, owner_id: userId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      contact_email: true,
+      contact_phone: true,
+      onboarding_data: true,
+      status: true,
+      rejected_reason: true,
+      approved_at: true,
+      created_at: true,
+      shop_addresses: true,
+      shop_payment_accounts: true,
+      shop_documents: true,
+    },
+  });
+
+  if (!updatedShop) {
+    throw new Error("Shop not found");
+  }
+
+  return updatedShop;
 };
 
 export const listApprovedShops = async (query: ListShopsQuery) => {

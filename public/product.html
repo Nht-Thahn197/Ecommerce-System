@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chi tiết sản phẩm | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css?v=20260310-25" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260310-28" />
   </head>
   <body data-page="product">
     <div class="topbar">
@@ -162,13 +162,11 @@
                 <strong id="productCurrentVariantLabel">Chưa có biến thể</strong>
               </div>
               <div id="productVariantOptions" class="variant-chip-list"></div>
-              <div id="productVariantMeta" class="variant-meta"></div>
             </div>
 
             <div class="product-picker-block">
               <div class="product-picker-header">
                 <span>Số lượng</span>
-                <strong id="productStockText">0 sản phẩm sẵn kho</strong>
               </div>
               <div class="quantity-row">
                 <div class="quantity-stepper">
@@ -187,7 +185,6 @@
                     +
                   </button>
                 </div>
-                <span id="productQtyHint" class="muted">Chọn số lượng phù hợp</span>
               </div>
             </div>
 
@@ -264,7 +261,27 @@
             <h3>Sản phẩm khác của shop</h3>
             <span id="relatedCountLabel" class="section-link">0 sản phẩm</span>
           </div>
-          <div id="relatedProducts" class="product-grid"></div>
+          <div class="related-carousel">
+            <button
+              id="relatedProductsPrev"
+              class="related-carousel-arrow related-carousel-arrow-prev"
+              type="button"
+              aria-label="Xem san pham truoc"
+              hidden
+            >
+              <span>&#8249;</span>
+            </button>
+            <div id="relatedProducts" class="related-products-track"></div>
+            <button
+              id="relatedProductsNext"
+              class="related-carousel-arrow related-carousel-arrow-next"
+              type="button"
+              aria-label="Xem san pham tiep theo"
+              hidden
+            >
+              <span>&#8250;</span>
+            </button>
+          </div>
           <div id="relatedEmpty" class="catalog-empty" hidden>
             Shop hiện chưa có thêm sản phẩm nào khác để hiển thị.
           </div>
@@ -278,6 +295,6 @@
     </footer>
 
     <script src="/ui/store.js?v=20260310-3"></script>
-    <script src="/ui/product.js?v=20260310-24"></script>
+    <script src="/ui/product.js?v=20260310-26"></script>
   </body>
 </html>

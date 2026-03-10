@@ -18,10 +18,7 @@
     voucherChips: document.querySelector("#productVoucherChips"),
     currentVariantLabel: document.querySelector("#productCurrentVariantLabel"),
     variantOptions: document.querySelector("#productVariantOptions"),
-    variantMeta: document.querySelector("#productVariantMeta"),
-    stockText: document.querySelector("#productStockText"),
     qtyInput: document.querySelector("#qtyInput"),
-    qtyHint: document.querySelector("#productQtyHint"),
     qtyDecreaseBtn: document.querySelector("#qtyDecreaseBtn"),
     qtyIncreaseBtn: document.querySelector("#qtyIncreaseBtn"),
     addToCartBtn: document.querySelector("#addToCartBtn"),
@@ -40,6 +37,8 @@
     reviewPagination: document.querySelector("#reviewPagination"),
     relatedCountLabel: document.querySelector("#relatedCountLabel"),
     relatedProducts: document.querySelector("#relatedProducts"),
+    relatedPrev: document.querySelector("#relatedProductsPrev"),
+    relatedNext: document.querySelector("#relatedProductsNext"),
     relatedEmpty: document.querySelector("#relatedEmpty"),
   };
 
@@ -65,6 +64,8 @@
   const MAX_CART_QUANTITY = 99;
   const DESKTOP_MEDIA_THUMBS_PER_VIEW = 5;
   const MOBILE_MEDIA_THUMBS_PER_VIEW = 4;
+  const RELATED_CAROUSEL_EDGE_THRESHOLD = 6;
+  let relatedCarouselFrame = 0;
 
   const escapeHtml = (value) =>
     String(value || "")
@@ -318,18 +319,57 @@
     }
   };
 
+  const updateRelatedCarouselControls = () => {
+    if (!els.relatedProducts) return;
+
+    const maxScrollLeft = Math.max(
+      0,
+      els.relatedProducts.scrollWidth - els.relatedProducts.clientWidth
+    );
+    const currentScrollLeft = Math.max(0, els.relatedProducts.scrollLeft);
+    const hasOverflow = maxScrollLeft > RELATED_CAROUSEL_EDGE_THRESHOLD;
+    const isAtStart = currentScrollLeft <= RELATED_CAROUSEL_EDGE_THRESHOLD;
+    const isAtEnd =
+      currentScrollLeft >= maxScrollLeft - RELATED_CAROUSEL_EDGE_THRESHOLD;
+
+    if (els.relatedPrev) {
+      els.relatedPrev.hidden = !hasOverflow || isAtStart;
+    }
+
+    if (els.relatedNext) {
+      els.relatedNext.hidden = !hasOverflow || isAtEnd;
+    }
+  };
+
+  const scheduleRelatedCarouselControls = () => {
+    if (relatedCarouselFrame) {
+      window.cancelAnimationFrame(relatedCarouselFrame);
+    }
+
+    relatedCarouselFrame = window.requestAnimationFrame(() => {
+      relatedCarouselFrame = 0;
+      updateRelatedCarouselControls();
+    });
+  };
+
+  const scrollRelatedProducts = (direction) => {
+    if (!els.relatedProducts) return;
+
+    const distance = Math.max(els.relatedProducts.clientWidth, 1);
+
+    els.relatedProducts.scrollBy({
+      left: distance * direction,
+      behavior: "smooth",
+    });
+  };
+
   const fitActiveVideo = () => {
     if (!els.mediaMain) return;
 
-    const frame = els.mediaMain.querySelector(".product-media-frame-video");
     const stage = els.mediaMain.querySelector(".product-video-stage");
     const video = els.mediaMain.querySelector(".product-video-object");
 
-    if (
-      !(frame instanceof HTMLElement) ||
-      !(stage instanceof HTMLElement) ||
-      !(video instanceof HTMLVideoElement)
-    ) {
+    if (!(stage instanceof HTMLElement) || !(video instanceof HTMLVideoElement)) {
       return;
     }
 
@@ -339,56 +379,20 @@
 
       if (!videoWidth || !videoHeight) return;
 
-      const frameStyle = window.getComputedStyle(frame);
-      const innerWidth =
-        frame.clientWidth -
-        (Number.parseFloat(frameStyle.paddingLeft || "0") || 0) -
-        (Number.parseFloat(frameStyle.paddingRight || "0") || 0);
-      const innerHeight =
-        frame.clientHeight -
-        (Number.parseFloat(frameStyle.paddingTop || "0") || 0) -
-        (Number.parseFloat(frameStyle.paddingBottom || "0") || 0);
-
-      if (!innerWidth || !innerHeight) return;
-
-      let fittedHeight = innerHeight;
-      let fittedWidth = fittedHeight * (videoWidth / videoHeight);
-
-      if (fittedWidth > innerWidth) {
-        fittedWidth = innerWidth;
-        fittedHeight = fittedWidth * (videoHeight / videoWidth);
-      }
-
-      const videoScale =
-        Number.parseFloat(
-          window
-            .getComputedStyle(document.body)
-            .getPropertyValue("--product-video-scale")
-        ) || 0.93;
-
-      fittedWidth *= videoScale;
-      fittedHeight *= videoScale;
-
-      stage.style.aspectRatio = "";
-      stage.style.width = `${Math.floor(fittedWidth)}px`;
-      stage.style.height = `${Math.floor(fittedHeight)}px`;
+      stage.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
+      stage.style.width = "";
+      stage.style.height = "";
       video.style.width = "100%";
       video.style.height = "100%";
     };
 
     if (video.readyState >= 1 && video.videoWidth && video.videoHeight) {
       window.requestAnimationFrame(applyFit);
-      window.setTimeout(applyFit, 80);
-      window.setTimeout(applyFit, 260);
       return;
     }
 
     video.addEventListener("loadedmetadata", applyFit, { once: true });
     video.addEventListener("loadeddata", applyFit, { once: true });
-    video.addEventListener("canplay", applyFit, { once: true });
-    window.setTimeout(applyFit, 120);
-    window.setTimeout(applyFit, 420);
-    window.setTimeout(applyFit, 1000);
   };
 
   const renderMedia = () => {
@@ -533,28 +537,6 @@
         : "Chưa có biến thể";
     }
 
-    if (els.variantMeta) {
-      const pieces = [];
-      if (hasVariant) {
-        pieces.push(`SKU: ${variant?.sku || "Đang cập nhật"}`);
-        if (Number(variant?.weight) > 0) {
-          pieces.push(`Khối lượng: ${Number(variant.weight)}g`);
-        }
-        pieces.push(hasStock ? `Còn ${stock} sản phẩm` : "Tạm hết hàng");
-      } else {
-        pieces.push("Sản phẩm chưa có biến thể sẵn sàng bán.");
-      }
-      els.variantMeta.textContent = pieces.join(" • ");
-    }
-
-    if (els.stockText) {
-      els.stockText.textContent = hasVariant
-        ? hasStock
-          ? `${formatCompactNumber(stock)} sản phẩm sẵn kho`
-          : "Hết hàng"
-        : "Chưa có biến thể";
-    }
-
     if (els.soldCount) {
       els.soldCount.textContent = hasStock ? "Còn hàng" : "Hết hàng";
     }
@@ -565,14 +547,6 @@
       els.qtyInput.value = String(state.quantity);
       els.qtyInput.max = String(Math.max(1, Math.min(stock || 1, MAX_CART_QUANTITY)));
       els.qtyInput.disabled = !hasVariant || !hasStock;
-    }
-
-    if (els.qtyHint) {
-      els.qtyHint.textContent = hasVariant
-        ? hasStock
-          ? `Có thể mua tối đa ${Math.min(stock, MAX_CART_QUANTITY)} sản phẩm`
-          : "Biến thể này đang hết hàng"
-        : "Chọn biến thể khi shop cập nhật";
     }
 
     if (els.qtyDecreaseBtn) {
@@ -821,7 +795,14 @@
 
     if (!state.relatedProducts.length) {
       els.relatedProducts.innerHTML = "";
+      els.relatedProducts.scrollLeft = 0;
       els.relatedEmpty.hidden = false;
+      if (els.relatedPrev) {
+        els.relatedPrev.hidden = true;
+      }
+      if (els.relatedNext) {
+        els.relatedNext.hidden = true;
+      }
       els.relatedCountLabel.textContent = "0 sản phẩm";
       return;
     }
@@ -859,6 +840,8 @@
         `;
       })
       .join("");
+    els.relatedProducts.scrollLeft = 0;
+    scheduleRelatedCarouselControls();
   };
 
   const renderPage = (reviewPayload) => {
@@ -954,7 +937,7 @@
             ? fetchJson(
                 `/products?status=active&shop_id=${encodeURIComponent(
                   product.shop_id
-                )}&limit=12`
+                )}&limit=100`
               )
             : Promise.resolve({ data: [], pagination: { total: 0 } }),
           fetchJson("/shops?limit=100"),
@@ -1085,6 +1068,22 @@
       updateMediaThumbCarousel();
     });
 
+    els.relatedPrev?.addEventListener("click", () => {
+      scrollRelatedProducts(-1);
+    });
+
+    els.relatedNext?.addEventListener("click", () => {
+      scrollRelatedProducts(1);
+    });
+
+    els.relatedProducts?.addEventListener(
+      "scroll",
+      () => {
+        scheduleRelatedCarouselControls();
+      },
+      { passive: true }
+    );
+
     els.variantOptions?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-variant-id]");
       if (!button) return;
@@ -1136,6 +1135,7 @@
 
     window.addEventListener("resize", () => {
       updateMediaThumbCarousel();
+      scheduleRelatedCarouselControls();
       fitActiveVideo();
     });
   };

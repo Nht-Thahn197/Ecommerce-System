@@ -40,6 +40,12 @@
       subtitle:
         "Soạn sản phẩm theo từng phần giống seller center, đồng thời xem preview và checklist hoàn thiện.",
     },
+    "shop-profile": {
+      breadcrumb: "Trang chủ / Hồ sơ shop",
+      title: "Hồ sơ shop",
+      subtitle:
+        "Theo dõi thông tin cơ bản, thuế và định danh của shop trong cùng Seller Studio.",
+    },
   };
 
   const SELLER_ORDER_ACTIONS = {
@@ -126,9 +132,97 @@
     previewStock: document.querySelector("#previewStock"),
     previewDescription: document.querySelector("#previewDescription"),
     previewBadges: document.querySelector("#previewBadges"),
+    shopProfileSummary: null,
+    shopProfileTabs: null,
+    shopProfileContent: null,
   };
 
   if (!els.shell) return;
+
+  const ensureShopProfileUi = () => {
+    const newProductNav = document.querySelector(
+      '.seller-nav-link[data-view-target="new-product"]'
+    );
+    const productNavSection = newProductNav?.closest(".seller-nav-section");
+
+    if (
+      productNavSection &&
+      !document.querySelector('.seller-nav-link[data-view-target="shop-profile"]')
+    ) {
+      const shopNavSection = document.createElement("section");
+      shopNavSection.className = "seller-nav-section";
+      shopNavSection.innerHTML = `
+        <p class="seller-nav-heading">Quản lý shop</p>
+        <button class="seller-nav-link" type="button" data-view-target="shop-profile">
+          <span class="seller-nav-icon">HS</span>
+          <span class="seller-nav-copy">
+            <strong>Hồ sơ shop</strong>
+            <span>Thông tin cơ bản, thuế và định danh</span>
+          </span>
+        </button>
+      `;
+      productNavSection.insertAdjacentElement("afterend", shopNavSection);
+    }
+
+    if (els.dashboardSummaryCards && !document.querySelector(".seller-management-panel")) {
+      const managementPanel = document.createElement("section");
+      managementPanel.className = "seller-panel seller-management-panel";
+      managementPanel.innerHTML = `
+        <div class="seller-panel-head">
+          <div>
+            <span class="seller-eyebrow">Quản lý shop</span>
+            <h2>Khu vực quản lý shop</h2>
+            <p class="muted">Truy cập nhanh hồ sơ shop để xem thông tin cơ bản, thuế và định danh.</p>
+          </div>
+        </div>
+        <div class="seller-management-grid">
+          <button class="seller-management-card" type="button" data-view-target="shop-profile">
+            <span class="seller-management-icon">HS</span>
+            <span class="seller-management-copy">
+              <strong>Hồ sơ shop</strong>
+              <span>Theo dõi thông tin cơ bản, thuế và định danh của shop</span>
+            </span>
+          </button>
+        </div>
+      `;
+      els.dashboardSummaryCards.insertAdjacentElement("afterend", managementPanel);
+    }
+
+    const productsView = document.querySelector('.seller-view[data-view="products"]');
+    if (productsView && !document.querySelector('.seller-view[data-view="shop-profile"]')) {
+      const shopProfileView = document.createElement("section");
+      shopProfileView.className = "seller-view hidden";
+      shopProfileView.dataset.view = "shop-profile";
+      shopProfileView.innerHTML = `
+        <article class="seller-panel seller-shop-profile-shell">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <span class="seller-eyebrow">Quản lý shop</span>
+              <h2>Hồ sơ shop</h2>
+              <p class="muted">Tổng hợp thông tin cơ bản, thuế và định danh của shop đang được duyệt.</p>
+            </div>
+            <div class="stack-actions">
+              <button class="seller-btn ghost" type="button" data-view-target="dashboard">Quay lại tổng quan</button>
+            </div>
+          </div>
+          <div id="shopProfileSummary" class="seller-shop-profile-summary"></div>
+          <div id="shopProfileTabs" class="seller-shop-profile-tabs"></div>
+          <div id="shopProfileContent" class="seller-shop-profile-content"></div>
+        </article>
+      `;
+      productsView.insertAdjacentElement("beforebegin", shopProfileView);
+    }
+
+    els.shopProfileSummary = document.querySelector("#shopProfileSummary");
+    els.shopProfileTabs = document.querySelector("#shopProfileTabs");
+    els.shopProfileContent = document.querySelector("#shopProfileContent");
+    els.sellerViews = Array.from(document.querySelectorAll(".seller-view"));
+    els.sellerNavLinks = Array.from(
+      document.querySelectorAll(".seller-nav-link[data-view-target]")
+    );
+  };
+
+  ensureShopProfileUi();
 
   const createEmptyDraft = () => ({
     name: "",
@@ -155,6 +249,16 @@
     video: null,
   });
 
+  const createEmptyShopProfileEditor = () => ({
+    isEditing: false,
+    isSaving: false,
+    name: "",
+    description: "",
+    avatarFile: null,
+    avatarPreviewUrl: "",
+    avatarObjectUrl: "",
+  });
+
   const state = {
     currentView: "dashboard",
     user: null,
@@ -169,6 +273,10 @@
       categoryId: "",
       sort: "recent",
     },
+    shopProfileTab: "basic",
+    shopProfileEditor: createEmptyShopProfileEditor(),
+    editingProductId: "",
+    editingVariantId: "",
     draft: createEmptyDraft(),
     statusTimer: 0,
     isSaving: false,
@@ -429,6 +537,180 @@
   const getCurrentShop = () =>
     state.approvedShops.find((shop) => shop.id === state.currentShopId) || null;
 
+  const getShopOnboardingData = (shop) =>
+    shop?.onboarding_data && typeof shop.onboarding_data === "object"
+      ? shop.onboarding_data
+      : {};
+
+  const getShopAddress = (shop, addressType) => {
+    const matchedAddress = Array.isArray(shop?.shop_addresses)
+      ? shop.shop_addresses.find((item) => item?.address_type === addressType)
+      : null;
+
+    if (matchedAddress) return matchedAddress;
+
+    const onboarding = getShopOnboardingData(shop);
+    const fallbackKey = addressType === "tax" ? "tax_address" : "pickup_address";
+    return onboarding?.[fallbackKey] || null;
+  };
+
+  const getShopPaymentAccount = (shop) => {
+    if (Array.isArray(shop?.shop_payment_accounts) && shop.shop_payment_accounts[0]) {
+      return shop.shop_payment_accounts[0];
+    }
+
+    return getShopOnboardingData(shop)?.payment_account || null;
+  };
+
+  const getShopDocumentsByType = (shop, docType) =>
+    Array.isArray(shop?.shop_documents)
+      ? shop.shop_documents.filter((item) => item?.doc_type === docType)
+      : [];
+
+  const formatBusinessType = (value) => {
+    const map = {
+      individual: "Cá nhân",
+      household: "Hộ kinh doanh",
+      company: "Công ty",
+    };
+    return map[value] || "Chưa cập nhật";
+  };
+
+  const formatIdentityType = (value) => {
+    const map = {
+      cccd: "Căn cước công dân",
+      cmnd: "Chứng minh nhân dân",
+      passport: "Hộ chiếu",
+    };
+    return map[value] || "Chưa cập nhật";
+  };
+
+  const buildAddressText = (address = {}) =>
+    [address.detail, address.ward, address.district, address.province]
+      .filter(Boolean)
+      .join(", ");
+
+  const getDocTypeLabel = (docType) => {
+    const map = {
+      business_license: "Giấy phép kinh doanh",
+      identity_front: "Giấy tờ mặt trước",
+      identity_selfie: "Ảnh chân dung cầm giấy tờ",
+      identity_extra: "Tài liệu bổ sung",
+    };
+    return map[docType] || "Tài liệu";
+  };
+
+  const revokeShopProfileAvatarPreview = () => {
+    if (state.shopProfileEditor.avatarObjectUrl) {
+      URL.revokeObjectURL(state.shopProfileEditor.avatarObjectUrl);
+    }
+    state.shopProfileEditor.avatarObjectUrl = "";
+  };
+
+  const resetShopProfileEditor = () => {
+    revokeShopProfileAvatarPreview();
+    state.shopProfileEditor = createEmptyShopProfileEditor();
+  };
+
+  const getCurrentShopAvatarUrl = () =>
+    state.shopProfileEditor.avatarPreviewUrl || state.user?.avatar_url || "";
+
+  const startShopProfileEdit = () => {
+    const currentShop = getCurrentShop();
+    if (!currentShop) return;
+
+    revokeShopProfileAvatarPreview();
+    state.shopProfileTab = "basic";
+    state.shopProfileEditor = {
+      isEditing: true,
+      isSaving: false,
+      name: currentShop.name || "",
+      description: currentShop.description || "",
+      avatarFile: null,
+      avatarPreviewUrl: state.user?.avatar_url || "",
+      avatarObjectUrl: "",
+    };
+    renderShopProfile();
+  };
+
+  const setShopProfileAvatarFile = (file) => {
+    revokeShopProfileAvatarPreview();
+
+    if (!file) {
+      state.shopProfileEditor.avatarFile = null;
+      state.shopProfileEditor.avatarPreviewUrl = state.user?.avatar_url || "";
+      renderShopProfile();
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    state.shopProfileEditor.avatarFile = file;
+    state.shopProfileEditor.avatarPreviewUrl = objectUrl;
+    state.shopProfileEditor.avatarObjectUrl = objectUrl;
+    renderShopProfile();
+  };
+
+  const saveShopProfile = async () => {
+    const currentShop = getCurrentShop();
+    if (!currentShop) return;
+
+    const name = state.shopProfileEditor.name.trim();
+    const description = state.shopProfileEditor.description.trim();
+
+    if (!name) {
+      showStatus("Tên shop không được để trống.", { error: true });
+      return;
+    }
+
+    state.shopProfileEditor.isSaving = true;
+    renderShopProfile();
+    showStatus("Đang cập nhật hồ sơ shop...", { persist: true });
+
+    try {
+      if (state.shopProfileEditor.avatarFile) {
+        const formData = new FormData();
+        formData.append("avatar", state.shopProfileEditor.avatarFile);
+        const avatarPayload = await apiFetch(
+          "/auth/me/avatar",
+          {
+            method: "POST",
+            body: formData,
+          },
+          { redirectOn401: true }
+        );
+        state.user = avatarPayload?.user || state.user;
+        updateUserInfo();
+      }
+
+      const shopPayload = await apiFetch(
+        `/shops/${currentShop.id}/profile`,
+        {
+          method: "PATCH",
+          body: {
+            name,
+            description,
+          },
+        },
+        { redirectOn401: true }
+      );
+
+      state.approvedShops = state.approvedShops.map((shop) =>
+        shop.id === currentShop.id ? { ...shop, ...(shopPayload?.shop || {}) } : shop
+      );
+
+      resetShopProfileEditor();
+      renderAll();
+      showStatus("Đã cập nhật hồ sơ shop.");
+    } catch (error) {
+      state.shopProfileEditor.isSaving = false;
+      renderShopProfile();
+      showStatus(
+        error instanceof Error ? error.message : "Không thể cập nhật hồ sơ shop.",
+        { error: true }
+      );
+    }
+  };
+
   const getCategoryMap = () =>
     new Map(state.categories.map((item) => [String(item.id), item]));
 
@@ -524,6 +806,8 @@
     els.sellerStatus.style.display = "none";
   };
 
+  const isEditingDraft = () => Boolean(state.editingProductId);
+
   const setSelectValue = (select, value) => {
     if (!select) return;
     select.value = value;
@@ -531,7 +815,15 @@
   };
 
   const updateViewChrome = () => {
-    const meta = VIEW_META[state.currentView] || VIEW_META.dashboard;
+    const meta =
+      state.currentView === "new-product" && isEditingDraft()
+        ? {
+            breadcrumb: "Trang chủ / Sản phẩm / Sửa sản phẩm",
+            title: "Sửa sản phẩm",
+            subtitle:
+              "Cập nhật thông tin listing hiện có, xem preview trước khi lưu lại thay đổi.",
+          }
+        : VIEW_META[state.currentView] || VIEW_META.dashboard;
     const currentShop = getCurrentShop();
 
     if (els.breadcrumb) els.breadcrumb.textContent = meta.breadcrumb;
@@ -573,6 +865,7 @@
 
     if (nextView === "products") renderProductsView();
     if (nextView === "new-product") renderDraft();
+    if (nextView === "shop-profile") renderShopProfile();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1046,6 +1339,384 @@
     renderRecentOrders();
   };
 
+  const renderProfileInfoItems = (items) =>
+    items
+      .map((item) => {
+        const wideClass = item.wide ? " seller-info-item-wide" : "";
+        const detailHtml = item.detail
+          ? `<p>${escapeHtml(item.detail)}</p>`
+          : "";
+        const valueHtml = item.valueHtml
+          ? item.valueHtml
+          : `<strong>${escapeHtml(item.value || "Chưa cập nhật")}</strong>`;
+
+        return `
+          <article class="seller-info-item${wideClass}">
+            <span>${escapeHtml(item.label)}</span>
+            ${valueHtml}
+            ${detailHtml}
+          </article>
+        `;
+      })
+      .join("");
+
+  const renderShopDocumentCards = (shop) => {
+    const docTypes = [
+      "business_license",
+      "identity_front",
+      "identity_selfie",
+      "identity_extra",
+    ];
+
+    return docTypes
+      .map((docType) => {
+        const documents = getShopDocumentsByType(shop, docType);
+        const linksHtml = documents.length
+          ? documents
+              .map(
+                (doc, index) => `
+                  <a class="seller-doc-link" href="${escapeHtml(
+                    doc?.doc_url || "#"
+                  )}" target="_blank" rel="noreferrer">
+                    <span>${escapeHtml(`${getDocTypeLabel(docType)} ${documents.length > 1 ? `#${index + 1}` : ""}`.trim())}</span>
+                    <small>${escapeHtml(doc?.status || "pending")}</small>
+                  </a>
+                `
+              )
+              .join("")
+          : '<div class="seller-empty-compact">Chưa có tài liệu được tải lên.</div>';
+
+        return `
+          <article class="seller-shop-profile-card">
+            <div class="seller-panel-head seller-panel-head-wrap">
+              <div>
+                <h3>${escapeHtml(getDocTypeLabel(docType))}</h3>
+                <p class="muted">${escapeHtml(
+                  documents.length
+                    ? `${documents.length} file đã lưu cho loại tài liệu này.`
+                    : "Khu vực này sẽ hiển thị giấy tờ sau khi seller hoàn tất hồ sơ."
+                )}</p>
+              </div>
+            </div>
+            <div class="seller-doc-list">
+              ${linksHtml}
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  };
+
+  const renderShopProfile = () => {
+    if (!els.shopProfileSummary || !els.shopProfileTabs || !els.shopProfileContent) {
+      return;
+    }
+
+    const currentShop = getCurrentShop();
+    if (!currentShop) {
+      els.shopProfileSummary.innerHTML = `
+        <div class="seller-empty-block">Chưa có shop đã duyệt để hiển thị hồ sơ.</div>
+      `;
+      els.shopProfileTabs.innerHTML = "";
+      els.shopProfileContent.innerHTML = "";
+      return;
+    }
+
+    const onboarding = getShopOnboardingData(currentShop);
+    const pickupAddress = getShopAddress(currentShop, "pickup");
+    const taxAddress = getShopAddress(currentShop, "tax");
+    const paymentAccount = getShopPaymentAccount(currentShop);
+    const taxInfo = onboarding?.tax_info || {};
+    const identityInfo = onboarding?.identity_info || {};
+    const shopDocuments = Array.isArray(currentShop.shop_documents)
+      ? currentShop.shop_documents
+      : [];
+
+    const tabs = [
+      { id: "basic", label: "Thông tin cơ bản" },
+      { id: "tax", label: "Thông tin thuế" },
+      { id: "identity", label: "Thông tin định danh" },
+    ];
+
+    if (!tabs.some((tab) => tab.id === state.shopProfileTab)) {
+      state.shopProfileTab = "basic";
+    }
+
+    const avatarMarkup = getCurrentShopAvatarUrl()
+      ? `<img src="${escapeHtml(getCurrentShopAvatarUrl())}" alt="${escapeHtml(
+          currentShop.name || "Shop"
+        )}" />`
+      : `<span>${escapeHtml(getInitial(currentShop.name || "S"))}</span>`;
+
+    els.shopProfileSummary.innerHTML = `
+      <div class="seller-shop-profile-hero">
+        <article class="seller-shop-profile-card">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div class="seller-shop-profile-brand">
+              <div class="seller-shop-avatar">${avatarMarkup}</div>
+              <div class="seller-shop-profile-copy">
+                <div class="seller-tag-row">
+                  <span class="chip ${escapeHtml(
+                    currentShop.status === "approved" ? "" : "gray"
+                  )}">${escapeHtml(
+        currentShop.status === "approved" ? "Đã duyệt" : currentShop.status || "N/A"
+      )}</span>
+                  <span class="chip gray">ID ${escapeHtml(shortId(currentShop.id))}</span>
+                </div>
+                <h3>${escapeHtml(currentShop.name || "Shop")}</h3>
+                <p>${escapeHtml(
+                  currentShop.description ||
+                    "Shop chưa cập nhật mô tả. Bạn có thể bổ sung ở bước chỉnh sửa sau."
+                )}</p>
+                <div class="seller-profile-chip-row">
+                  <span>${escapeHtml(currentShop.contact_email || "Chưa có email liên hệ")}</span>
+                  <span>${escapeHtml(currentShop.contact_phone || "Chưa có số điện thoại")}</span>
+                </div>
+              </div>
+            </div>
+            <div class="stack-actions seller-shop-profile-actions">
+              ${
+                state.shopProfileEditor.isEditing
+                  ? `
+                    <button
+                      class="seller-btn ghost"
+                      type="button"
+                      data-action="cancel-shop-profile-edit"
+                      ${state.shopProfileEditor.isSaving ? "disabled" : ""}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      class="seller-btn primary"
+                      type="button"
+                      data-action="save-shop-profile"
+                      ${state.shopProfileEditor.isSaving ? "disabled" : ""}
+                    >
+                      ${escapeHtml(
+                        state.shopProfileEditor.isSaving ? "Đang lưu..." : "Lưu thay đổi"
+                      )}
+                    </button>
+                  `
+                  : `
+                    <button class="seller-btn subtle" type="button" data-action="edit-shop-profile">
+                      Chỉnh sửa
+                    </button>
+                  `
+              }
+            </div>
+          </div>
+        </article>
+        <div class="seller-shop-profile-stats">
+          <article class="seller-shop-mini-stat">
+            <span>Ngày tạo</span>
+            <strong>${escapeHtml(formatDate(currentShop.created_at))}</strong>
+          </article>
+          <article class="seller-shop-mini-stat">
+            <span>Duyệt từ</span>
+            <strong>${escapeHtml(
+              currentShop.approved_at ? formatDate(currentShop.approved_at) : "Chưa rõ"
+            )}</strong>
+          </article>
+          <article class="seller-shop-mini-stat">
+            <span>Tài liệu</span>
+            <strong>${escapeHtml(formatCompactNumber(shopDocuments.length))}</strong>
+          </article>
+          <article class="seller-shop-mini-stat">
+            <span>Địa chỉ lấy hàng</span>
+            <strong>${escapeHtml(
+              pickupAddress ? "Đã cập nhật" : "Chưa có"
+            )}</strong>
+          </article>
+        </div>
+      </div>
+    `;
+
+    els.shopProfileTabs.innerHTML = tabs
+      .map(
+        (tab) => `
+          <button
+            class="seller-profile-tab ${tab.id === state.shopProfileTab ? "active" : ""}"
+            type="button"
+            data-shop-profile-tab="${escapeHtml(tab.id)}"
+          >
+            ${escapeHtml(tab.label)}
+          </button>
+        `
+      )
+      .join("");
+
+    if (state.shopProfileTab === "basic") {
+      els.shopProfileContent.innerHTML = `
+        <section class="seller-shop-profile-card">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <h3>Thông tin cơ bản</h3>
+              <p class="muted">Tóm tắt thông tin công khai và vận hành của shop.</p>
+            </div>
+          </div>
+          ${
+            state.shopProfileEditor.isEditing
+              ? `
+                <div class="seller-shop-edit-card">
+                  <div class="seller-shop-edit-avatar-row">
+                    <div class="seller-shop-avatar seller-shop-avatar-large">${avatarMarkup}</div>
+                    <div class="field seller-shop-avatar-field">
+                      <label for="shopProfileAvatarInput">Avatar shop</label>
+                      <input
+                        id="shopProfileAvatarInput"
+                        class="input"
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        ${state.shopProfileEditor.isSaving ? "disabled" : ""}
+                      />
+                      <div class="seller-inline-meta">
+                        <span>Avatar này dùng ảnh đại diện tài khoản seller, tối đa 1MB.</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="seller-two-column">
+                    <div class="field">
+                      <label for="shopProfileNameInput">Tên shop</label>
+                      <input
+                        id="shopProfileNameInput"
+                        class="input"
+                        maxlength="255"
+                        value="${escapeHtml(state.shopProfileEditor.name)}"
+                        ${state.shopProfileEditor.isSaving ? "disabled" : ""}
+                      />
+                    </div>
+                    <div class="seller-tip-card muted">
+                      Chỉ có thể chỉnh sửa tên shop, avatar và mô tả ở màn này. Các thông tin thuế, định danh và liên hệ hiện ở chế độ chỉ xem.
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="shopProfileDescriptionInput">Mô tả shop</label>
+                    <textarea
+                      id="shopProfileDescriptionInput"
+                      class="textarea"
+                      placeholder="Giới thiệu ngắn về shop"
+                      ${state.shopProfileEditor.isSaving ? "disabled" : ""}
+                    >${escapeHtml(state.shopProfileEditor.description)}</textarea>
+                  </div>
+                </div>
+              `
+              : ""
+          }
+          <div class="seller-shop-info-grid">
+            ${renderProfileInfoItems([
+              { label: "Tên shop", value: currentShop.name },
+              {
+                label: "Mô tả shop",
+                value: currentShop.description || "Chưa cập nhật",
+                wide: true,
+              },
+              {
+                label: "Email liên hệ",
+                value: currentShop.contact_email || "Chưa cập nhật",
+              },
+              {
+                label: "Số điện thoại",
+                value: currentShop.contact_phone || "Chưa cập nhật",
+              },
+              {
+                label: "Địa chỉ lấy hàng",
+                value: pickupAddress ? buildAddressText(pickupAddress) : "Chưa cập nhật",
+                detail:
+                  pickupAddress?.contact_name || pickupAddress?.contact_phone
+                    ? `${pickupAddress?.contact_name || "Chưa có người nhận"} · ${
+                        pickupAddress?.contact_phone || "Chưa có số điện thoại"
+                      }`
+                    : "",
+                wide: true,
+              },
+              {
+                label: "Tài khoản nhận tiền",
+                value: paymentAccount
+                  ? `${paymentAccount.account_holder || "Chưa rõ"} · ${
+                      paymentAccount.bank_name || "Chưa có ngân hàng"
+                    }`
+                  : "Chưa cập nhật",
+                detail: paymentAccount?.account_number || "",
+                wide: true,
+              },
+            ])}
+          </div>
+        </section>
+      `;
+      return;
+    }
+
+    if (state.shopProfileTab === "tax") {
+      els.shopProfileContent.innerHTML = `
+        <section class="seller-shop-profile-card">
+          <div class="seller-inline-alert">
+            Thông tin thuế hiện được lấy từ hồ sơ đăng ký shop đã được duyệt. Màn hình này đang ở chế độ xem trước, chưa mở chỉnh sửa trực tiếp.
+          </div>
+          <div class="seller-shop-info-grid">
+            ${renderProfileInfoItems([
+              {
+                label: "Loại hình kinh doanh",
+                value: formatBusinessType(taxInfo?.business_type),
+              },
+              {
+                label: "Tên pháp lý / đơn vị",
+                value: taxInfo?.business_name || "Chưa cập nhật",
+              },
+              {
+                label: "Mã số thuế",
+                value: taxInfo?.tax_code || "Chưa cập nhật",
+              },
+              {
+                label: "Email hóa đơn",
+                value: taxInfo?.invoice_email || "Chưa cập nhật",
+              },
+              {
+                label: "Địa chỉ đăng ký thuế",
+                value: taxAddress ? buildAddressText(taxAddress) : "Chưa cập nhật",
+                detail:
+                  taxAddress?.contact_name || taxAddress?.contact_phone
+                    ? `${taxAddress?.contact_name || "Chưa có người liên hệ"} · ${
+                        taxAddress?.contact_phone || "Chưa có số điện thoại"
+                      }`
+                    : "",
+                wide: true,
+              },
+            ])}
+          </div>
+        </section>
+      `;
+      return;
+    }
+
+    els.shopProfileContent.innerHTML = `
+      <section class="seller-shop-profile-card">
+        <div class="seller-shop-info-grid">
+          ${renderProfileInfoItems([
+            {
+              label: "Hình thức định danh",
+              value: formatIdentityType(identityInfo?.identity_type),
+            },
+            {
+              label: "Số giấy tờ",
+              value: identityInfo?.identity_number || "Chưa cập nhật",
+            },
+            {
+              label: "Họ và tên",
+              value: identityInfo?.identity_full_name || "Chưa cập nhật",
+            },
+            {
+              label: "Xác nhận hồ sơ",
+              value: identityInfo?.consent ? "Đã xác nhận" : "Chưa xác nhận",
+            },
+          ])}
+        </div>
+      </section>
+      <section class="seller-doc-grid">
+        ${renderShopDocumentCards(currentShop)}
+      </section>
+    `;
+  };
+
   const getFilteredProducts = () => {
     const query = state.productFilters.search.trim().toLowerCase();
     const categoryFilter = state.productFilters.categoryId;
@@ -1233,10 +1904,10 @@
                       <button
                         class="seller-mini-btn ghost"
                         type="button"
-                        data-action="duplicate-product"
+                        data-action="edit-product"
                         data-product-id="${escapeHtml(product.id)}"
                       >
-                        Sao chép
+                        Sửa
                       </button>
                       <button
                         class="seller-mini-btn ${
@@ -1478,6 +2149,21 @@
     if (els.productNameCount) {
       els.productNameCount.textContent = `${state.draft.name.trim().length}/120`;
     }
+    if (els.resetProductDraft) {
+      els.resetProductDraft.textContent = isEditingDraft()
+        ? "Xóa sản phẩm"
+        : "Làm lại form";
+    }
+    if (els.saveProductHidden) {
+      els.saveProductHidden.textContent = isEditingDraft()
+        ? "Cập nhật & Ẩn"
+        : "Lưu & Ẩn";
+    }
+    if (els.saveProductVisible) {
+      els.saveProductVisible.textContent = isEditingDraft()
+        ? "Cập nhật & Hiển thị"
+        : "Lưu & Hiển thị";
+    }
     renderChecklist();
     renderMediaPanels();
     renderPreview();
@@ -1527,11 +2213,14 @@
 
   const resetDraft = () => {
     revokeAllDraftMedia();
+    state.editingProductId = "";
+    state.editingVariantId = "";
     state.draft = createEmptyDraft();
     if (els.galleryInput) els.galleryInput.value = "";
     if (els.coverInput) els.coverInput.value = "";
     if (els.videoInput) els.videoInput.value = "";
     syncDraftToForm();
+    updateViewChrome();
   };
 
   const toRemoteMedia = (url, fallbackName) => {
@@ -1547,10 +2236,10 @@
     };
   };
 
-  const prefillDraftFromProduct = (productId) => {
+  const openProductEditor = (productId) => {
     const product = state.products.find((item) => item.id === productId);
     if (!product) {
-      showStatus("Không tìm thấy sản phẩm để sao chép.", { error: true });
+      showStatus("Không tìm thấy sản phẩm để sửa.", { error: true });
       return;
     }
 
@@ -1562,9 +2251,11 @@
       : [];
 
     revokeAllDraftMedia();
+    state.editingProductId = product.id;
+    state.editingVariantId = variant?.id || "";
     state.draft = {
       ...createEmptyDraft(),
-      name: clampText(`${product.name} - Bản sao`, 120),
+      name: clampText(product.name || "", 120),
       categoryId: product.category_id ? String(product.category_id) : "",
       gtin: product.gtin || "",
       description: product.description || "",
@@ -1594,7 +2285,7 @@
     };
     syncDraftToForm();
     setView("new-product");
-    showStatus("Đã nạp dữ liệu sản phẩm vào form tạo mới.");
+    showStatus("Đã nạp dữ liệu sản phẩm vào form chỉnh sửa.");
   };
 
   const setFormBusy = (busy) => {
@@ -1765,6 +2456,161 @@
     }
   };
 
+  const updateDraftProduct = async (status) => {
+    const validationMessage = validateDraft();
+    if (validationMessage) {
+      showStatus(validationMessage, { error: true });
+      return;
+    }
+
+    if (!state.editingProductId) {
+      showStatus("Không xác định sản phẩm cần cập nhật.", { error: true });
+      return;
+    }
+
+    const variantPayload = {
+      price: Number(state.draft.price),
+      stock: Math.max(0, Math.floor(Number(state.draft.stock) || 0)),
+      sku: state.draft.sku.trim() || "",
+      weight: toOptionalNumber(state.draft.weight),
+    };
+
+    setFormBusy(true);
+    showStatus("Đang cập nhật sản phẩm...", { persist: true });
+
+    try {
+      const uploadedMedia = await uploadDraftMedia();
+      const existingGallery = state.draft.gallery
+        .map((item) => item?.serverUrl || "")
+        .filter(Boolean);
+
+      const payload = {
+        name: state.draft.name.trim(),
+        description: state.draft.description.trim(),
+        category_id: Number(state.draft.categoryId),
+        gtin: state.draft.gtin.trim(),
+        condition: state.draft.condition || "new",
+        length_cm: toOptionalNumber(state.draft.length),
+        width_cm: toOptionalNumber(state.draft.width),
+        height_cm: toOptionalNumber(state.draft.height),
+        cover_image_url:
+          uploadedMedia.cover_image_url || state.draft.cover?.serverUrl || null,
+        video_url: uploadedMedia.video_url || state.draft.video?.serverUrl || null,
+        media_gallery: [...existingGallery, ...(uploadedMedia.gallery || [])],
+        status,
+      };
+
+      await apiFetch(
+        `/products/${state.editingProductId}`,
+        {
+          method: "PATCH",
+          body: payload,
+        },
+        { redirectOn401: true }
+      );
+
+      try {
+        if (state.editingVariantId) {
+          await apiFetch(
+            `/products/variants/${state.editingVariantId}`,
+            {
+              method: "PATCH",
+              body: variantPayload,
+            },
+            { redirectOn401: true }
+          );
+        } else {
+          await apiFetch(
+            `/products/${state.editingProductId}/variants`,
+            {
+              method: "POST",
+              body: variantPayload,
+            },
+            { redirectOn401: true }
+          );
+        }
+      } catch (variantError) {
+        await Promise.all([loadProducts(), loadOrders()]);
+        renderAll();
+        setView("products");
+        throw new Error(
+          `Sản phẩm đã được cập nhật nhưng chưa lưu được biến thể: ${
+            variantError instanceof Error
+              ? variantError.message
+              : "Không rõ lỗi"
+          }`
+        );
+      }
+
+      resetDraft();
+      await Promise.all([loadProducts(), loadOrders()]);
+      renderAll();
+      setView("products");
+      showStatus(
+        status === "active"
+          ? "Đã cập nhật và hiển thị sản phẩm."
+          : "Đã cập nhật sản phẩm ở trạng thái ẩn."
+      );
+    } catch (error) {
+      showStatus(
+        error instanceof Error ? error.message : "Không thể cập nhật sản phẩm.",
+        { error: true }
+      );
+    } finally {
+      setFormBusy(false);
+    }
+  };
+
+  const saveDraft = async (status) => {
+    if (isEditingDraft()) {
+      await updateDraftProduct(status);
+      return;
+    }
+
+    await saveDraftAsProduct(status);
+  };
+
+  const deleteCurrentProduct = async (button) => {
+    if (!state.editingProductId) return;
+
+    const shouldDelete = window.confirm(
+      "Xóa sản phẩm này? Sản phẩm sẽ được chuyển sang trạng thái ẩn."
+    );
+    if (!shouldDelete) return;
+
+    const originalText = button?.textContent || "";
+    setFormBusy(true);
+    if (button) {
+      button.textContent = "Đang xóa...";
+    }
+
+    try {
+      await apiFetch(
+        `/products/${state.editingProductId}`,
+        {
+          method: "DELETE",
+        },
+        { redirectOn401: true }
+      );
+
+      resetDraft();
+      await Promise.all([loadProducts(), loadOrders()]);
+      renderAll();
+      setView("products");
+      showStatus("Đã xóa sản phẩm.");
+    } catch (error) {
+      showStatus(
+        error instanceof Error ? error.message : "Không thể xóa sản phẩm.",
+        { error: true }
+      );
+      if (button) {
+        button.textContent = originalText;
+      }
+    } finally {
+      setFormBusy(false);
+    }
+  };
+
   const updateProductStatus = async (productId, nextStatus, button) => {
     if (!productId || !nextStatus) return;
 
@@ -1855,6 +2701,7 @@
       state.approvedShops[0]?.id ||
       "";
 
+    resetShopProfileEditor();
     populateShopSelect();
     updateUserInfo();
     toggleApprovedContent(Boolean(state.approvedShops.length));
@@ -1902,6 +2749,7 @@
     updateShopSummary();
     updateViewChrome();
     renderDashboard();
+    renderShopProfile();
     renderProductsView();
     renderDraft();
   };
@@ -2075,6 +2923,7 @@
     els.sellerShopSelect?.addEventListener("change", async (event) => {
       const nextShopId = event.target.value || "";
       if (!nextShopId || nextShopId === state.currentShopId) return;
+      resetShopProfileEditor();
       state.currentShopId = nextShopId;
       localStorage.setItem(SHOP_PREF_KEY, nextShopId);
       updateShopSummary();
@@ -2179,13 +3028,36 @@
         return;
       }
 
+      const shopProfileTab = event.target.closest("[data-shop-profile-tab]");
+      if (shopProfileTab) {
+        state.shopProfileTab = shopProfileTab.dataset.shopProfileTab || "basic";
+        renderShopProfile();
+        return;
+      }
+
       const actionButton = event.target.closest("[data-action]");
       if (!actionButton) return;
 
       const action = actionButton.dataset.action;
 
-      if (action === "duplicate-product") {
-        prefillDraftFromProduct(actionButton.dataset.productId);
+      if (action === "edit-shop-profile") {
+        startShopProfileEdit();
+        return;
+      }
+
+      if (action === "cancel-shop-profile-edit") {
+        resetShopProfileEditor();
+        renderShopProfile();
+        return;
+      }
+
+      if (action === "save-shop-profile") {
+        await saveShopProfile();
+        return;
+      }
+
+      if (action === "edit-product") {
+        openProductEditor(actionButton.dataset.productId);
         return;
       }
 
@@ -2232,6 +3104,30 @@
       }
     });
 
+    document.addEventListener("input", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.id === "shopProfileNameInput") {
+        state.shopProfileEditor.name = target.value || "";
+        return;
+      }
+
+      if (target.id === "shopProfileDescriptionInput") {
+        state.shopProfileEditor.description = target.value || "";
+      }
+    });
+
+    document.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.id === "shopProfileAvatarInput") {
+        const file = target.files?.[0] || null;
+        setShopProfileAvatarFile(file);
+      }
+    });
+
     els.reloadSellerData?.addEventListener("click", async () => {
       await loadSellerData();
     });
@@ -2259,7 +3155,12 @@
       setView("products");
     });
 
-    els.resetProductDraft?.addEventListener("click", () => {
+    els.resetProductDraft?.addEventListener("click", async () => {
+      if (isEditingDraft()) {
+        await deleteCurrentProduct(els.resetProductDraft);
+        return;
+      }
+
       const shouldReset = window.confirm(
         "Xóa toàn bộ dữ liệu bản nháp hiện tại?"
       );
@@ -2269,11 +3170,11 @@
     });
 
     els.saveProductHidden?.addEventListener("click", async () => {
-      await saveDraftAsProduct("inactive");
+      await saveDraft("inactive");
     });
 
     els.saveProductVisible?.addEventListener("click", async () => {
-      await saveDraftAsProduct("active");
+      await saveDraft("active");
     });
 
     els.logoutSeller?.addEventListener("click", () => {
@@ -2282,7 +3183,10 @@
     });
 
     document.addEventListener("scroll", syncActiveFormTab, { passive: true });
-    window.addEventListener("beforeunload", revokeAllDraftMedia);
+    window.addEventListener("beforeunload", () => {
+      revokeAllDraftMedia();
+      revokeShopProfileAvatarPreview();
+    });
   };
 
   const bootstrap = async () => {

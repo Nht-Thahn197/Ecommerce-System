@@ -5,11 +5,13 @@ import {
   listApprovedShops,
   listPendingShops,
   registerShop,
+  updateShopProfile,
   updateShopStatus,
 } from "./shop.service";
 import {
   ListShopsQuery,
   RegisterShopInput,
+  UpdateShopProfileInput,
   UpdateShopStatusInput,
 } from "./shop.types";
 
@@ -70,6 +72,19 @@ export const updateStatus = async (
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     const shop = await updateShopStatus(req.userId, req.params.id, req.body);
+    res.json({ shop });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateProfile = async (
+  req: AuthRequest<{ id: string }, {}, UpdateShopProfileInput>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    const shop = await updateShopProfile(req.userId, req.params.id, req.body);
     res.json({ shop });
   } catch (error: any) {
     res.status(400).json({ message: error.message });

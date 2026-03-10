@@ -54,6 +54,11 @@ export interface RegisterShopInput {
   documents?: ShopDocumentInput[];
 }
 
+export interface UpdateShopProfileInput {
+  name?: string;
+  description?: string | null;
+}
+
 export interface UpdateShopStatusInput {
   status: "approved" | "rejected";
   rejected_reason?: string;
