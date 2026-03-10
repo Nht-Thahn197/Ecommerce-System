@@ -86,6 +86,7 @@
   };
 
   const getCategoryHref = (id) => `/ui/category.html?id=${encodeURIComponent(id)}`;
+  const getProductHref = (id) => `/ui/product.html?id=${encodeURIComponent(id)}`;
 
   const getChildren = (node) => (Array.isArray(node?.children) ? node.children : []);
 
@@ -267,7 +268,8 @@
           CONDITION_LABELS[product?.condition] || CONDITION_LABELS.new;
 
         return `
-          <article class="product-card">
+          <a class="product-card-link" href="${getProductHref(product?.id || "")}">
+            <article class="product-card">
             <div class="badge">${escapeHtml(conditionLabel)}</div>
             <div class="product-thumb ${imageUrl ? "has-image" : ""}">
               ${
@@ -283,7 +285,8 @@
               <div class="price">${escapeHtml(formatCurrency(price))}</div>
               <div class="product-shop">${escapeHtml(shopName)}</div>
             </div>
-          </article>
+            </article>
+          </a>
         `;
       })
       .join("");

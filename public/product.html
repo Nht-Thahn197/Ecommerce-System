@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chi tiết sản phẩm | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260310-25" />
+  </head>
+  <body data-page="product">
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <a href="/ui/shop-register.html">Kênh Người Bán</a>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <a class="logo" href="/ui/">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </a>
+        <div class="search-wrap">
+          <input
+            type="text"
+            placeholder="Tìm sản phẩm, thương hiệu, và tên shop"
+          />
+          <button type="button">Tìm</button>
+        </div>
+        <div class="header-actions">
+          <a class="pill" href="/ui/">Về trang chủ</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container hero product-page">
+      <nav id="productBreadcrumb" class="catalog-breadcrumb product-breadcrumb">
+        <a href="/ui/">Trang chủ</a>
+        <span>/</span>
+        <span>Chi tiết sản phẩm</span>
+      </nav>
+
+      <div id="productPageStatus" class="status" hidden></div>
+
+      <section id="productShell" class="product-shell" hidden>
+        <section class="product-hero-card">
+          <div class="product-gallery-panel">
+            <div id="productMediaMain" class="product-media-main"></div>
+            <div class="product-media-thumbs-wrap">
+              <button
+                id="productMediaPrev"
+                class="product-media-nav product-media-nav-prev"
+                type="button"
+                aria-label="Xem media trước"
+                hidden
+              >
+                <span>&lsaquo;</span>
+              </button>
+              <div class="product-media-thumbs-viewport">
+                <div id="productMediaThumbs" class="product-media-thumbs"></div>
+              </div>
+              <button
+                id="productMediaNext"
+                class="product-media-nav product-media-nav-next"
+                type="button"
+                aria-label="Xem media tiếp theo"
+                hidden
+              >
+                <span>&rsaquo;</span>
+              </button>
+            </div>
+            <div class="product-share-row">
+              <span>Chia sẻ:</span>
+              <div class="product-share-icons">
+                <span>f</span>
+                <span>m</span>
+                <span>p</span>
+                <span>x</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="product-info-panel">
+            <div class="product-heading">
+              <div id="productBadges" class="product-badge-row"></div>
+              <h1 id="productTitle">Đang tải sản phẩm...</h1>
+            </div>
+
+            <div class="product-meta-row">
+              <div class="product-score">
+                <strong id="productAverageRating">0.0</strong>
+                <div id="productStars" class="rating-stars" aria-hidden="true"></div>
+              </div>
+              <div class="product-meta-sep"></div>
+              <div>
+                <strong id="productReviewCount">0</strong>
+                <span>đánh giá</span>
+              </div>
+              <div class="product-meta-sep"></div>
+              <div>
+                <strong id="productSoldCount">Còn hàng</strong>
+                <span>trạng thái</span>
+              </div>
+            </div>
+
+            <div class="product-price-box">
+              <div class="product-price-line">
+                <strong id="productPrice">0₫</strong>
+                <span id="productPriceHint">Giá tốt từ shop</span>
+              </div>
+              <div id="productVoucherChips" class="voucher-chip-list"></div>
+            </div>
+
+            <div class="product-highlight-grid">
+              <article class="product-highlight-card">
+                <span class="product-highlight-label">Vận chuyển</span>
+                <strong>Giao nhanh toàn quốc</strong>
+                <p>Ước tính 2-4 ngày làm việc, đóng gói chắc chắn.</p>
+              </article>
+              <article class="product-highlight-card">
+                <span class="product-highlight-label">Cam kết</span>
+                <strong>Đổi trả 14 ngày</strong>
+                <p>Hỗ trợ nếu sản phẩm lỗi hoặc sai mô tả của shop.</p>
+              </article>
+              <article class="product-highlight-card">
+                <span class="product-highlight-label">Ưu đãi</span>
+                <strong>Mã giảm giá tại shop</strong>
+                <p>Áp dụng các voucher đang hiển thị phía dưới giá bán.</p>
+              </article>
+            </div>
+
+            <div class="product-picker-block">
+              <div class="product-picker-header">
+                <span>Phân loại</span>
+                <strong id="productCurrentVariantLabel">Chưa có biến thể</strong>
+              </div>
+              <div id="productVariantOptions" class="variant-chip-list"></div>
+              <div id="productVariantMeta" class="variant-meta"></div>
+            </div>
+
+            <div class="product-picker-block">
+              <div class="product-picker-header">
+                <span>Số lượng</span>
+                <strong id="productStockText">0 sản phẩm sẵn kho</strong>
+              </div>
+              <div class="quantity-row">
+                <div class="quantity-stepper">
+                  <button id="qtyDecreaseBtn" type="button" aria-label="Giảm số lượng">
+                    -
+                  </button>
+                  <input
+                    id="qtyInput"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="1"
+                    inputmode="numeric"
+                  />
+                  <button id="qtyIncreaseBtn" type="button" aria-label="Tăng số lượng">
+                    +
+                  </button>
+                </div>
+                <span id="productQtyHint" class="muted">Chọn số lượng phù hợp</span>
+              </div>
+            </div>
+
+            <div class="product-action-row">
+              <button id="addToCartBtn" class="primary-outline-btn" type="button">
+                Thêm vào giỏ hàng
+              </button>
+              <button id="buyNowBtn" class="primary-fill-btn" type="button">
+                Mua ngay
+              </button>
+            </div>
+
+            <div id="productActionStatus" class="product-inline-status" hidden></div>
+          </div>
+        </section>
+
+        <section class="shop-summary-card">
+          <div class="shop-summary-main">
+            <div class="shop-summary-avatar">B</div>
+            <div>
+              <h2 id="shopName">Shop Bambi</h2>
+              <p id="shopDescription">Cửa hàng đang được đồng bộ dữ liệu từ hệ thống.</p>
+            </div>
+          </div>
+          <div class="shop-summary-stats">
+            <div>
+              <span>Sản phẩm</span>
+              <strong id="shopProductCount">0</strong>
+            </div>
+            <div>
+              <span>Danh mục</span>
+              <strong id="shopCategoryName">Đang cập nhật</strong>
+            </div>
+            <div>
+              <span>Tình trạng shop</span>
+              <strong>Đang hoạt động</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="product-content-grid">
+          <article class="panel-card product-detail-card">
+            <h2 class="panel-title">Chi tiết sản phẩm</h2>
+            <dl id="productSpecs" class="product-spec-grid"></dl>
+          </article>
+
+          <article class="panel-card product-description-card">
+            <h2 class="panel-title">Mô tả sản phẩm</h2>
+            <div id="productDescription" class="product-description"></div>
+          </article>
+        </section>
+
+        <section class="panel-card review-panel">
+          <div class="review-header">
+            <div>
+              <h2 class="panel-title">Đánh giá sản phẩm</h2>
+              <p class="panel-sub">Tổng hợp phản hồi thực tế từ người mua.</p>
+            </div>
+            <div class="review-summary-card">
+              <strong id="reviewAverageLabel">0.0</strong>
+              <span id="reviewSummaryCount">0 đánh giá</span>
+            </div>
+          </div>
+
+          <div id="reviewList" class="review-list"></div>
+          <div id="reviewEmpty" class="catalog-empty" hidden>
+            Chưa có đánh giá nào cho sản phẩm này.
+          </div>
+          <div id="reviewPagination" class="review-pagination"></div>
+        </section>
+
+        <section class="section related-section">
+          <div class="section-title">
+            <h3>Sản phẩm khác của shop</h3>
+            <span id="relatedCountLabel" class="section-link">0 sản phẩm</span>
+          </div>
+          <div id="relatedProducts" class="product-grid"></div>
+          <div id="relatedEmpty" class="catalog-empty" hidden>
+            Shop hiện chưa có thêm sản phẩm nào khác để hiển thị.
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Bambi Marketplace - Trang chi tiết sản phẩm lấy dữ liệu thật từ danh mục,
+      sản phẩm, đánh giá và giỏ hàng.
+    </footer>
+
+    <script src="/ui/store.js?v=20260310-3"></script>
+    <script src="/ui/product.js?v=20260310-24"></script>
+  </body>
+</html>
