@@ -5,6 +5,7 @@ import {
   listApprovedShops,
   listPendingShops,
   registerShop,
+  updateShopAvatar,
   updateShopProfile,
   updateShopStatus,
 } from "./shop.service";
@@ -85,6 +86,33 @@ export const updateProfile = async (
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     const shop = await updateShopProfile(req.userId, req.params.id, req.body);
+    res.json({ shop });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const uploadAvatar = async (
+  req: AuthRequest<{ id: string }>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const validationError = (req as any).fileValidationError as
+      | string
+      | undefined;
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) {
+      return res.status(400).json({ message: "Khong co anh" });
+    }
+
+    const avatarUrl = `/ui/uploads/shop-avatars/${file.filename}`;
+    const shop = await updateShopAvatar(req.userId, req.params.id, avatarUrl);
     res.json({ shop });
   } catch (error: any) {
     res.status(400).json({ message: error.message });

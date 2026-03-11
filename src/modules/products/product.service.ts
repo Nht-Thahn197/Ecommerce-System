@@ -5,9 +5,11 @@ import {
   CreateProductInput,
   CreateVariantInput,
   ListProductsQuery,
+  SyncProductVariantsInput,
   UpdateProductInput,
   UpdateVariantInput,
   UpdateVariantStockInput,
+  VariantGroupInput,
 } from "./product.types";
 
 const MAX_LIMIT = 100;
@@ -27,6 +29,7 @@ const productSelect = {
   cover_image_url: true,
   video_url: true,
   media_gallery: true,
+  variant_config: true,
   status: true,
   created_at: true,
   shop_id: true,
@@ -50,6 +53,8 @@ const productSelect = {
       price: true,
       stock: true,
       weight: true,
+      image_url: true,
+      option_values: true,
     },
   },
 } satisfies Prisma.productsSelect;
@@ -131,6 +136,88 @@ const normalizeMediaGallery = (value?: string[] | null) => {
     : [];
 
   return items.length ? (items as Prisma.InputJsonValue) : Prisma.DbNull;
+};
+
+const normalizeSku = (value?: string | null) => normalizeString(value, 100);
+
+const normalizeOptionValues = (value?: string[] | null) => {
+  if (value === undefined) return undefined;
+  if (value === null) return Prisma.DbNull;
+  if (!Array.isArray(value)) {
+    throw new Error("Variant option values must be an array");
+  }
+
+  const items = value
+    .map((item) => normalizeString(String(item || ""), 100))
+    .filter((item): item is string => Boolean(item));
+
+  return items.length ? (items as Prisma.InputJsonValue) : Prisma.DbNull;
+};
+
+const normalizeVariantConfig = (value?: VariantGroupInput[] | null) => {
+  if (value === undefined) return undefined;
+  if (value === null) return Prisma.DbNull;
+  if (!Array.isArray(value)) {
+    throw new Error("Variant config must be an array");
+  }
+
+  const groups = value
+    .map((group) => {
+      const name = normalizeString(group?.name, 50);
+      const options = Array.isArray(group?.options)
+        ? Array.from(
+            new Set(
+              group.options
+                .map((option) => normalizeString(option, 50))
+                .filter((option): option is string => Boolean(option))
+            )
+          )
+        : [];
+
+      if (!name || !options.length) return null;
+
+      return {
+        name,
+        options,
+      };
+    })
+    .filter((group): group is { name: string; options: string[] } => Boolean(group))
+    .slice(0, 2);
+
+  return groups.length ? (groups as Prisma.InputJsonValue) : Prisma.DbNull;
+};
+
+const readVariantConfig = (value: Prisma.JsonValue | null | undefined) =>
+  (Array.isArray(value) ? value : [])
+    .map((group) => ({
+      name: normalizeString(String((group as any)?.name || ""), 50),
+      options: Array.from(
+        new Set(
+          (Array.isArray((group as any)?.options) ? (group as any).options : [])
+            .map((option: unknown) => normalizeString(String(option || ""), 50))
+            .filter((option: string | null): option is string => Boolean(option))
+        )
+      ),
+    }))
+    .filter((group) => group.name && group.options.length)
+    .map((group) => ({
+      name: group.name!,
+      options: group.options,
+    }));
+
+const toVariantWriteError = (error: unknown) => {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    Array.isArray(error.meta?.target) &&
+    error.meta.target.includes("sku")
+  ) {
+    return new Error("SKU da ton tai, vui long dung ma khac.");
+  }
+
+  return error instanceof Error
+    ? error
+    : new Error("Khong the luu bien the san pham.");
 };
 
 const buildWhere = async (
@@ -295,6 +382,7 @@ export const createProduct = async (
       cover_image_url: normalizeString(input.cover_image_url, 500) ?? null,
       video_url: normalizeString(input.video_url, 500) ?? null,
       media_gallery: mediaGallery ?? Prisma.DbNull,
+      variant_config: normalizeVariantConfig(input.variant_config) ?? Prisma.DbNull,
       status: input.status || "active",
       shop_id: shopId,
     },
@@ -380,6 +468,10 @@ export const updateProduct = async (
     data.media_gallery = normalizeMediaGallery(input.media_gallery);
   }
 
+  if (input.variant_config !== undefined) {
+    data.variant_config = normalizeVariantConfig(input.variant_config);
+  }
+
   return prisma.products.update({
     where: { id: productId },
     data,
@@ -411,6 +503,158 @@ export const deleteProduct = async (userId: string, productId: string) => {
   });
 };
 
+const ensureSellerOwnsProduct = async (userId: string, productId: string) => {
+  const product = await prisma.products.findUnique({
+    where: { id: productId },
+    select: { id: true, shop_id: true, variant_config: true },
+  });
+
+  if (!product?.shop_id) {
+    throw new Error("Product not found");
+  }
+
+  const shop = await prisma.shops.findFirst({
+    where: { id: product.shop_id, owner_id: userId },
+    select: { id: true },
+  });
+
+  if (!shop) {
+    throw new Error("Seller only");
+  }
+
+  return product;
+};
+
+export const syncProductVariants = async (
+  userId: string,
+  productId: string,
+  input: SyncProductVariantsInput
+) => {
+  const product = await ensureSellerOwnsProduct(userId, productId);
+  const configuredGroups = readVariantConfig(product.variant_config);
+  const seenOptionKeys = new Set<string>();
+
+  if (!Array.isArray(input.variants) || !input.variants.length) {
+    throw new Error("At least one variant is required");
+  }
+
+  const nextVariants = input.variants.map((variant) => {
+    if (!Number.isFinite(variant.price) || variant.price <= 0) {
+      throw new Error("Price must be greater than 0");
+    }
+
+    if (variant.stock !== undefined && variant.stock < 0) {
+      throw new Error("Stock must be >= 0");
+    }
+
+    const optionValues = Array.isArray(variant.option_values)
+      ? variant.option_values
+          .map((value) => normalizeString(String(value || ""), 100))
+          .filter((value): value is string => Boolean(value))
+      : [];
+
+    if (configuredGroups.length) {
+      if (optionValues.length !== configuredGroups.length) {
+        throw new Error("Each variant must select enough option values");
+      }
+
+      optionValues.forEach((value, index) => {
+        if (!configuredGroups[index]?.options.includes(value)) {
+          throw new Error("Variant option value is invalid");
+        }
+      });
+
+      const optionKey = optionValues.join("||");
+      if (seenOptionKeys.has(optionKey)) {
+        throw new Error("Variant option values must be unique");
+      }
+      seenOptionKeys.add(optionKey);
+    }
+
+    return {
+      id: variant.id?.trim() || "",
+      sku: normalizeSku(variant.sku) ?? null,
+      price: variant.price,
+      stock: variant.stock ?? 0,
+      weight: normalizeInteger(variant.weight, true) ?? null,
+      image_url: normalizeString(variant.image_url, 500) ?? null,
+      option_values: optionValues.length
+        ? (optionValues as Prisma.InputJsonValue)
+        : Prisma.DbNull,
+    };
+  });
+
+  const existingVariants = await prisma.product_variants.findMany({
+    where: { product_id: productId },
+    select: {
+      id: true,
+      order_items: { select: { id: true } },
+    },
+  });
+
+  const existingIds = new Set(existingVariants.map((variant) => variant.id));
+  const nextIds = new Set(nextVariants.map((variant) => variant.id).filter(Boolean));
+  const variantsToDelete = existingVariants.filter((variant) => !nextIds.has(variant.id));
+
+  if (variantsToDelete.some((variant) => variant.order_items.length > 0)) {
+    throw new Error("Cannot remove variants that already have orders");
+  }
+
+  const invalidIncomingId = nextVariants.find(
+    (variant) => variant.id && !existingIds.has(variant.id)
+  );
+
+  if (invalidIncomingId?.id) {
+    throw new Error("Variant not found");
+  }
+
+  await prisma
+    .$transaction(async (tx) => {
+      if (variantsToDelete.length) {
+        await tx.product_variants.deleteMany({
+          where: { id: { in: variantsToDelete.map((variant) => variant.id) } },
+        });
+      }
+
+      for (const variant of nextVariants) {
+        if (variant.id) {
+          await tx.product_variants.update({
+            where: { id: variant.id },
+            data: {
+              sku: variant.sku,
+              price: variant.price,
+              stock: variant.stock,
+              weight: variant.weight,
+              image_url: variant.image_url,
+              option_values: variant.option_values,
+            },
+          });
+          continue;
+        }
+
+        await tx.product_variants.create({
+          data: {
+            product_id: productId,
+            sku: variant.sku,
+            price: variant.price,
+            stock: variant.stock,
+            weight: variant.weight,
+            image_url: variant.image_url,
+            option_values: variant.option_values,
+          },
+        });
+      }
+    })
+    .catch((error) => {
+      throw toVariantWriteError(error);
+    });
+
+  return prisma.product_variants.findMany({
+    where: { product_id: productId },
+    orderBy: { created_at: "asc" },
+  });
+};
+
 export const createVariant = async (
   userId: string,
   productId: string,
@@ -438,15 +682,21 @@ export const createVariant = async (
     throw new Error("Seller only");
   }
 
-  return prisma.product_variants.create({
-    data: {
-      product_id: productId,
-      sku: input.sku || null,
-      price: input.price,
-      stock: input.stock ?? 0,
-      weight: normalizeInteger(input.weight, true) ?? null,
-    },
-  });
+  return prisma.product_variants
+    .create({
+      data: {
+        product_id: productId,
+        sku: normalizeSku(input.sku) ?? null,
+        price: input.price,
+        stock: input.stock ?? 0,
+        weight: normalizeInteger(input.weight, true) ?? null,
+        image_url: normalizeString(input.image_url, 500) ?? null,
+        option_values: normalizeOptionValues(input.option_values) ?? Prisma.DbNull,
+      },
+    })
+    .catch((error) => {
+      throw toVariantWriteError(error);
+    });
 };
 
 export const updateVariant = async (
@@ -484,15 +734,27 @@ export const updateVariant = async (
     throw new Error("Stock must be >= 0");
   }
 
-  return prisma.product_variants.update({
-    where: { id: variantId },
-    data: {
-      sku: input.sku ?? undefined,
-      price: input.price ?? undefined,
-      stock: input.stock ?? undefined,
-      weight: normalizeInteger(input.weight) ?? undefined,
-    },
-  });
+  return prisma.product_variants
+    .update({
+      where: { id: variantId },
+      data: {
+        sku: normalizeSku(input.sku),
+        price: input.price ?? undefined,
+        stock: input.stock ?? undefined,
+        weight: normalizeInteger(input.weight) ?? undefined,
+        image_url:
+          input.image_url !== undefined
+            ? normalizeString(input.image_url, 500)
+            : undefined,
+        option_values:
+          input.option_values !== undefined
+            ? normalizeOptionValues(input.option_values)
+            : undefined,
+      },
+    })
+    .catch((error) => {
+      throw toVariantWriteError(error);
+    });
 };
 
 export const deleteVariant = async (userId: string, variantId: string) => {

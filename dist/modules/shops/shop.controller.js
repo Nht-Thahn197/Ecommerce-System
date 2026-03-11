@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadDocument = exports.updateStatus = exports.listPending = exports.listPublic = exports.myShops = exports.register = void 0;
+exports.uploadDocument = exports.uploadAvatar = exports.updateProfile = exports.updateStatus = exports.listPending = exports.listPublic = exports.myShops = exports.register = void 0;
 const shop_service_1 = require("./shop.service");
 const register = async (req, res) => {
     try {
@@ -58,6 +58,39 @@ const updateStatus = async (req, res) => {
     }
 };
 exports.updateStatus = updateStatus;
+const updateProfile = async (req, res) => {
+    try {
+        if (!req.userId)
+            return res.status(401).json({ message: "Unauthorized" });
+        const shop = await (0, shop_service_1.updateShopProfile)(req.userId, req.params.id, req.body);
+        res.json({ shop });
+    }
+    catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+exports.updateProfile = updateProfile;
+const uploadAvatar = async (req, res) => {
+    try {
+        if (!req.userId)
+            return res.status(401).json({ message: "Unauthorized" });
+        const validationError = req.fileValidationError;
+        if (validationError) {
+            return res.status(400).json({ message: validationError });
+        }
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ message: "Khong co anh" });
+        }
+        const avatarUrl = `/ui/uploads/shop-avatars/${file.filename}`;
+        const shop = await (0, shop_service_1.updateShopAvatar)(req.userId, req.params.id, avatarUrl);
+        res.json({ shop });
+    }
+    catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+exports.uploadAvatar = uploadAvatar;
 const uploadDocument = async (req, res) => {
     try {
         if (!req.userId)

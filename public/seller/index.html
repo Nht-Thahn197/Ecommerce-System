@@ -6,7 +6,7 @@
     <title>Bambi Seller Studio</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="../shared.css" />
-    <link rel="stylesheet" href="./seller.css" />
+    <link rel="stylesheet" href="./seller.css?v=20260311-5" />
   </head>
   <body class="seller-body">
     <div class="seller-shell">
@@ -232,7 +232,6 @@
                   <div class="seller-panel-head">
                     <div>
                       <h2>Thông tin cơ bản</h2>
-                      <p class="muted">Bám layout của sàn: hình ảnh, tên, ngành hàng và mã định danh sản phẩm.</p>
                     </div>
                   </div>
 
@@ -286,10 +285,23 @@
                     </div>
                   </div>
 
-                  <div class="seller-two-column">
-                    <div class="field">
-                      <label for="productCategoryInput">Ngành hàng</label>
-                      <select id="productCategoryInput" class="select"></select>
+                  <div class="seller-two-column seller-sales-single-fields">
+                    <div class="field" hidden>
+                      <label for="productCategoryTrigger">Ngành hàng</label>
+                      <button
+                        id="productCategoryTrigger"
+                        class="seller-category-trigger"
+                        type="button"
+                        aria-haspopup="dialog"
+                        aria-expanded="false"
+                        aria-controls="categoryPickerModal"
+                      >
+                        <span class="seller-category-trigger-copy">
+                          <strong id="productCategoryValue">Chọn ngành hàng</strong>
+                        </span>
+                        <span class="seller-category-trigger-arrow" aria-hidden="true"></span>
+                      </button>
+                      <input id="productCategoryInput" type="hidden" />
                     </div>
                     <div class="field">
                       <label for="productGtinInput">GTIN</label>
@@ -302,7 +314,6 @@
                   <div class="seller-panel-head">
                     <div>
                       <h2>Mô tả</h2>
-                      <p class="muted">Nội dung mô tả hiện được gửi lên API và dùng cho preview sản phẩm bên phải.</p>
                     </div>
                   </div>
 
@@ -316,41 +327,65 @@
                   </div>
                 </section>
 
-                <section id="productSalesSection" class="seller-panel seller-form-card">
+                <section id="productSalesSection" class="seller-panel seller-form-card seller-sales-panel">
                   <div class="seller-panel-head">
                     <div>
                       <h2>Thông tin bán hàng</h2>
-                      <p class="muted">Biến thể đầu tiên sẽ được tạo cùng sản phẩm để có giá và tồn kho ngay.</p>
                     </div>
                   </div>
 
-                  <div class="seller-tip-card">
+                  <div class="seller-tip-card seller-sales-info">
                     <strong>Phân loại hàng</strong>
-                    <p>
-                      API hiện tại hỗ trợ tạo biến thể đầu tiên ngay khi lưu. Sau khi sản phẩm đã tạo,
-                      bạn có thể bổ sung thêm biến thể khác trong các bước quản lý tiếp theo.
-                    </p>
+                    <button id="enableVariantGroupsBtn" type="button" class="seller-sales-ghost-btn">
+                      <span class="seller-sales-plus" aria-hidden="true">+</span>
+                      <span>Thêm nhóm phân loại</span>
+                    </button>
                   </div>
 
-                  <div class="seller-two-column">
+                  <div class="seller-two-column seller-sales-single-fields">
                     <div class="field">
                       <label for="productPriceInput">Giá</label>
-                      <input id="productPriceInput" class="input" type="number" min="0" step="1000" placeholder="Nhập giá bán" />
+                      <div class="seller-sales-input currency">
+                        <span class="seller-sales-prefix">đ</span>
+                        <input id="productPriceInput" class="input" type="number" min="0" step="1000" placeholder="Nhập giá bán" />
+                      </div>
                     </div>
                     <div class="field">
                       <label for="productStockInput">Kho hàng</label>
-                      <input id="productStockInput" class="input" type="number" min="0" step="1" value="0" />
+                      <div class="seller-sales-input">
+                        <input id="productStockInput" class="input" type="number" min="0" step="1" value="0" />
+                      </div>
                     </div>
                   </div>
 
-                  <div class="seller-two-column">
-                    <div class="field">
-                      <label for="productSkuInput">SKU sản phẩm</label>
-                      <input id="productSkuInput" class="input" placeholder="Ví dụ: BAMBI-TEE-001" />
+                  <div id="multiVariantSection" class="seller-multi-variant-section" hidden>
+                    <div id="variantGroupsEditor" class="seller-variant-groups-editor"></div>
+                    <button
+                      id="addSecondVariantGroupBtn"
+                      class="seller-sales-ghost-btn seller-sales-ghost-btn-secondary"
+                      type="button"
+                      hidden
+                    >
+                      <span class="seller-sales-plus" aria-hidden="true">+</span>
+                      <span>Thêm nhóm phân loại 2</span>
+                    </button>
+                    <div class="seller-variant-table-wrap">
+                      <div class="seller-variant-table-head">
+                        <strong>Danh sách phân loại hàng</strong>
+                        <span class="muted">Giá và kho hàng là bắt buộc cho từng biến thể.</span>
+                      </div>
+                      <div id="variantMatrixTable" class="seller-variant-table"></div>
                     </div>
+                  </div>
+
+                  <div class="seller-sales-discount-block">
                     <div class="field">
                       <label>Mua nhiều giảm giá</label>
-                      <div class="seller-tip-card muted">
+                      <button type="button" class="seller-sales-ghost-btn" data-sales-label="Thêm khoảng giá" disabled>
+                        <span class="seller-sales-plus" aria-hidden="true">+</span>
+                        <span>Thêm khoảng giá</span>
+                      </button>
+                      <div class="seller-tip-card muted seller-sales-muted">
                         Màn này đang ưu tiên luồng tạo sản phẩm gốc. Khoảng giá khuyến mãi có thể thêm sau.
                       </div>
                     </div>
@@ -490,6 +525,7 @@
                   <div class="seller-preview-category" id="previewCategory">Chưa chọn ngành hàng</div>
                   <h3 id="previewName">Tên sản phẩm sẽ hiển thị tại đây</h3>
                   <strong id="previewPrice">đ0</strong>
+                  <div class="seller-preview-variants" id="previewVariantSummary" hidden></div>
                   <div class="seller-preview-meta">
                     <span id="previewShopName">Shop</span>
                     <span id="previewStock">Kho 0</span>
@@ -509,7 +545,48 @@
       </main>
     </div>
 
+    <div id="categoryPickerModal" class="seller-category-modal hidden" aria-hidden="true">
+      <div class="seller-category-backdrop" data-category-picker-close="backdrop"></div>
+      <div class="seller-category-dialog" role="dialog" aria-modal="true" aria-labelledby="categoryPickerTitle">
+        <div class="seller-category-head">
+          <div>
+            <p class="seller-eyebrow">Danh mục sản phẩm</p>
+            <h2 id="categoryPickerTitle">Chỉnh sửa ngành hàng</h2>
+          </div>
+          <button id="closeCategoryPicker" class="seller-category-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+
+        <div class="seller-category-toolbar">
+          <div class="seller-category-search">
+            <input
+              id="categoryPickerSearch"
+              class="input"
+              type="search"
+              placeholder="ìm theo tên danh mục hoặc đường dẫn"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="seller-category-body">
+          <div id="categoryPickerResults" class="seller-category-results hidden"></div>
+          <div id="categoryPickerColumns" class="seller-category-columns"></div>
+        </div>
+
+        <div class="seller-category-foot">
+          <div class="seller-category-selection">
+            <span class="seller-category-selection-label">Danh mục đã chọn</span>
+            <strong id="categoryPickerSelected">Chưa chọn ngành hàng</strong>
+          </div>
+          <div class="seller-category-actions">
+            <button id="cancelCategoryPicker" class="seller-btn ghost" type="button">Hủy</button>
+            <button id="confirmCategoryPicker" class="seller-btn primary" type="button">Xác nhận</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="/ui/custom-select.js"></script>
-    <script src="/ui/seller/seller.js"></script>
+    <script src="/ui/seller/seller.js?v=20260311-2"></script>
   </body>
 </html>

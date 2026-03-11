@@ -10,6 +10,7 @@ import {
   deleteVariantHandler,
   getProduct,
   getProducts,
+  syncVariantsHandler,
   uploadProductMedia,
   updateProductHandler,
   updateStock,
@@ -73,6 +74,7 @@ router.post("/", authMiddleware, requireSeller, createProductHandler);
 router.patch("/:id", authMiddleware, requireSeller, updateProductHandler);
 router.delete("/:id", authMiddleware, requireSeller, deleteProductHandler);
 router.post("/:id/variants", authMiddleware, requireSeller, createVariantHandler);
+router.put("/:id/variants", authMiddleware, requireSeller, syncVariantsHandler);
 router.patch(
   "/variants/:id/stock",
   authMiddleware,

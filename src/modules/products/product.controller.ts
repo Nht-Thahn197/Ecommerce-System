@@ -7,6 +7,7 @@ import {
   deleteVariant,
   getProductById,
   listProducts,
+  syncProductVariants,
   updateProduct,
   updateVariant,
   updateVariantStock,
@@ -15,6 +16,7 @@ import {
   CreateProductInput,
   CreateVariantInput,
   ListProductsQuery,
+  SyncProductVariantsInput,
   UpdateProductInput,
   UpdateVariantInput,
   UpdateVariantStockInput,
@@ -168,6 +170,19 @@ export const updateVariantHandler = async (
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     const variant = await updateVariant(req.userId, req.params.id, req.body);
     res.json({ variant });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const syncVariantsHandler = async (
+  req: AuthRequest<{ id: string }, {}, SyncProductVariantsInput>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    const variants = await syncProductVariants(req.userId, req.params.id, req.body);
+    res.json({ variants });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

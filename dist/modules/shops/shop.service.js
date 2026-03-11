@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateShopStatus = exports.getShopDetailById = exports.listPendingShops = exports.listApprovedShops = exports.getMyShops = exports.registerShop = void 0;
+exports.updateShopStatus = exports.getShopDetailById = exports.listPendingShops = exports.listApprovedShops = exports.updateShopAvatar = exports.updateShopProfile = exports.getMyShops = exports.registerShop = void 0;
 const prisma_1 = __importDefault(require("../../libs/prisma"));
 const MAX_LIMIT = 100;
 const toNumber = (value) => {
@@ -189,6 +189,7 @@ const getMyShops = async (userId, query) => {
                 id: true,
                 name: true,
                 description: true,
+                avatar_url: true,
                 contact_email: true,
                 contact_phone: true,
                 onboarding_data: true,
@@ -213,6 +214,91 @@ const getMyShops = async (userId, query) => {
     };
 };
 exports.getMyShops = getMyShops;
+const updateShopProfile = async (userId, shopId, input) => {
+    const shop = await prisma_1.default.shops.findFirst({
+        where: { id: shopId, owner_id: userId },
+        select: { id: true },
+    });
+    if (!shop) {
+        throw new Error("Shop not found");
+    }
+    const data = {};
+    if (input.name !== undefined) {
+        const name = input.name.trim();
+        if (!name) {
+            throw new Error("Shop name is required");
+        }
+        data.name = name;
+    }
+    if (input.description !== undefined) {
+        data.description = sanitizeString(input.description);
+    }
+    await prisma_1.default.shops.update({
+        where: { id: shopId },
+        data,
+    });
+    const updatedShop = await prisma_1.default.shops.findFirst({
+        where: { id: shopId, owner_id: userId },
+        select: {
+            id: true,
+            name: true,
+            description: true,
+            avatar_url: true,
+            contact_email: true,
+            contact_phone: true,
+            onboarding_data: true,
+            status: true,
+            rejected_reason: true,
+            approved_at: true,
+            created_at: true,
+            shop_addresses: true,
+            shop_payment_accounts: true,
+            shop_documents: true,
+        },
+    });
+    if (!updatedShop) {
+        throw new Error("Shop not found");
+    }
+    return updatedShop;
+};
+exports.updateShopProfile = updateShopProfile;
+const updateShopAvatar = async (userId, shopId, avatarUrl) => {
+    const shop = await prisma_1.default.shops.findFirst({
+        where: { id: shopId, owner_id: userId },
+        select: { id: true },
+    });
+    if (!shop) {
+        throw new Error("Shop not found");
+    }
+    await prisma_1.default.shops.update({
+        where: { id: shopId },
+        data: { avatar_url: avatarUrl },
+    });
+    const updatedShop = await prisma_1.default.shops.findFirst({
+        where: { id: shopId, owner_id: userId },
+        select: {
+            id: true,
+            name: true,
+            description: true,
+            avatar_url: true,
+            contact_email: true,
+            contact_phone: true,
+            onboarding_data: true,
+            status: true,
+            rejected_reason: true,
+            approved_at: true,
+            created_at: true,
+            shop_addresses: true,
+            shop_payment_accounts: true,
+            shop_documents: true,
+        },
+    });
+    if (!updatedShop) {
+        throw new Error("Shop not found");
+    }
+    return updatedShop;
+};
+exports.updateShopAvatar = updateShopAvatar;
 const listApprovedShops = async (query) => {
     const { page, limit, skip } = getPagination(query);
     const where = { status: "approved" };
@@ -227,6 +313,7 @@ const listApprovedShops = async (query) => {
                 id: true,
                 name: true,
                 description: true,
+                avatar_url: true,
                 contact_email: true,
                 contact_phone: true,
                 onboarding_data: true,
@@ -260,6 +347,7 @@ const listPendingShops = async (query) => {
                 id: true,
                 name: true,
                 description: true,
+                avatar_url: true,
                 contact_email: true,
                 contact_phone: true,
                 onboarding_data: true,
@@ -292,6 +380,7 @@ const getShopDetailById = async (shopId) => {
             id: true,
             name: true,
             description: true,
+            avatar_url: true,
             contact_email: true,
             contact_phone: true,
             onboarding_data: true,

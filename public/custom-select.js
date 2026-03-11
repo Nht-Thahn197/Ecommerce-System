@@ -68,7 +68,7 @@
     const selectedOption = getSelectedOption(select);
     const isDisabled = select.disabled || options.length === 0;
 
-    label.textContent = selectedOption ? getOptionLabel(selectedOption) : "Khong co lua chon";
+    label.textContent = selectedOption ? getOptionLabel(selectedOption) : "Không có lựa chọn";
     trigger.disabled = isDisabled;
 
     optionsRoot.innerHTML = options
@@ -99,7 +99,7 @@
 
     if (!options.length) {
       optionsRoot.innerHTML =
-        '<div class="custom-select-empty">Khong co lua chon.</div>';
+        '<div class="custom-select-empty">Không có lựa chọn.</div>';
     }
   };
 

@@ -65,10 +65,12 @@
                       <span class="muted">${Admin.escapeHtml(shop.contact_phone || shop.users?.phone || "-")}</span>
                     </td>
                     <td>${Admin.escapeHtml(Admin.formatDateTime(shop.created_at))}</td>
-                    <td class="actions">
-                      <a class="btn ghost" href="/ui/admin/shop-detail.html?id=${Admin.escapeHtml(shop.id)}">Chi tiết</a>
-                      <button class="btn" data-action="approve-shop" data-id="${Admin.escapeHtml(shop.id)}">Duyệt</button>
-                      <button class="btn danger" data-action="reject-shop" data-id="${Admin.escapeHtml(shop.id)}">Từ chối</button>
+                    <td>
+                      <div class="actions">
+                        <a class="btn ghost" href="/ui/admin/shop-detail.html?id=${Admin.escapeHtml(shop.id)}">Chi tiết</a>
+                        <button class="btn" data-action="approve-shop" data-id="${Admin.escapeHtml(shop.id)}">Duyệt</button>
+                        <button class="btn danger" data-action="reject-shop" data-id="${Admin.escapeHtml(shop.id)}">Từ chối</button>
+                      </div>
                     </td>
                   </tr>
                 `

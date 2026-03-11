@@ -71,7 +71,8 @@
     return;
   }
 
-  const DRAFT_KEY = "bambi_shop_wizard_draft_v2";
+  const LEGACY_DRAFT_KEY = "bambi_shop_wizard_draft_v2";
+  const DRAFT_KEY_PREFIX = "bambi_shop_wizard_draft_v3";
   const DOC_LABELS = {
     business_license: "Giấy phép kinh doanh",
     identity_front: "Giấy tờ mặt trước",
@@ -206,9 +207,13 @@
       identity_extra: [],
     },
     meta: {
+      ownerUserId: "",
       submittedAt: "",
     },
   });
+
+  const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+  const getDraftKey = (userId) => `${DRAFT_KEY_PREFIX}:${userId}`;
 
   const getFileNameFromUrl = (url) => {
     if (!url) return "Tệp đã tải";
@@ -283,14 +288,60 @@
     return merged;
   };
 
-  const loadDraft = () => {
+  const readStoredDraft = (key) => {
+    if (!key) return null;
     try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      return mergeDraft(raw ? JSON.parse(raw) : {});
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
     } catch (_error) {
-      return createDefaultDraft();
+      return null;
     }
   };
+
+  const bindDraftToUser = (draft, userId) =>
+    mergeDraft({
+      ...draft,
+      meta: {
+        ...(draft?.meta || {}),
+        ownerUserId: userId,
+      },
+    });
+
+  const canUseLegacyDraftForUser = (draft, user) => {
+    const userEmail = normalizeEmail(user?.email);
+    if (!userEmail) return false;
+
+    const draftEmails = [
+      draft?.shopInfo?.contactEmail,
+      draft?.tax?.invoiceEmail,
+    ]
+      .map(normalizeEmail)
+      .filter(Boolean);
+
+    return draftEmails.includes(userEmail);
+  };
+
+  const loadDraftForUser = (user) => {
+    const userId = user?.id;
+    if (!userId) return createDefaultDraft();
+
+    const scopedDraft = readStoredDraft(getDraftKey(userId));
+    if (scopedDraft) {
+      return bindDraftToUser(scopedDraft, userId);
+    }
+
+    const legacyDraft = readStoredDraft(LEGACY_DRAFT_KEY);
+    if (legacyDraft && canUseLegacyDraftForUser(legacyDraft, user)) {
+      const migratedDraft = bindDraftToUser(legacyDraft, userId);
+      localStorage.setItem(getDraftKey(userId), JSON.stringify(migratedDraft));
+      localStorage.removeItem(LEGACY_DRAFT_KEY);
+      return migratedDraft;
+    }
+
+    localStorage.removeItem(LEGACY_DRAFT_KEY);
+    return bindDraftToUser(createDefaultDraft(), userId);
+  };
+
   const escapeHtml = (value) =>
     String(value ?? "").replace(/[&<>"']/g, (char) => {
       const map = {
@@ -354,7 +405,7 @@
     );
 
   const state = {
-    draft: loadDraft(),
+    draft: createDefaultDraft(),
     currentStep: 0,
     user: null,
     shop: null,
@@ -422,7 +473,11 @@
     );
 
   const saveDraft = () => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(state.draft));
+    const userId = state.user?.id;
+    if (!userId) return;
+
+    state.draft = bindDraftToUser(state.draft, userId);
+    localStorage.setItem(getDraftKey(userId), JSON.stringify(state.draft));
   };
 
   const updatePageAlert = (message = "", type = "info") => {
@@ -1417,6 +1472,7 @@
     try {
       const mePayload = await StoreAuth.apiFetch("/auth/me", {}, { redirectOn401: true });
       state.user = mePayload.user || null;
+      state.draft = loadDraftForUser(state.user);
       prefillFromUser();
       saveDraft();
     } catch (error) {

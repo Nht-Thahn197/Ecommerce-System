@@ -230,6 +230,7 @@ export const getMyShops = async (userId: string, query: ListShopsQuery) => {
         id: true,
         name: true,
         description: true,
+        avatar_url: true,
         contact_email: true,
         contact_phone: true,
         onboarding_data: true,
@@ -294,6 +295,53 @@ export const updateShopProfile = async (
       id: true,
       name: true,
       description: true,
+      avatar_url: true,
+      contact_email: true,
+      contact_phone: true,
+      onboarding_data: true,
+      status: true,
+      rejected_reason: true,
+      approved_at: true,
+      created_at: true,
+      shop_addresses: true,
+      shop_payment_accounts: true,
+      shop_documents: true,
+    },
+  });
+
+  if (!updatedShop) {
+    throw new Error("Shop not found");
+  }
+
+  return updatedShop;
+};
+
+export const updateShopAvatar = async (
+  userId: string,
+  shopId: string,
+  avatarUrl: string | null
+) => {
+  const shop = await prisma.shops.findFirst({
+    where: { id: shopId, owner_id: userId },
+    select: { id: true },
+  });
+
+  if (!shop) {
+    throw new Error("Shop not found");
+  }
+
+  await prisma.shops.update({
+    where: { id: shopId },
+    data: { avatar_url: avatarUrl },
+  });
+
+  const updatedShop = await prisma.shops.findFirst({
+    where: { id: shopId, owner_id: userId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      avatar_url: true,
       contact_email: true,
       contact_phone: true,
       onboarding_data: true,
@@ -329,6 +377,7 @@ export const listApprovedShops = async (query: ListShopsQuery) => {
         id: true,
         name: true,
         description: true,
+        avatar_url: true,
         contact_email: true,
         contact_phone: true,
         onboarding_data: true,
@@ -364,6 +413,7 @@ export const listPendingShops = async (query: ListShopsQuery) => {
         id: true,
         name: true,
         description: true,
+        avatar_url: true,
         contact_email: true,
         contact_phone: true,
         onboarding_data: true,
@@ -397,6 +447,7 @@ export const getShopDetailById = async (shopId: string) => {
       id: true,
       name: true,
       description: true,
+      avatar_url: true,
       contact_email: true,
       contact_phone: true,
       onboarding_data: true,

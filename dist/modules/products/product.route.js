@@ -54,6 +54,7 @@ router.post("/", auth_middleware_1.authMiddleware, auth_middleware_1.requireSell
 router.patch("/:id", auth_middleware_1.authMiddleware, auth_middleware_1.requireSeller, product_controller_1.updateProductHandler);
 router.delete("/:id", auth_middleware_1.authMiddleware, auth_middleware_1.requireSeller, product_controller_1.deleteProductHandler);
 router.post("/:id/variants", auth_middleware_1.authMiddleware, auth_middleware_1.requireSeller, product_controller_1.createVariantHandler);
+router.put("/:id/variants", auth_middleware_1.authMiddleware, auth_middleware_1.requireSeller, product_controller_1.syncVariantsHandler);
 router.patch("/variants/:id/stock", auth_middleware_1.authMiddleware, auth_middleware_1.requireSeller, product_controller_1.updateStock);
 router.patch("/variants/:id", auth_middleware_1.authMiddleware, auth_middleware_1.requireSeller, product_controller_1.updateVariantHandler);
 router.delete("/variants/:id", auth_middleware_1.authMiddleware, auth_middleware_1.requireSeller, product_controller_1.deleteVariantHandler);

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteVariantHandler = exports.updateVariantHandler = exports.createVariantHandler = exports.deleteProductHandler = exports.updateProductHandler = exports.createProductHandler = exports.updateStock = exports.uploadProductMedia = exports.getProduct = exports.getProducts = void 0;
+exports.deleteVariantHandler = exports.syncVariantsHandler = exports.updateVariantHandler = exports.createVariantHandler = exports.deleteProductHandler = exports.updateProductHandler = exports.createProductHandler = exports.updateStock = exports.uploadProductMedia = exports.getProduct = exports.getProducts = void 0;
 const product_service_1 = require("./product.service");
 const resolveParam = (value) => Array.isArray(value) ? value[0] : value;
 const getProducts = async (req, res) => {
@@ -129,6 +129,18 @@ const updateVariantHandler = async (req, res) => {
     }
 };
 exports.updateVariantHandler = updateVariantHandler;
+const syncVariantsHandler = async (req, res) => {
+    try {
+        if (!req.userId)
+            return res.status(401).json({ message: "Unauthorized" });
+        const variants = await (0, product_service_1.syncProductVariants)(req.userId, req.params.id, req.body);
+        res.json({ variants });
+    }
+    catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+exports.syncVariantsHandler = syncVariantsHandler;
 const deleteVariantHandler = async (req, res) => {
     try {
         if (!req.userId)

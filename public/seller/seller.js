@@ -102,10 +102,18 @@
     productNameInput: document.querySelector("#productNameInput"),
     productNameCount: document.querySelector("#productNameCount"),
     productCategoryInput: document.querySelector("#productCategoryInput"),
+    productCategoryTrigger: document.querySelector("#productCategoryTrigger"),
+    productCategoryValue: document.querySelector("#productCategoryValue"),
+    productCategoryMeta: document.querySelector("#productCategoryMeta"),
     productGtinInput: document.querySelector("#productGtinInput"),
     productDescriptionInput: document.querySelector("#productDescriptionInput"),
     productPriceInput: document.querySelector("#productPriceInput"),
     productStockInput: document.querySelector("#productStockInput"),
+    enableVariantGroupsBtn: document.querySelector("#enableVariantGroupsBtn"),
+    addSecondVariantGroupBtn: document.querySelector("#addSecondVariantGroupBtn"),
+    multiVariantSection: document.querySelector("#multiVariantSection"),
+    variantGroupsEditor: document.querySelector("#variantGroupsEditor"),
+    variantMatrixTable: document.querySelector("#variantMatrixTable"),
     productSkuInput: document.querySelector("#productSkuInput"),
     productWeightInput: document.querySelector("#productWeightInput"),
     productLengthInput: document.querySelector("#productLengthInput"),
@@ -128,10 +136,19 @@
     previewCategory: document.querySelector("#previewCategory"),
     previewName: document.querySelector("#previewName"),
     previewPrice: document.querySelector("#previewPrice"),
+    previewVariantSummary: document.querySelector("#previewVariantSummary"),
     previewShopName: document.querySelector("#previewShopName"),
     previewStock: document.querySelector("#previewStock"),
     previewDescription: document.querySelector("#previewDescription"),
     previewBadges: document.querySelector("#previewBadges"),
+    categoryPickerModal: document.querySelector("#categoryPickerModal"),
+    categoryPickerSearch: document.querySelector("#categoryPickerSearch"),
+    categoryPickerResults: document.querySelector("#categoryPickerResults"),
+    categoryPickerColumns: document.querySelector("#categoryPickerColumns"),
+    categoryPickerSelected: document.querySelector("#categoryPickerSelected"),
+    closeCategoryPicker: document.querySelector("#closeCategoryPicker"),
+    cancelCategoryPicker: document.querySelector("#cancelCategoryPicker"),
+    confirmCategoryPicker: document.querySelector("#confirmCategoryPicker"),
     shopProfileSummary: null,
     shopProfileTabs: null,
     shopProfileContent: null,
@@ -231,7 +248,9 @@
     description: "",
     price: "",
     stock: "0",
-    sku: "",
+    variantMode: "single",
+    variantGroups: [],
+    variantItems: [],
     weight: "",
     length: "",
     width: "",
@@ -259,6 +278,13 @@
     avatarObjectUrl: "",
   });
 
+  const createEmptyCategoryPicker = () => ({
+    isOpen: false,
+    search: "",
+    browsePath: [],
+    pendingCategoryId: "",
+  });
+
   const state = {
     currentView: "dashboard",
     user: null,
@@ -275,11 +301,166 @@
     },
     shopProfileTab: "basic",
     shopProfileEditor: createEmptyShopProfileEditor(),
+    categoryPicker: createEmptyCategoryPicker(),
     editingProductId: "",
     editingVariantId: "",
     draft: createEmptyDraft(),
     statusTimer: 0,
     isSaving: false,
+  };
+
+  const createRuntimeId = (prefix = "draft") =>
+    `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+
+  const createDraftVariantOption = (value = "") => ({
+    id: createRuntimeId("option"),
+    value,
+  });
+
+  const createDraftVariantGroup = (name = "", options) => ({
+    id: createRuntimeId("group"),
+    name,
+    options:
+      Array.isArray(options) && options.length
+        ? options
+        : [createDraftVariantOption(""), createDraftVariantOption("")],
+  });
+
+  const buildVariantItemKey = (optionValues = []) =>
+    optionValues.map((value) => String(value || "").trim()).join("||");
+
+  const createDraftVariantItem = ({
+    variantId = "",
+    optionValues = [],
+    price = "",
+    stock = "0",
+    image = null,
+  } = {}) => ({
+    key: buildVariantItemKey(optionValues),
+    variantId,
+    optionValues: Array.isArray(optionValues)
+      ? optionValues.map((value) => String(value || "").trim())
+      : [],
+    price: price === undefined || price === null ? "" : String(price),
+    stock: stock === undefined || stock === null ? "0" : String(stock),
+    image,
+  });
+
+  const getNormalizedVariantGroups = (groups = state.draft.variantGroups) =>
+    (Array.isArray(groups) ? groups : [])
+      .map((group) => ({
+        id: group?.id || createRuntimeId("group"),
+        name: String(group?.name || "").trim(),
+        options: Array.from(
+          new Set(
+            (Array.isArray(group?.options) ? group.options : [])
+              .map((option) => ({
+                id: option?.id || createRuntimeId("option"),
+                value: String(option?.value || "").trim(),
+              }))
+              .filter((option) => option.value)
+              .map((option) => option.value)
+          )
+        ),
+      }))
+      .filter((group) => group.name && group.options.length)
+      .slice(0, 2);
+
+  const buildVariantCombinations = (groups) => {
+    if (!Array.isArray(groups) || !groups.length) return [];
+
+    return groups.reduce(
+      (all, group) =>
+        all.flatMap((prefix) =>
+          group.options.map((option) => [...prefix, String(option || "").trim()])
+        ),
+      [[]]
+    );
+  };
+
+  const syncDraftVariantItems = () => {
+    if (state.draft.variantMode !== "multiple") {
+      state.draft.variantItems.forEach((item) => revokeMedia(item?.image));
+      state.draft.variantItems = [];
+      return;
+    }
+
+    const groups = getNormalizedVariantGroups();
+    const combos = buildVariantCombinations(groups);
+    const currentMap = new Map(
+      state.draft.variantItems.map((item) => [item.key, item])
+    );
+    const nextKeys = new Set(combos.map((combo) => buildVariantItemKey(combo)));
+
+    state.draft.variantItems
+      .filter((item) => !nextKeys.has(item.key))
+      .forEach((item) => revokeMedia(item?.image));
+
+    state.draft.variantItems = combos.map((combo) => {
+      const key = buildVariantItemKey(combo);
+      const current = currentMap.get(key);
+      return current
+        ? {
+            ...current,
+            key,
+            optionValues: [...combo],
+          }
+        : createDraftVariantItem({ optionValues: combo });
+    });
+  };
+
+  const getDraftSalesSnapshot = () => {
+    if (state.draft.variantMode === "multiple") {
+      const prices = state.draft.variantItems
+        .map((item) => toOptionalNumber(item.price))
+        .filter((value) => Number.isFinite(value) && value > 0);
+      const stock = state.draft.variantItems.reduce((total, item) => {
+        const value = toOptionalNumber(item.stock);
+        return total + (Number.isFinite(value) ? value : 0);
+      }, 0);
+
+      return {
+        price: prices.length ? Math.min(...prices) : undefined,
+        minPrice: prices.length ? Math.min(...prices) : undefined,
+        maxPrice: prices.length ? Math.max(...prices) : undefined,
+        stock,
+        variantCount: state.draft.variantItems.length,
+      };
+    }
+
+    return {
+      price: toOptionalNumber(state.draft.price),
+      minPrice: toOptionalNumber(state.draft.price),
+      maxPrice: toOptionalNumber(state.draft.price),
+      stock: toOptionalNumber(state.draft.stock) || 0,
+      variantCount: 1,
+    };
+  };
+
+  const getDraftVariantSummary = () => {
+    if (state.draft.variantMode !== "multiple") return "";
+
+    const groups = getNormalizedVariantGroups();
+    if (!groups.length) return "";
+
+    return groups
+      .map((group) => `${group.name}: ${group.options.join(", ")}`)
+      .join(" • ");
+  };
+
+  const setDraftVariantMode = (mode) => {
+    if (mode === "multiple") {
+      state.draft.variantMode = "multiple";
+      if (!state.draft.variantGroups.length) {
+        state.draft.variantGroups = [createDraftVariantGroup()];
+      }
+      syncDraftVariantItems();
+      return;
+    }
+
+    state.draft.variantMode = "single";
+    state.draft.variantGroups = [];
+    syncDraftVariantItems();
   };
 
   const getLoginRedirect = () => {
@@ -537,6 +718,8 @@
   const getCurrentShop = () =>
     state.approvedShops.find((shop) => shop.id === state.currentShopId) || null;
 
+  const getShopAvatarUrl = (shop) => shop?.avatar_url || state.user?.avatar_url || "";
+
   const getShopOnboardingData = (shop) =>
     shop?.onboarding_data && typeof shop.onboarding_data === "object"
       ? shop.onboarding_data
@@ -613,7 +796,7 @@
   };
 
   const getCurrentShopAvatarUrl = () =>
-    state.shopProfileEditor.avatarPreviewUrl || state.user?.avatar_url || "";
+    state.shopProfileEditor.avatarPreviewUrl || getShopAvatarUrl(getCurrentShop());
 
   const startShopProfileEdit = () => {
     const currentShop = getCurrentShop();
@@ -627,7 +810,7 @@
       name: currentShop.name || "",
       description: currentShop.description || "",
       avatarFile: null,
-      avatarPreviewUrl: state.user?.avatar_url || "",
+      avatarPreviewUrl: getShopAvatarUrl(currentShop),
       avatarObjectUrl: "",
     };
     renderShopProfile();
@@ -638,7 +821,7 @@
 
     if (!file) {
       state.shopProfileEditor.avatarFile = null;
-      state.shopProfileEditor.avatarPreviewUrl = state.user?.avatar_url || "";
+      state.shopProfileEditor.avatarPreviewUrl = getShopAvatarUrl(getCurrentShop());
       renderShopProfile();
       return;
     }
@@ -667,19 +850,20 @@
     showStatus("Đang cập nhật hồ sơ shop...", { persist: true });
 
     try {
+      let nextShop = currentShop;
+
       if (state.shopProfileEditor.avatarFile) {
         const formData = new FormData();
         formData.append("avatar", state.shopProfileEditor.avatarFile);
         const avatarPayload = await apiFetch(
-          "/auth/me/avatar",
+          `/shops/${currentShop.id}/avatar`,
           {
             method: "POST",
             body: formData,
           },
           { redirectOn401: true }
         );
-        state.user = avatarPayload?.user || state.user;
-        updateUserInfo();
+        nextShop = { ...nextShop, ...(avatarPayload?.shop || {}) };
       }
 
       const shopPayload = await apiFetch(
@@ -694,8 +878,9 @@
         { redirectOn401: true }
       );
 
+      nextShop = { ...nextShop, ...(shopPayload?.shop || {}) };
       state.approvedShops = state.approvedShops.map((shop) =>
-        shop.id === currentShop.id ? { ...shop, ...(shopPayload?.shop || {}) } : shop
+        shop.id === currentShop.id ? nextShop : shop
       );
 
       resetShopProfileEditor();
@@ -714,9 +899,261 @@
   const getCategoryMap = () =>
     new Map(state.categories.map((item) => [String(item.id), item]));
 
+  const getLeafCategories = () => state.categories.filter((item) => item?.is_leaf);
+
+  const normalizeCategoryKey = (value) =>
+    value === null || value === undefined || value === "" ? "" : String(value);
+
+  const getCategoryById = (categoryId) =>
+    categoryId ? getCategoryMap().get(String(categoryId)) || null : null;
+
+  const getCategoryChildren = (parentId = null) =>
+    state.categories
+      .filter(
+        (item) =>
+          normalizeCategoryKey(item?.parent_id ?? null) ===
+          normalizeCategoryKey(parentId ?? null)
+      )
+      .sort((left, right) => left.name.localeCompare(right.name, "vi"));
+
+  const getCategoryLineageIds = (categoryId) => {
+    const targetId = String(categoryId || "");
+    if (!targetId) return [];
+
+    const categoryMap = getCategoryMap();
+    const lineage = [];
+    const seen = new Set();
+    let current = categoryMap.get(targetId) || null;
+
+    while (current && !seen.has(current.id)) {
+      lineage.unshift(String(current.id));
+      seen.add(current.id);
+      current = current.parent_id ? categoryMap.get(String(current.parent_id)) || null : null;
+    }
+
+    return lineage;
+  };
+
+  const getCategoryColumns = (pathIds = []) => {
+    const columns = [];
+    let parentId = null;
+    let depth = 0;
+
+    while (true) {
+      const items = getCategoryChildren(parentId);
+      if (!items.length) break;
+
+      const activeId = pathIds[depth] || "";
+      columns.push({ depth, activeId, items });
+
+      const activeCategory = getCategoryById(activeId);
+      if (!activeCategory || activeCategory.is_leaf) break;
+
+      parentId = activeCategory.id;
+      depth += 1;
+    }
+
+    return columns;
+  };
+
+  const getCategorySearchResults = (query) => {
+    const normalizedQuery = String(query || "").trim().toLocaleLowerCase("vi");
+    if (!normalizedQuery) return [];
+
+    return getLeafCategories()
+      .filter((item) =>
+        [item.name, item.breadcrumb]
+          .filter(Boolean)
+          .some((value) => String(value).toLocaleLowerCase("vi").includes(normalizedQuery))
+      )
+      .slice(0, 24);
+  };
+
+  const syncCategoryInput = () => {
+    if (els.productCategoryInput) {
+      els.productCategoryInput.value = state.draft.categoryId || "";
+    }
+  };
+
+  const renderCategoryTrigger = () => {
+    const selectedCategory = getCategoryById(state.draft.categoryId);
+    const hasValue = Boolean(state.draft.categoryId);
+
+    if (els.productCategoryValue) {
+      els.productCategoryValue.textContent = hasValue
+        ? selectedCategory?.name || "Chọn ngành hàng"
+        : "Chọn ngành hàng";
+    }
+
+    if (els.productCategoryMeta) {
+      els.productCategoryMeta.textContent = hasValue
+        ? selectedCategory?.breadcrumb || "Bấm để đổi ngành hàng hoặc chọn lại theo nhiều cấp."
+        : "Mở form chọn danh mục nhiều cấp giống seller center.";
+    }
+
+    els.productCategoryTrigger?.classList.toggle("has-value", hasValue);
+    syncCategoryInput();
+  };
+
+  const closeCategoryPicker = () => {
+    state.categoryPicker.isOpen = false;
+    state.categoryPicker.search = "";
+    document.body.classList.remove("is-category-picker-open");
+    if (els.categoryPickerModal) {
+      els.categoryPickerModal.classList.add("hidden");
+      els.categoryPickerModal.setAttribute("aria-hidden", "true");
+    }
+    if (els.productCategoryTrigger) {
+      els.productCategoryTrigger.setAttribute("aria-expanded", "false");
+    }
+  };
+
+  const renderCategoryPicker = () => {
+    if (!els.categoryPickerModal) return;
+
+    const { isOpen, search, browsePath, pendingCategoryId } = state.categoryPicker;
+    els.categoryPickerModal.classList.toggle("hidden", !isOpen);
+    els.categoryPickerModal.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    document.body.classList.toggle("is-category-picker-open", isOpen);
+    if (els.productCategoryTrigger) {
+      els.productCategoryTrigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+
+    if (!isOpen) return;
+
+    const selectedCategory = getCategoryById(pendingCategoryId);
+    const searchQuery = String(search || "").trim();
+    const results = getCategorySearchResults(searchQuery);
+
+    if (els.categoryPickerSearch && els.categoryPickerSearch.value !== search) {
+      els.categoryPickerSearch.value = search;
+    }
+
+    if (els.categoryPickerSelected) {
+      els.categoryPickerSelected.textContent = selectedCategory?.breadcrumb || "Chưa chọn ngành hàng";
+    }
+
+    if (els.confirmCategoryPicker) {
+      els.confirmCategoryPicker.disabled = !selectedCategory?.is_leaf;
+    }
+
+    if (els.categoryPickerResults) {
+      const showResults = Boolean(searchQuery);
+      els.categoryPickerResults.classList.toggle("hidden", !showResults);
+      els.categoryPickerResults.innerHTML = showResults
+        ? results.length
+          ? results
+              .map((item) => {
+                const isSelected = String(item.id) === String(pendingCategoryId);
+                return `
+                  <button
+                    class="seller-category-search-item${isSelected ? " is-selected" : ""}"
+                    type="button"
+                    data-category-id="${escapeHtml(item.id)}"
+                  >
+                    <strong>${escapeHtml(item.name)}</strong>
+                    <span>${escapeHtml(item.breadcrumb || item.name)}</span>
+                  </button>
+                `;
+              })
+              .join("")
+          : '<div class="seller-category-empty">Không tìm thấy danh mục phù hợp.</div>'
+        : "";
+    }
+
+    if (els.categoryPickerColumns) {
+      const showColumns = !searchQuery;
+      els.categoryPickerColumns.classList.toggle("hidden", !showColumns);
+
+      if (!showColumns) return;
+
+      const columns = getCategoryColumns(browsePath);
+      els.categoryPickerColumns.innerHTML = columns
+        .map(
+          (column) => `
+            <section class="seller-category-column">
+              <div class="seller-category-list">
+                ${column.items
+                  .map((item) => {
+                    const isActive = String(column.activeId) === String(item.id);
+                    const isSelected = String(pendingCategoryId) === String(item.id);
+                    return `
+                      <button
+                        class="seller-category-item${isActive ? " is-active" : ""}${
+                          isSelected ? " is-selected" : ""
+                        }"
+                        type="button"
+                        data-category-id="${escapeHtml(item.id)}"
+                      >
+                        <span>${escapeHtml(item.name)}</span>
+                        <span class="seller-category-item-mark" aria-hidden="true">${
+                          item.is_leaf ? "&bull;" : "&rsaquo;"
+                        }</span>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+          `
+        )
+        .join("");
+
+      if (!columns.length) {
+        els.categoryPickerColumns.innerHTML =
+          '<div class="seller-category-empty">Không có danh mục để hiển thị.</div>';
+      }
+    }
+  };
+
+  const openCategoryPicker = () => {
+    if (!state.categories.length) {
+      showStatus("Danh mục đang được tải, vui lòng thử lại sau.", { error: true });
+      return;
+    }
+
+    state.categoryPicker = {
+      isOpen: true,
+      search: "",
+      browsePath: getCategoryLineageIds(state.draft.categoryId),
+      pendingCategoryId: state.draft.categoryId || "",
+    };
+    renderCategoryPicker();
+    window.setTimeout(() => els.categoryPickerSearch?.focus(), 0);
+  };
+
+  const updateCategoryPickerSelection = (categoryId) => {
+    const category = getCategoryById(categoryId);
+    if (!category) return;
+
+    const browsePath = getCategoryLineageIds(category.id);
+    const pendingLineage = getCategoryLineageIds(state.categoryPicker.pendingCategoryId);
+    const keepsPending =
+      !category.is_leaf &&
+      pendingLineage.length >= browsePath.length &&
+      browsePath.every((id, index) => pendingLineage[index] === id);
+
+    state.categoryPicker.browsePath = browsePath;
+    state.categoryPicker.pendingCategoryId = category.is_leaf
+      ? String(category.id)
+      : keepsPending
+        ? state.categoryPicker.pendingCategoryId
+        : "";
+    renderCategoryPicker();
+  };
+
+  const confirmCategoryPicker = () => {
+    const selectedCategory = getCategoryById(state.categoryPicker.pendingCategoryId);
+    if (!selectedCategory?.is_leaf) return;
+
+    state.draft.categoryId = String(selectedCategory.id);
+    renderDraft();
+    closeCategoryPicker();
+  };
+
   const getCategoryLabel = (categoryId) => {
     if (!categoryId) return "Chưa chọn ngành hàng";
-    const category = getCategoryMap().get(String(categoryId));
+    const category = getCategoryById(categoryId);
     return category?.breadcrumb || category?.name || "Chưa chọn ngành hàng";
   };
 
@@ -811,7 +1248,9 @@
   const setSelectValue = (select, value) => {
     if (!select) return;
     select.value = value;
-    window.BambiCustomSelect?.refreshSelect(select);
+    if (select.tagName === "SELECT") {
+      window.BambiCustomSelect?.refreshSelect(select);
+    }
   };
 
   const updateViewChrome = () => {
@@ -882,7 +1321,10 @@
         : "Chờ duyệt seller";
     }
     if (els.sellerUserAvatar) {
-      els.sellerUserAvatar.textContent = getInitial(displayName);
+      const avatarUrl = state.user.avatar_url || "";
+      els.sellerUserAvatar.innerHTML = avatarUrl
+        ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" />`
+        : escapeHtml(getInitial(displayName));
     }
   };
 
@@ -936,7 +1378,7 @@
   };
 
   const populateCategorySelects = () => {
-    const optionsHtml = state.categories
+    const optionsHtml = getLeafCategories()
       .map(
         (category) =>
           `<option value="${category.id}">${escapeHtml(
@@ -956,7 +1398,7 @@
       );
     }
 
-    if (els.productCategoryInput) {
+    if (els.productCategoryInput?.tagName === "SELECT") {
       els.productCategoryInput.innerHTML = `
         <option value="">Chọn ngành hàng</option>
         ${optionsHtml}
@@ -1936,8 +2378,9 @@
   const buildChecklistItems = () => {
     const nameLength = state.draft.name.trim().length;
     const descriptionLength = state.draft.description.trim().length;
-    const price = toOptionalNumber(state.draft.price);
-    const stock = toOptionalNumber(state.draft.stock);
+    const sales = getDraftSalesSnapshot();
+    const price = sales.price;
+    const stock = sales.stock;
 
     return [
       {
@@ -1965,10 +2408,10 @@
         description: "Đây là các trường bắt buộc cho API tạo sản phẩm hiện tại.",
         complete:
           Boolean(state.draft.categoryId) &&
-          Number.isFinite(price) &&
-          price > 0 &&
-          Number.isFinite(stock) &&
-          stock >= 0,
+          Number.isFinite(sales.price) &&
+          sales.price > 0 &&
+          Number.isFinite(sales.stock) &&
+          sales.stock >= 0,
       },
     ];
   };
@@ -2000,6 +2443,7 @@
     state.draft.gallery.forEach(revokeMedia);
     revokeMedia(state.draft.cover);
     revokeMedia(state.draft.video);
+    state.draft.variantItems.forEach((item) => revokeMedia(item?.image));
   };
 
   const renderMediaPanels = () => {
@@ -2069,6 +2513,286 @@
     }
   };
 
+  const renderSalesSection = () => {
+    const singleVariantFields = els.productPriceInput?.closest(".seller-two-column");
+    const isMultiple = state.draft.variantMode === "multiple";
+    const normalizedGroups = getNormalizedVariantGroups();
+
+    if (singleVariantFields) {
+      singleVariantFields.hidden = isMultiple;
+    }
+
+    if (els.enableVariantGroupsBtn) {
+      els.enableVariantGroupsBtn.hidden = isMultiple;
+    }
+
+    if (els.multiVariantSection) {
+      els.multiVariantSection.hidden = !isMultiple;
+      const tableHeadTitle = els.multiVariantSection.querySelector(
+        ".seller-variant-table-head strong"
+      );
+      const tableHeadMeta = els.multiVariantSection.querySelector(
+        ".seller-variant-table-head .muted"
+      );
+      if (tableHeadTitle) {
+        tableHeadTitle.textContent = "Danh sách phân loại";
+      }
+      if (tableHeadMeta) {
+        tableHeadMeta.textContent = "Giá và kho hàng là bắt buộc cho từng biến thể.";
+      }
+    }
+
+    if (els.addSecondVariantGroupBtn) {
+      els.addSecondVariantGroupBtn.hidden = !isMultiple || state.draft.variantGroups.length >= 2;
+    }
+
+    if (els.variantGroupsEditor) {
+      if (!isMultiple) {
+        els.variantGroupsEditor.innerHTML = "";
+      } else {
+        els.variantGroupsEditor.innerHTML = state.draft.variantGroups
+          .map(
+            (group, groupIndex) => `
+              <div class="seller-variant-group-card" data-group-id="${escapeHtml(group.id)}">
+                <div class="seller-variant-group-head">
+                  <strong>Phân loại ${escapeHtml(String(groupIndex + 1))}</strong>
+                  <button
+                    class="seller-variant-icon-btn"
+                    type="button"
+                    data-action="remove-variant-group"
+                    data-group-id="${escapeHtml(group.id)}"
+                    aria-label="Xóa nhóm phân loại"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div class="seller-variant-group-form">
+                  <label class="seller-variant-label">
+                    <span>Tên nhóm</span>
+                    <input
+                      class="input"
+                      type="text"
+                      value="${escapeHtml(group.name)}"
+                      maxlength="14"
+                      data-action="variant-group-name"
+                      data-group-id="${escapeHtml(group.id)}"
+                      placeholder="Ví dụ: Màu sắc"
+                    />
+                  </label>
+                  <div class="seller-variant-options-list">
+                    ${(Array.isArray(group.options) ? group.options : [])
+                      .map(
+                        (option, optionIndex) => `
+                          <div class="seller-variant-option-row">
+                            <label class="seller-variant-label seller-variant-option-input">
+                              <span>${optionIndex === 0 ? "Tùy chọn" : " "}</span>
+                              <input
+                                class="input"
+                                type="text"
+                                value="${escapeHtml(option.value)}"
+                                maxlength="20"
+                                data-action="variant-option-value"
+                                data-group-id="${escapeHtml(group.id)}"
+                                data-option-id="${escapeHtml(option.id)}"
+                                placeholder="Ví dụ: Đỏ, Xanh"
+                              />
+                            </label>
+                            <div class="seller-variant-option-actions">
+                              <button
+                                class="seller-variant-icon-btn"
+                                type="button"
+                                data-action="add-variant-option"
+                                data-group-id="${escapeHtml(group.id)}"
+                                aria-label="Thêm tùy chọn"
+                              >
+                                +
+                              </button>
+                              <button
+                                class="seller-variant-icon-btn ghost"
+                                type="button"
+                                data-action="remove-variant-option"
+                                data-group-id="${escapeHtml(group.id)}"
+                                data-option-id="${escapeHtml(option.id)}"
+                                aria-label="Xóa tùy chọn"
+                              >
+                                −
+                              </button>
+                            </div>
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                </div>
+              </div>
+            `
+          )
+          .join("");
+      }
+    }
+
+    if (els.variantMatrixTable) {
+      if (!isMultiple) {
+        els.variantMatrixTable.innerHTML = "";
+      } else if (!normalizedGroups.length || !state.draft.variantItems.length) {
+        els.variantMatrixTable.innerHTML = `
+          <div class="seller-variant-empty">
+            Hãy nhập tên nhóm và ít nhất một tùy chọn hợp lệ để tạo danh sách biến thể.
+          </div>
+        `;
+      } else {
+        const groupLabels = normalizedGroups.map((group) => group.name);
+        const hasSecondGroup = groupLabels.length > 1;
+        const renderVariantImageCell = (item, optionLabel) => {
+          const imageUrl = item.image?.url || "";
+
+          return `
+            <div class="seller-variant-image-card">
+              ${
+                imageUrl
+                  ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(optionLabel || "Bien the")}" />`
+                  : `<span>Chưa có ảnh</span>`
+              }
+              <div class="seller-variant-image-actions">
+                <button
+                  class="seller-mini-btn ghost"
+                  type="button"
+                  data-action="pick-variant-image"
+                  data-variant-key="${escapeHtml(item.key)}"
+                >
+                  ${imageUrl ? "Đổi ảnh" : "Thêm ảnh"}
+                </button>
+                ${
+                  imageUrl
+                    ? `<button
+                        class="seller-mini-btn ghost"
+                        type="button"
+                        data-action="remove-variant-image"
+                        data-variant-key="${escapeHtml(item.key)}"
+                      >
+                        Xóa
+                      </button>`
+                    : ""
+                }
+              </div>
+            </div>
+          `;
+        };
+
+        const rows = hasSecondGroup
+          ? normalizedGroups[0].options
+              .map((primaryOption) => {
+                const relatedItems = state.draft.variantItems.filter(
+                  (item) => item.optionValues[0] === primaryOption
+                );
+
+                return relatedItems
+                  .map((item, itemIndex) => {
+                    const optionLabel = item.optionValues.join(" / ");
+                    return `
+                      <tr>
+                        ${
+                          itemIndex === 0
+                            ? `<td class="seller-variant-matrix-primary" rowspan="${relatedItems.length}">
+                                <strong>${escapeHtml(primaryOption)}</strong>
+                              </td>`
+                            : ""
+                        }
+                        <td>${escapeHtml(item.optionValues[1] || "Bien the")}</td>
+                        <td>${renderVariantImageCell(item, optionLabel)}</td>
+                        <td>
+                          <input
+                            class="input"
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value="${escapeHtml(item.price)}"
+                            data-action="variant-row-price"
+                            data-variant-key="${escapeHtml(item.key)}"
+                            placeholder="Nhập giá"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            class="input"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value="${escapeHtml(item.stock)}"
+                            data-action="variant-row-stock"
+                            data-variant-key="${escapeHtml(item.key)}"
+                            placeholder="0"
+                          />
+                        </td>
+                      </tr>
+                    `;
+                  })
+                  .join("");
+              })
+              .join("")
+          : state.draft.variantItems
+              .map((item) => {
+                const optionLabel = item.optionValues[0] || "Biến thể";
+
+                return `
+                  <tr>
+                    <td class="seller-variant-matrix-primary">
+                      <strong>${escapeHtml(optionLabel)}</strong>
+                    </td>
+                    <td>${renderVariantImageCell(item, optionLabel)}</td>
+                    <td>
+                      <input
+                        class="input"
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value="${escapeHtml(item.price)}"
+                        data-action="variant-row-price"
+                        data-variant-key="${escapeHtml(item.key)}"
+                        placeholder="Nhập giá"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        class="input"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="${escapeHtml(item.stock)}"
+                        data-action="variant-row-stock"
+                        data-variant-key="${escapeHtml(item.key)}"
+                        placeholder="0"
+                      />
+                    </td>
+                  </tr>
+                `;
+              })
+              .join("");
+
+        els.variantMatrixTable.innerHTML = `
+          <div class="seller-variant-matrix-wrap">
+            <table class="seller-variant-matrix">
+              <thead>
+                <tr>
+                  <th>${escapeHtml(groupLabels[0] || "Phân loại 1")}</th>
+                  ${
+                    hasSecondGroup
+                      ? `<th>${escapeHtml(groupLabels[1] || "Phân loại 2")}</th>`
+                      : ""
+                  }
+                  <th>Ảnh</th>
+                  <th>Giá</th>
+                  <th>Kho hàng</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+      }
+    }
+  };
+
   const renderPreview = () => {
     const previewImage =
       state.draft.cover?.url || state.draft.gallery[0]?.url || "";
@@ -2077,8 +2801,12 @@
     const description =
       state.draft.description.trim() ||
       "Mô tả ngắn của sản phẩm sẽ được cắt gọn để xem trước.";
-    const price = toOptionalNumber(state.draft.price);
-    const stock = toOptionalNumber(state.draft.stock);
+    const sales = getDraftSalesSnapshot();
+    const price = sales.price;
+    const stock = sales.stock;
+    const minPrice = sales.minPrice;
+    const maxPrice = sales.maxPrice;
+    const variantSummary = getDraftVariantSummary();
 
     if (state.draft.condition) {
       badges.push(
@@ -2122,6 +2850,19 @@
       els.previewPrice.textContent =
         Number.isFinite(price) && price > 0 ? formatPrice(price) : "0 đ";
     }
+    if (els.previewPrice && Number.isFinite(minPrice) && minPrice > 0) {
+      els.previewPrice.textContent =
+        Number.isFinite(maxPrice) && maxPrice > minPrice
+          ? `${formatPrice(minPrice)} ~ ${formatPrice(maxPrice)}`
+          : formatPrice(minPrice);
+    }
+    if (els.previewVariantSummary) {
+      const hasVariantSummary = Boolean(variantSummary);
+      els.previewVariantSummary.hidden = !hasVariantSummary;
+      els.previewVariantSummary.textContent = hasVariantSummary
+        ? clampText(variantSummary, 120)
+        : "";
+    }
     if (els.previewShopName) {
       els.previewShopName.textContent = currentShop?.name || "Shop";
     }
@@ -2149,6 +2890,8 @@
     if (els.productNameCount) {
       els.productNameCount.textContent = `${state.draft.name.trim().length}/120`;
     }
+    renderCategoryTrigger();
+    renderSalesSection();
     if (els.resetProductDraft) {
       els.resetProductDraft.textContent = isEditingDraft()
         ? "Xóa sản phẩm"
@@ -2169,6 +2912,123 @@
     renderPreview();
   };
 
+  const enableVariantGroups = () => {
+    setDraftVariantMode("multiple");
+    renderDraft();
+  };
+
+  const addVariantGroup = () => {
+    if (state.draft.variantGroups.length >= 2) return;
+    setDraftVariantMode("multiple");
+    state.draft.variantGroups = [
+      ...state.draft.variantGroups,
+      createDraftVariantGroup(),
+    ].slice(0, 2);
+    syncDraftVariantItems();
+    renderDraft();
+  };
+
+  const removeVariantGroup = (groupId) => {
+    state.draft.variantGroups = state.draft.variantGroups.filter(
+      (group) => group.id !== groupId
+    );
+
+    if (!state.draft.variantGroups.length) {
+      setDraftVariantMode("single");
+      renderDraft();
+      return;
+    }
+
+    syncDraftVariantItems();
+    renderDraft();
+  };
+
+  const addVariantOption = (groupId) => {
+    state.draft.variantGroups = state.draft.variantGroups.map((group) =>
+      group.id === groupId
+        ? {
+            ...group,
+            options: [...group.options, createDraftVariantOption("")],
+          }
+        : group
+    );
+    renderDraft();
+  };
+
+  const removeVariantOption = (groupId, optionId) => {
+    state.draft.variantGroups = state.draft.variantGroups.map((group) => {
+      if (group.id !== groupId) return group;
+      const nextOptions = group.options.filter((option) => option.id !== optionId);
+      return {
+        ...group,
+        options: nextOptions.length ? nextOptions : [createDraftVariantOption("")],
+      };
+    });
+    syncDraftVariantItems();
+    renderDraft();
+  };
+
+  const updateVariantGroupName = (groupId, value) => {
+    state.draft.variantGroups = state.draft.variantGroups.map((group) =>
+      group.id === groupId ? { ...group, name: value || "" } : group
+    );
+  };
+
+  const updateVariantOptionValue = (groupId, optionId, value) => {
+    state.draft.variantGroups = state.draft.variantGroups.map((group) =>
+      group.id === groupId
+        ? {
+            ...group,
+            options: group.options.map((option) =>
+              option.id === optionId ? { ...option, value: value || "" } : option
+            ),
+          }
+        : group
+    );
+  };
+
+  const commitVariantGroupChanges = () => {
+    syncDraftVariantItems();
+    renderDraft();
+  };
+
+  const updateVariantRowField = (variantKey, field, value) => {
+    state.draft.variantItems = state.draft.variantItems.map((item) =>
+      item.key === variantKey
+        ? {
+            ...item,
+            [field]: value,
+          }
+        : item
+    );
+    renderChecklist();
+    renderPreview();
+  };
+
+  const setVariantRowImage = (variantKey, file) => {
+    state.draft.variantItems = state.draft.variantItems.map((item) => {
+      if (item.key !== variantKey) return item;
+      revokeMedia(item.image);
+      return {
+        ...item,
+        image: file ? toLocalMedia(file) : null,
+      };
+    });
+    renderDraft();
+  };
+
+  const clearVariantRowImage = (variantKey) => {
+    state.draft.variantItems = state.draft.variantItems.map((item) => {
+      if (item.key !== variantKey) return item;
+      revokeMedia(item.image);
+      return {
+        ...item,
+        image: null,
+      };
+    });
+    renderDraft();
+  };
+
   const syncDraftToForm = () => {
     if (els.productNameInput) els.productNameInput.value = state.draft.name;
     if (els.productGtinInput) els.productGtinInput.value = state.draft.gtin;
@@ -2177,7 +3037,6 @@
     }
     if (els.productPriceInput) els.productPriceInput.value = state.draft.price;
     if (els.productStockInput) els.productStockInput.value = state.draft.stock;
-    if (els.productSkuInput) els.productSkuInput.value = state.draft.sku;
     if (els.productWeightInput) {
       els.productWeightInput.value = state.draft.weight;
     }
@@ -2206,7 +3065,7 @@
       input.checked = input.value === state.draft.preorder;
     });
 
-    setSelectValue(els.productCategoryInput, state.draft.categoryId || "");
+    syncCategoryInput();
     setSelectValue(els.productConditionInput, state.draft.condition || "new");
     renderDraft();
   };
@@ -2244,10 +3103,40 @@
     }
 
     const variant = getPrimaryVariant(product);
+    const variantConfig = Array.isArray(product?.variant_config)
+      ? product.variant_config
+      : [];
     const gallery = Array.isArray(product.media_gallery)
       ? product.media_gallery
           .map((url, index) => toRemoteMedia(url, `gallery-${index + 1}`))
           .filter(Boolean)
+      : [];
+    const hasVariantGroups = variantConfig.length > 0;
+    const draftVariantGroups = hasVariantGroups
+      ? variantConfig.map((group) =>
+          createDraftVariantGroup(
+            String(group?.name || ""),
+            Array.isArray(group?.options)
+              ? group.options.map((option) => createDraftVariantOption(String(option || "")))
+              : []
+          )
+        )
+      : [];
+    const draftVariantItems = hasVariantGroups
+      ? (product.product_variants || []).map((item, index) =>
+          createDraftVariantItem({
+            variantId: item?.id || "",
+            optionValues: Array.isArray(item?.option_values)
+              ? item.option_values.map((value) => String(value || ""))
+              : [],
+            price: item?.price ? String(Number(item.price) || "") : "",
+            stock:
+              item?.stock !== undefined && item?.stock !== null
+                ? String(Number(item.stock) || 0)
+                : "0",
+            image: toRemoteMedia(item?.image_url, `variant-${index + 1}`),
+          })
+        )
       : [];
 
     revokeAllDraftMedia();
@@ -2278,11 +3167,16 @@
           ? String(product.height_cm)
           : "",
       condition: product.condition || "new",
-      sku: "",
+      variantMode: hasVariantGroups ? "multiple" : "single",
+      variantGroups: draftVariantGroups,
+      variantItems: draftVariantItems,
       gallery,
       cover: toRemoteMedia(product.cover_image_url, "cover"),
       video: toRemoteMedia(product.video_url, "video"),
     };
+    if (hasVariantGroups) {
+      syncDraftVariantItems();
+    }
     syncDraftToForm();
     setView("new-product");
     showStatus("Đã nạp dữ liệu sản phẩm vào form chỉnh sửa.");
@@ -2307,6 +3201,29 @@
 
     if (!state.draft.categoryId) {
       return "Vui lòng chọn ngành hàng.";
+    }
+
+    if (state.draft.variantMode === "multiple") {
+      const groups = getNormalizedVariantGroups();
+      if (!groups.length) {
+        return "Vui lòng nhập ít nhất 1 nhóm phân loại hợp lệ.";
+      }
+
+      if (!state.draft.variantItems.length) {
+        return "Vui lòng nhập tùy chọn để tạo danh sách biến thể.";
+      }
+
+      const invalidVariant = state.draft.variantItems.find((item) => {
+        const price = toOptionalNumber(item.price);
+        const stock = toOptionalNumber(item.stock);
+        return !Number.isFinite(price) || price <= 0 || !Number.isFinite(stock) || stock < 0;
+      });
+
+      if (invalidVariant) {
+        return "Giá và kho hàng của từng biến thể là bắt buộc.";
+      }
+
+      return "";
     }
 
     const price = toOptionalNumber(state.draft.price);
@@ -2356,6 +3273,69 @@
     };
   };
 
+  const uploadDraftVariantImages = async () => {
+    const pendingItems = state.draft.variantItems.filter((item) => item?.image?.file);
+    if (!pendingItems.length) {
+      return new Map();
+    }
+
+    const formData = new FormData();
+    pendingItems.forEach((item) => formData.append("gallery", item.image.file));
+
+    const payload = await apiFetch(
+      "/products/media/upload",
+      {
+        method: "POST",
+        body: formData,
+      },
+      { redirectOn401: true }
+    );
+
+    const urls = Array.isArray(payload?.media?.gallery) ? payload.media.gallery : [];
+    const uploadedMap = new Map();
+
+    pendingItems.forEach((item, index) => {
+      uploadedMap.set(item.key, urls[index] || item?.image?.serverUrl || "");
+    });
+
+    return uploadedMap;
+  };
+
+  const buildVariantConfigPayload = () =>
+    state.draft.variantMode === "multiple"
+      ? getNormalizedVariantGroups().map((group) => ({
+          name: group.name,
+          options: [...group.options],
+        }))
+      : null;
+
+  const buildVariantSyncPayload = (uploadedVariantImageMap = new Map()) => {
+    if (state.draft.variantMode !== "multiple") {
+      return [
+        {
+          id: state.editingVariantId || undefined,
+          price: Number(state.draft.price),
+          stock: Math.max(0, Math.floor(Number(state.draft.stock) || 0)),
+          weight: toOptionalNumber(state.draft.weight),
+          image_url: null,
+          option_values: [],
+          sku: null,
+        },
+      ];
+    }
+
+    return state.draft.variantItems.map((item) => ({
+      id: item.variantId || undefined,
+      price: Number(item.price),
+      stock: Math.max(0, Math.floor(Number(item.stock) || 0)),
+      weight: toOptionalNumber(state.draft.weight),
+      image_url:
+        uploadedVariantImageMap.get(item.key) || item?.image?.serverUrl || null,
+      option_values: [...item.optionValues],
+      sku: null,
+    }));
+  };
+
   const saveDraftAsProduct = async (status) => {
     const validationMessage = validateDraft();
     if (validationMessage) {
@@ -2363,18 +3343,12 @@
       return;
     }
 
-    const variantPayload = {
-      price: Number(state.draft.price),
-      stock: Math.max(0, Math.floor(Number(state.draft.stock) || 0)),
-      sku: state.draft.sku.trim() || undefined,
-      weight: toOptionalNumber(state.draft.weight),
-    };
-
     setFormBusy(true);
     showStatus("Đang tạo sản phẩm mới...", { persist: true });
 
     try {
       const uploadedMedia = await uploadDraftMedia();
+      const uploadedVariantImageMap = await uploadDraftVariantImages();
       const existingGallery = state.draft.gallery
         .map((item) => item?.serverUrl || "")
         .filter(Boolean);
@@ -2397,6 +3371,7 @@
           state.draft.video?.serverUrl ||
           undefined,
         media_gallery: [...existingGallery, ...(uploadedMedia.gallery || [])],
+        variant_config: buildVariantConfigPayload(),
         status,
         shop_id: state.currentShopId,
       };
@@ -2419,8 +3394,10 @@
         await apiFetch(
           `/products/${productId}/variants`,
           {
-            method: "POST",
-            body: variantPayload,
+            method: "PUT",
+            body: {
+              variants: buildVariantSyncPayload(uploadedVariantImageMap),
+            },
           },
           { redirectOn401: true }
         );
@@ -2468,18 +3445,12 @@
       return;
     }
 
-    const variantPayload = {
-      price: Number(state.draft.price),
-      stock: Math.max(0, Math.floor(Number(state.draft.stock) || 0)),
-      sku: state.draft.sku.trim() || "",
-      weight: toOptionalNumber(state.draft.weight),
-    };
-
     setFormBusy(true);
     showStatus("Đang cập nhật sản phẩm...", { persist: true });
 
     try {
       const uploadedMedia = await uploadDraftMedia();
+      const uploadedVariantImageMap = await uploadDraftVariantImages();
       const existingGallery = state.draft.gallery
         .map((item) => item?.serverUrl || "")
         .filter(Boolean);
@@ -2497,6 +3468,7 @@
           uploadedMedia.cover_image_url || state.draft.cover?.serverUrl || null,
         video_url: uploadedMedia.video_url || state.draft.video?.serverUrl || null,
         media_gallery: [...existingGallery, ...(uploadedMedia.gallery || [])],
+        variant_config: buildVariantConfigPayload(),
         status,
       };
 
@@ -2510,25 +3482,16 @@
       );
 
       try {
-        if (state.editingVariantId) {
-          await apiFetch(
-            `/products/variants/${state.editingVariantId}`,
-            {
-              method: "PATCH",
-              body: variantPayload,
+        await apiFetch(
+          `/products/${state.editingProductId}/variants`,
+          {
+            method: "PUT",
+            body: {
+              variants: buildVariantSyncPayload(uploadedVariantImageMap),
             },
-            { redirectOn401: true }
-          );
-        } else {
-          await apiFetch(
-            `/products/${state.editingProductId}/variants`,
-            {
-              method: "POST",
-              body: variantPayload,
-            },
-            { redirectOn401: true }
-          );
-        }
+          },
+          { redirectOn401: true }
+        );
       } catch (variantError) {
         await Promise.all([loadProducts(), loadOrders()]);
         renderAll();
@@ -2708,9 +3671,10 @@
   };
 
   const loadCategories = async () => {
-    const payload = await apiFetch("/categories?leaf_only=true", {}, {});
+    const payload = await apiFetch("/categories", {}, {});
     state.categories = Array.isArray(payload?.data) ? payload.data : [];
     populateCategorySelects();
+    renderCategoryPicker();
     renderDraft();
   };
 
@@ -2836,9 +3800,35 @@
       renderDraft();
     });
 
-    els.productCategoryInput?.addEventListener("change", (event) => {
-      state.draft.categoryId = event.target.value || "";
-      renderDraft();
+    els.productCategoryTrigger?.addEventListener("click", () => {
+      openCategoryPicker();
+    });
+
+    els.categoryPickerSearch?.addEventListener("input", (event) => {
+      state.categoryPicker.search = event.target.value || "";
+      renderCategoryPicker();
+    });
+
+    els.categoryPickerResults?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-category-id]");
+      if (!button) return;
+      updateCategoryPickerSelection(button.dataset.categoryId || "");
+    });
+
+    els.categoryPickerColumns?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-category-id]");
+      if (!button) return;
+      updateCategoryPickerSelection(button.dataset.categoryId || "");
+    });
+
+    els.closeCategoryPicker?.addEventListener("click", closeCategoryPicker);
+    els.cancelCategoryPicker?.addEventListener("click", closeCategoryPicker);
+    els.confirmCategoryPicker?.addEventListener("click", confirmCategoryPicker);
+
+    els.categoryPickerModal?.addEventListener("click", (event) => {
+      if (event.target.dataset.categoryPickerClose === "backdrop") {
+        closeCategoryPicker();
+      }
     });
 
     els.productGtinInput?.addEventListener("input", (event) => {
@@ -2861,9 +3851,100 @@
       renderDraft();
     });
 
-    els.productSkuInput?.addEventListener("input", (event) => {
-      state.draft.sku = event.target.value || "";
-      renderDraft();
+    els.enableVariantGroupsBtn?.addEventListener("click", () => {
+      enableVariantGroups();
+    });
+
+    els.addSecondVariantGroupBtn?.addEventListener("click", () => {
+      addVariantGroup();
+    });
+
+    els.variantGroupsEditor?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+
+      const action = button.dataset.action || "";
+      const groupId = button.dataset.groupId || "";
+      const optionId = button.dataset.optionId || "";
+
+      if (action === "add-variant-option") {
+        addVariantOption(groupId);
+      }
+
+      if (action === "remove-variant-option") {
+        removeVariantOption(groupId, optionId);
+      }
+
+      if (action === "remove-variant-group") {
+        removeVariantGroup(groupId);
+      }
+    });
+
+    els.variantGroupsEditor?.addEventListener("input", (event) => {
+      const input = event.target.closest("[data-action]");
+      if (!input) return;
+
+      const action = input.dataset.action || "";
+      const groupId = input.dataset.groupId || "";
+      const optionId = input.dataset.optionId || "";
+
+      if (action === "variant-group-name") {
+        updateVariantGroupName(groupId, input.value || "");
+      }
+
+      if (action === "variant-option-value") {
+        updateVariantOptionValue(groupId, optionId, input.value || "");
+      }
+    });
+
+    els.variantGroupsEditor?.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-action]");
+      if (!input) return;
+      const action = input.dataset.action || "";
+      if (action === "variant-group-name" || action === "variant-option-value") {
+        commitVariantGroupChanges();
+      }
+    });
+
+    els.variantMatrixTable?.addEventListener("input", (event) => {
+      const input = event.target.closest("[data-action]");
+      if (!input) return;
+
+      const action = input.dataset.action || "";
+      const variantKey = input.dataset.variantKey || "";
+
+      if (action === "variant-row-price") {
+        updateVariantRowField(variantKey, "price", input.value || "");
+      }
+
+      if (action === "variant-row-stock") {
+        updateVariantRowField(variantKey, "stock", input.value || "0");
+      }
+    });
+
+    els.variantMatrixTable?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+
+      const action = button.dataset.action || "";
+      const variantKey = button.dataset.variantKey || "";
+
+      if (action === "remove-variant-image") {
+        clearVariantRowImage(variantKey);
+        return;
+      }
+
+      if (action === "pick-variant-image") {
+        const picker = document.createElement("input");
+        picker.type = "file";
+        picker.accept = "image/*";
+        picker.addEventListener("change", () => {
+          const file = picker.files?.[0] || null;
+          if (!file) return;
+          setVariantRowImage(variantKey, file);
+        });
+        picker.click();
+      }
     });
 
     els.productWeightInput?.addEventListener("input", (event) => {
@@ -2929,6 +4010,12 @@
       updateShopSummary();
       renderDraft();
       await loadSellerData();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && state.categoryPicker.isOpen) {
+        closeCategoryPicker();
+      }
     });
   };
 

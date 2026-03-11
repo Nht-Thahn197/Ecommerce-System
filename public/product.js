@@ -24,6 +24,7 @@
     addToCartBtn: document.querySelector("#addToCartBtn"),
     buyNowBtn: document.querySelector("#buyNowBtn"),
     actionStatus: document.querySelector("#productActionStatus"),
+    shopAvatar: document.querySelector("#shopAvatar"),
     shopName: document.querySelector("#shopName"),
     shopDescription: document.querySelector("#shopDescription"),
     shopProductCount: document.querySelector("#shopProductCount"),
@@ -48,6 +49,7 @@
     activeMediaIndex: 0,
     thumbStartIndex: 0,
     selectedVariantId: "",
+    selectedVariantOptions: [],
     quantity: 1,
     relatedProducts: [],
     shopSummary: null,
@@ -176,10 +178,142 @@
     return prices.length ? Math.min(...prices) : 0;
   };
 
-  const getSelectedVariant = () =>
-    (state.product?.product_variants || []).find(
-      (variant) => String(variant?.id) === String(state.selectedVariantId)
-    ) || state.product?.product_variants?.[0] || null;
+  const getProductPriceRange = (product = state.product) => {
+    const prices = getProductVariants(product)
+      .map((variant) => getVariantPrice(variant))
+      .filter((price) => price > 0);
+
+    if (!prices.length) {
+      return { min: 0, max: 0 };
+    }
+
+    return {
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+    };
+  };
+
+  const getProductVariants = (product = state.product) =>
+    Array.isArray(product?.product_variants)
+      ? product.product_variants.filter((variant) => Boolean(variant?.id))
+      : [];
+
+  const getVariantGroups = (product = state.product) =>
+    (Array.isArray(product?.variant_config) ? product.variant_config : [])
+      .map((group) => ({
+        name: String(group?.name || "").trim(),
+        options: Array.from(
+          new Set(
+            (Array.isArray(group?.options) ? group.options : [])
+              .map((option) => String(option || "").trim())
+              .filter(Boolean)
+          )
+        ),
+      }))
+      .filter((group) => group.name && group.options.length)
+      .slice(0, 2);
+
+  const usesGroupedVariants = (product = state.product) =>
+    getVariantGroups(product).length > 0;
+
+  const getVariantOptionValues = (variant, product = state.product) => {
+    const groupCount = getVariantGroups(product).length;
+    const values = Array.isArray(variant?.option_values)
+      ? variant.option_values.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+
+    return groupCount ? values.slice(0, groupCount) : values;
+  };
+
+  const getVariantLabel = (variant, product = state.product) => {
+    const optionValues = getVariantOptionValues(variant, product);
+    if (optionValues.length) {
+      return optionValues.join(" / ");
+    }
+
+    const sku = String(variant?.sku || "").trim();
+    return sku || "Biến thể mặc định";
+  };
+
+  const getSelectedOptionValues = (product = state.product) => {
+    const groups = getVariantGroups(product);
+    return groups.map((_, index) =>
+      String(state.selectedVariantOptions?.[index] || "").trim()
+    );
+  };
+
+  const isSelectionComplete = (product = state.product) => {
+    const groups = getVariantGroups(product);
+    if (!groups.length) return Boolean(state.selectedVariantId);
+    const selections = getSelectedOptionValues(product);
+    return groups.every((_, index) => Boolean(selections[index]));
+  };
+
+  const matchesSelections = (variant, selections, product = state.product) => {
+    const optionValues = getVariantOptionValues(variant, product);
+    const groups = getVariantGroups(product);
+
+    if (!groups.length || optionValues.length !== groups.length) {
+      return false;
+    }
+
+    return selections.every(
+      (selection, index) => !selection || optionValues[index] === selection
+    );
+  };
+
+  const findVariantBySelections = (selections, product = state.product) =>
+    getProductVariants(product).find((variant) =>
+      matchesSelections(variant, selections, product)
+    ) || null;
+
+  const getVariantSelectionPrompt = (product = state.product) =>
+    usesGroupedVariants(product)
+      ? "Vui lòng chọn đủ phân loại"
+      : "Vui lòng chọn phân loại";
+
+  const requiresVariantSelection = (product = state.product) =>
+    getProductVariants(product).length > 1;
+
+  const applyDefaultVariantSelection = (product = state.product) => {
+    const variants = getProductVariants(product);
+    const groups = getVariantGroups(product);
+    const defaultVariant =
+      variants.find((variant) => getVariantStock(variant) > 0) || variants[0] || null;
+
+    if (!requiresVariantSelection(product)) {
+      state.selectedVariantId = defaultVariant?.id || "";
+      state.selectedVariantOptions = defaultVariant
+        ? getVariantOptionValues(defaultVariant, product)
+        : groups.map(() => "");
+      return;
+    }
+
+    state.selectedVariantId = "";
+    state.selectedVariantOptions = groups.map(() => "");
+  };
+
+  const getSelectedVariant = (product = state.product) => {
+    const variants = getProductVariants(product);
+    if (!variants.length) return null;
+
+    const selectedVariant =
+      variants.find(
+        (variant) => String(variant?.id) === String(state.selectedVariantId)
+      ) || null;
+
+    if (selectedVariant) return selectedVariant;
+
+    if (usesGroupedVariants(product)) {
+      if (!isSelectionComplete(product)) {
+        return requiresVariantSelection(product) ? null : variants[0] || null;
+      }
+
+      return findVariantBySelections(getSelectedOptionValues(product), product);
+    }
+
+    return requiresVariantSelection(product) ? null : variants[0] || null;
+  };
 
   const getVariantStock = (variant) => {
     const stock = Number(variant?.stock);
@@ -367,30 +501,36 @@
     if (!els.mediaMain) return;
 
     const stage = els.mediaMain.querySelector(".product-video-stage");
+    const frame = els.mediaMain.querySelector(".product-media-frame-video");
     const video = els.mediaMain.querySelector(".product-video-object");
 
-    if (!(stage instanceof HTMLElement) || !(video instanceof HTMLVideoElement)) {
+    if (
+      !(stage instanceof HTMLElement) ||
+      !(frame instanceof HTMLElement) ||
+      !(video instanceof HTMLVideoElement)
+    ) {
       return;
     }
 
     const applyFit = () => {
       const videoWidth = Number(video.videoWidth || 0);
       const videoHeight = Number(video.videoHeight || 0);
+      const frameWidth = Math.max(frame.clientWidth, 1);
+      const frameHeight = Math.max(frame.clientHeight, 1);
+      const isPortrait = videoHeight > videoWidth;
+      const inset = isPortrait ? 12 : 15;
+      const stageSize = Math.max(
+        1,
+        Math.min(frameWidth - 28, frameHeight - inset)
+      );
 
-      if (!videoWidth || !videoHeight) return;
-
-      stage.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
-      stage.style.width = "";
-      stage.style.height = "";
-      video.style.width = "100%";
+      stage.style.width = `${stageSize}px`;
+      stage.style.height = `${stageSize}px`;
+      video.style.width = "auto";
       video.style.height = "100%";
     };
 
-    if (video.readyState >= 1 && video.videoWidth && video.videoHeight) {
-      window.requestAnimationFrame(applyFit);
-      return;
-    }
-
+    window.requestAnimationFrame(applyFit);
     video.addEventListener("loadedmetadata", applyFit, { once: true });
     video.addEventListener("loadeddata", applyFit, { once: true });
   };
@@ -422,7 +562,12 @@
         ? `
           <div class="product-media-frame product-media-frame-video">
             <div class="product-video-stage">
-              <video class="product-media-object product-video-object" controls playsinline preload="metadata">
+              <video
+                class="product-media-object product-video-object"
+                controls
+                playsinline
+                preload="metadata"
+              >
               <source src="${escapeHtml(activeItem.url)}" />
               </video>
             </div>
@@ -475,13 +620,21 @@
   };
 
   const renderPriceAndVouchers = (variant) => {
-    const basePrice = variant ? getVariantPrice(variant) : getProductPrice(state.product);
+    const priceRange = getProductPriceRange(state.product);
+    const basePrice = variant ? getVariantPrice(variant) : priceRange.min;
     if (els.price) {
-      els.price.textContent = formatCurrency(basePrice);
+      els.price.textContent =
+        !variant && priceRange.max > priceRange.min
+          ? `${formatCurrency(priceRange.min)} ~ ${formatCurrency(priceRange.max)}`
+          : formatCurrency(basePrice);
     }
     if (els.priceHint) {
       els.priceHint.textContent =
-        basePrice > 0 ? "Giá đang áp dụng cho lựa chọn hiện tại" : "Shop chưa cập nhật giá";
+        requiresVariantSelection() && !variant
+          ? `${getVariantSelectionPrompt()} để xác định giá và tồn kho.`
+          : basePrice > 0
+            ? "Giá đang áp dụng cho lựa chọn hiện tại"
+            : "Shop chưa cập nhật giá";
     }
     if (els.voucherChips) {
       els.voucherChips.innerHTML = buildVoucherChips(basePrice)
@@ -528,17 +681,31 @@
   const renderSelectedVariant = () => {
     const variant = getSelectedVariant();
     const stock = getVariantStock(variant);
+    const needsVariantChoice = requiresVariantSelection();
     const hasVariant = Boolean(variant?.id);
     const hasStock = stock > 0;
+    const canBuy = hasStock && (hasVariant || !needsVariantChoice);
 
     if (els.currentVariantLabel) {
       els.currentVariantLabel.textContent = hasVariant
         ? variant?.sku || "Biến thể mặc định"
-        : "Chưa có biến thể";
+        : needsVariantChoice
+          ? getVariantSelectionPrompt()
+          : getProductVariants().length
+            ? "Biến thể mặc định"
+            : "Không có phân loại";
+      if (hasVariant) {
+        els.currentVariantLabel.textContent = getVariantLabel(variant);
+      }
     }
 
     if (els.soldCount) {
-      els.soldCount.textContent = hasStock ? "Còn hàng" : "Hết hàng";
+      els.soldCount.textContent =
+        needsVariantChoice && !hasVariant
+          ? "Chọn loại"
+          : hasStock
+            ? "Còn hàng"
+            : "Hết hàng";
     }
 
     state.quantity = clampQuantity(state.quantity, hasStock ? stock : 1);
@@ -546,45 +713,129 @@
     if (els.qtyInput) {
       els.qtyInput.value = String(state.quantity);
       els.qtyInput.max = String(Math.max(1, Math.min(stock || 1, MAX_CART_QUANTITY)));
-      els.qtyInput.disabled = !hasVariant || !hasStock;
+      els.qtyInput.disabled = !canBuy;
     }
 
     if (els.qtyDecreaseBtn) {
-      els.qtyDecreaseBtn.disabled = !hasVariant || !hasStock || state.quantity <= 1;
+      els.qtyDecreaseBtn.disabled = !canBuy || state.quantity <= 1;
     }
 
     if (els.qtyIncreaseBtn) {
       els.qtyIncreaseBtn.disabled =
-        !hasVariant ||
-        !hasStock ||
+        !canBuy ||
         state.quantity >= Math.min(stock || 1, MAX_CART_QUANTITY);
     }
 
     if (els.addToCartBtn) {
-      els.addToCartBtn.disabled = !hasVariant || !hasStock;
+      els.addToCartBtn.disabled = !canBuy;
     }
 
     if (els.buyNowBtn) {
-      els.buyNowBtn.disabled = !hasVariant || !hasStock;
+      els.buyNowBtn.disabled = !canBuy;
     }
 
     renderPriceAndVouchers(variant);
   };
 
+  const getOptionAvailability = (groupIndex, optionValue, product = state.product) => {
+    const selections = getSelectedOptionValues(product);
+    const nextSelections = [...selections];
+    nextSelections[groupIndex] = optionValue;
+    const matchingVariants = getProductVariants(product).filter((variant) =>
+      matchesSelections(variant, nextSelections, product)
+    );
+
+    return {
+      exists: matchingVariants.length > 0,
+      inStock: matchingVariants.some((variant) => getVariantStock(variant) > 0),
+    };
+  };
+
   const renderVariantOptions = () => {
     if (!els.variantOptions || !state.product) return;
 
-    const variants = Array.isArray(state.product.product_variants)
-      ? state.product.product_variants
-      : [];
+    const variants = getProductVariants();
+    const groups = getVariantGroups();
+    const variantBlock = els.variantOptions.closest(".product-picker-block");
+    const showVariantPicker = requiresVariantSelection();
+    els.variantOptions.classList.toggle(
+      "has-groups",
+      groups.length > 0 && showVariantPicker
+    );
+
+    if (variantBlock) {
+      variantBlock.hidden = !showVariantPicker;
+      variantBlock.style.display = showVariantPicker ? "" : "none";
+    }
 
     if (!variants.length) {
-      els.variantOptions.innerHTML = `
-        <button class="variant-chip" type="button" disabled>
-          <strong>Chưa mở bán</strong>
-          <span>Shop đang cập nhật biến thể</span>
-        </button>
-      `;
+      els.variantOptions.innerHTML = "";
+      state.selectedVariantId = "";
+      state.selectedVariantOptions = [];
+      renderSelectedVariant();
+      return;
+    }
+
+    if (!showVariantPicker) {
+      els.variantOptions.innerHTML = "";
+      renderSelectedVariant();
+      return;
+    }
+
+    if (groups.length) {
+      const selections = getSelectedOptionValues();
+      els.variantOptions.innerHTML = groups
+        .map((group, groupIndex) => {
+          const selectedValue = selections[groupIndex] || "";
+          const previousSelectionsFilled = selections
+            .slice(0, groupIndex)
+            .every(Boolean);
+          const isLocked = groupIndex > 0 && !previousSelectionsFilled;
+          const visibleOptions =
+            groupIndex > 0 && previousSelectionsFilled
+              ? group.options.filter((optionValue) =>
+                  getOptionAvailability(groupIndex, optionValue).exists
+                )
+              : group.options;
+
+          return `
+            <section class="product-variant-group ${isLocked ? "is-disabled" : ""}">
+              <div class="product-variant-group-head">
+                <strong>${escapeHtml(group.name)}</strong>
+                <span>${escapeHtml(selectedValue || "Chưa chọn")}</span>
+              </div>
+              ${
+                isLocked
+                  ? `<div class="product-variant-group-empty">Chọn ${escapeHtml(
+                      groups[groupIndex - 1]?.name || "phân loại"
+                    )} trước</div>`
+                  : `<div class="variant-chip-list">`
+              }
+                ${isLocked ? "" : visibleOptions
+                  .map((optionValue) => {
+                    const active = selectedValue === optionValue ? "active" : "";
+                    const availability = getOptionAvailability(groupIndex, optionValue);
+                    const stateLabel = availability.inStock ? "Có thể chọn" : "Hết hàng";
+                    return `
+                      <button
+                        class="variant-chip ${active} ${availability.inStock ? "" : "soldout"}"
+                        type="button"
+                        data-option-group="${groupIndex}"
+                        data-option-value="${escapeHtml(optionValue)}"
+                        ${availability.exists ? "" : "disabled"}
+                      >
+                        <strong>${escapeHtml(optionValue)}</strong>
+                        <span>${escapeHtml(stateLabel)}</span>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              ${isLocked ? "" : "</div>"}
+            </section>
+          `;
+        })
+        .join("");
+
       renderSelectedVariant();
       return;
     }
@@ -602,7 +853,7 @@
             data-variant-id="${escapeHtml(variant?.id || "")}"
             ${stock <= 0 ? "disabled" : ""}
           >
-            <strong>${escapeHtml(label)}</strong>
+            <strong>${escapeHtml(getVariantLabel(variant) || label)}</strong>
             <span>${escapeHtml(formatCurrency(getVariantPrice(variant)))}</span>
           </button>
         `;
@@ -616,6 +867,15 @@
     if (!state.product) return;
 
     const shopName = state.product?.shops?.name || "Shop Bambi";
+    const shopAvatarUrl =
+      state.product?.shops?.avatar_url || state.shopSummary?.avatar_url || "";
+
+    if (els.shopAvatar) {
+      els.shopAvatar.classList.toggle("has-image", Boolean(shopAvatarUrl));
+      els.shopAvatar.innerHTML = shopAvatarUrl
+        ? `<img src="${escapeHtml(shopAvatarUrl)}" alt="${escapeHtml(shopName)}" />`
+        : `<span>${escapeHtml(getInitials(shopName))}</span>`;
+    }
 
     if (els.shopName) {
       els.shopName.textContent = shopName;
@@ -642,6 +902,8 @@
     if (!els.specs || !state.product) return;
 
     const variant = getSelectedVariant();
+    const needsVariantChoice = requiresVariantSelection();
+    const variantPending = needsVariantChoice && !variant?.id;
     const specs = [
       ["Danh mục", state.product?.categories?.name || "Chưa phân loại"],
       ["Shop", state.product?.shops?.name || "Shop Bambi"],
@@ -649,7 +911,10 @@
         "Tình trạng",
         CONDITION_LABELS[state.product?.condition] || CONDITION_LABELS.new,
       ],
-      ["SKU", variant?.sku || "Chưa cập nhật"],
+      [
+        "Phân loại",
+        variantPending ? getVariantSelectionPrompt() : getVariantLabel(variant) || "Biến thể mặc định",
+      ],
       ["GTIN", state.product?.gtin || "Chưa cập nhật"],
       [
         "Kích thước",
@@ -660,12 +925,20 @@
       ],
       [
         "Khối lượng",
-        Number(variant?.weight) > 0 ? `${Number(variant.weight)} g` : "Chưa cập nhật",
+        variantPending
+          ? getVariantSelectionPrompt()
+          : Number(variant?.weight) > 0
+            ? `${Number(variant.weight)} g`
+            : "Chưa cập nhật",
       ],
       ["Ngày đăng", formatDate(state.product?.created_at)],
       [
         "Tình trạng kho",
-        getVariantStock(variant) > 0 ? "Còn hàng" : "Tạm hết hàng",
+        variantPending
+          ? getVariantSelectionPrompt()
+          : getVariantStock(variant) > 0
+            ? "Còn hàng"
+            : "Tạm hết hàng",
       ],
     ];
 
@@ -691,6 +964,7 @@
     const averageRating = Number(reviewSummary?.average_rating || 0);
     const variant = getSelectedVariant();
     const stock = getVariantStock(variant);
+    const variantPending = requiresVariantSelection() && !variant?.id;
 
     if (els.title) {
       els.title.textContent = state.product?.name || "Chi tiết sản phẩm";
@@ -709,7 +983,11 @@
     }
 
     if (els.soldCount) {
-      els.soldCount.textContent = stock > 0 ? "Còn hàng" : "Hết hàng";
+      els.soldCount.textContent = variantPending
+        ? "Chon loai"
+        : stock > 0
+          ? "Còn hàng"
+          : "Hết hàng";
     }
 
     if (els.reviewAverageLabel) {
@@ -857,6 +1135,9 @@
     if (els.shell) {
       els.shell.hidden = false;
     }
+    window.requestAnimationFrame(() => {
+      fitActiveVideo();
+    });
     document.title = `${state.product?.name || "Chi tiết sản phẩm"} | Bambi`;
   };
 
@@ -921,10 +1202,7 @@
       state.media = buildMediaItems(product);
       state.activeMediaIndex = 0;
       state.thumbStartIndex = 0;
-      state.selectedVariantId =
-        product?.product_variants?.find((variant) => getVariantStock(variant) > 0)?.id ||
-        product?.product_variants?.[0]?.id ||
-        "";
+      applyDefaultVariantSelection(product);
       state.quantity = 1;
 
       const [categoriesResult, reviewResult, relatedResult, shopsResult] =
@@ -987,7 +1265,16 @@
 
   const withCartAction = async (mode) => {
     const variant = getSelectedVariant();
-    if (!variant?.id) return;
+    if (!variant?.id) {
+      if (requiresVariantSelection()) {
+        showStatus(
+          els.actionStatus,
+          `${getVariantSelectionPrompt()} trước khi mua hàng.`,
+          true
+        );
+      }
+      return;
+    }
 
     const auth = window.BambiStoreAuth || {};
     const token = typeof auth.getToken === "function" ? auth.getToken() : "";
@@ -1085,10 +1372,43 @@
     );
 
     els.variantOptions?.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-variant-id]");
+      const button = event.target.closest("[data-variant-id], [data-option-group]");
       if (!button) return;
-      state.selectedVariantId = button.dataset.variantId || "";
+
+      if (button.dataset.optionGroup !== undefined) {
+        const groupIndex = Number(button.dataset.optionGroup || -1);
+        const optionValue = String(button.dataset.optionValue || "").trim();
+        if (!Number.isFinite(groupIndex) || groupIndex < 0 || !optionValue) return;
+
+        const selections = getSelectedOptionValues();
+        selections[groupIndex] = optionValue;
+
+        const groups = getVariantGroups();
+        groups.forEach((_, index) => {
+          if (index === groupIndex || !selections[index]) return;
+          const stillValid = getProductVariants().some((variant) =>
+            matchesSelections(variant, selections, state.product)
+          );
+          if (!stillValid) {
+            selections[index] = "";
+          }
+        });
+
+        state.selectedVariantOptions = selections;
+        state.selectedVariantId =
+          isSelectionComplete() ? findVariantBySelections(selections)?.id || "" : "";
+      } else {
+        state.selectedVariantId = button.dataset.variantId || "";
+        const selectedVariant = getProductVariants().find(
+          (variant) => String(variant?.id) === String(state.selectedVariantId)
+        );
+        state.selectedVariantOptions = selectedVariant
+          ? getVariantOptionValues(selectedVariant)
+          : [];
+      }
+
       state.quantity = 1;
+      hideStatus(els.actionStatus);
       renderVariantOptions();
       renderSpecs();
     });
