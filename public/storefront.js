@@ -12,20 +12,39 @@
   const catalogDescription = document.querySelector("#catalogDescription");
   const catalogTrailLabel = document.querySelector("#catalogTrailLabel");
   const catalogChildLinks = document.querySelector("#catalogChildLinks");
-  const catalogProductCount = document.querySelector("#catalogProductCount");
-  const catalogBranchCount = document.querySelector("#catalogBranchCount");
-  const catalogLeafCount = document.querySelector("#catalogLeafCount");
   const catalogSectionTitle = document.querySelector("#catalogSectionTitle");
-  const catalogCountLabel = document.querySelector("#catalogCountLabel");
   const catalogStatus = document.querySelector("#catalogStatus");
   const catalogProductGrid = document.querySelector("#catalogProductGrid");
   const catalogEmpty = document.querySelector("#catalogEmpty");
+  const catalogPriceMinInput = document.querySelector("#catalogPriceMin");
+  const catalogPriceMaxInput = document.querySelector("#catalogPriceMax");
+  const catalogApplyFiltersBtn = document.querySelector("#catalogApplyFilters");
+  const catalogConditionInputs = Array.from(
+    document.querySelectorAll("[data-catalog-condition]")
+  );
+  const catalogRatingButtons = Array.from(
+    document.querySelectorAll("[data-catalog-rating]")
+  );
 
   const categoryCarouselState = {
     roots: [],
     columns: 10,
     pageSize: 20,
     slideIndex: 0,
+  };
+
+  const catalogState = {
+    allProducts: [],
+    filteredProducts: [],
+    reviewSummaryById: new Map(),
+    reviewsLoaded: false,
+    reviewLoadPromise: null,
+    filters: {
+      minPrice: null,
+      maxPrice: null,
+      minRating: 0,
+      conditions: new Set(),
+    },
   };
 
   let categoryResizeFrame = 0;
@@ -107,6 +126,34 @@
     return prices.length ? Math.min(...prices) : 0;
   };
 
+  const parseOptionalNumber = (value) => {
+    const text = String(value ?? "").trim();
+    if (!text) return null;
+
+    const amount = Number(text);
+    return Number.isFinite(amount) ? amount : Number.NaN;
+  };
+
+  const getCatalogReviewSummary = (productId) =>
+    catalogState.reviewSummaryById.get(String(productId)) || {
+      total_reviews: 0,
+      average_rating: 0,
+    };
+
+  const getCatalogProductRating = (product) =>
+    Number(
+      product?.average_rating ??
+        product?.rating_average ??
+        getCatalogReviewSummary(product?.id).average_rating ??
+        0
+    ) || 0;
+
+  const hasActiveCatalogFilters = () =>
+    catalogState.filters.minPrice !== null ||
+    catalogState.filters.maxPrice !== null ||
+    catalogState.filters.minRating > 0 ||
+    catalogState.filters.conditions.size > 0;
+
   const getInitials = (value) => {
     const parts = String(value || "")
       .trim()
@@ -116,22 +163,6 @@
 
     if (!parts.length) return "BM";
     return parts.map((part) => part[0]?.toUpperCase() || "").join("");
-  };
-
-  const getSubtreeProductCount = (node) =>
-    Number(node?.product_count || 0) +
-    getChildren(node).reduce(
-      (total, child) => total + getSubtreeProductCount(child),
-      0
-    );
-
-  const getSubtreeNodeCount = (node) =>
-    1 + getChildren(node).reduce((total, child) => total + getSubtreeNodeCount(child), 0);
-
-  const getSubtreeLeafCount = (node) => {
-    const children = getChildren(node);
-    if (!children.length) return 1;
-    return children.reduce((total, child) => total + getSubtreeLeafCount(child), 0);
   };
 
   const findCategoryNode = (nodes, id, trail = []) => {
@@ -319,6 +350,233 @@
     ].join("");
   };
 
+  const syncCatalogRatingButtons = () => {
+    catalogRatingButtons.forEach((button) => {
+      const isActive =
+        Number(button.dataset.catalogRating || 0) === catalogState.filters.minRating;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+  };
+
+  const renderCatalogProducts = (products) => {
+    const filteredProducts = Array.isArray(products) ? products : [];
+
+    catalogState.filteredProducts = filteredProducts;
+
+    renderProducts(
+      filteredProducts,
+      catalogProductGrid,
+      catalogEmpty,
+      hasActiveCatalogFilters()
+        ? "Không có sản phẩm phù hợp với bộ lọc hiện tại."
+        : "Chưa có sản phẩm đang bán trong danh mục này."
+    );
+  };
+
+  const ensureCatalogReviewSummaries = async () => {
+    if (catalogState.reviewsLoaded) return;
+    if (catalogState.reviewLoadPromise) {
+      await catalogState.reviewLoadPromise;
+      return;
+    }
+
+    const productIds = Array.from(
+      new Set(
+        catalogState.allProducts
+          .map((product) => String(product?.id || ""))
+          .filter(Boolean)
+      )
+    );
+
+    if (!productIds.length) {
+      catalogState.reviewsLoaded = true;
+      return;
+    }
+
+    catalogState.reviewLoadPromise = (async () => {
+      showStatus(catalogStatus, "Đang tải đánh giá sản phẩm...");
+
+      const results = await Promise.allSettled(
+        productIds.map(async (productId) => ({
+          productId,
+          payload: await fetchJson(
+            `/reviews?product_id=${encodeURIComponent(productId)}&page=1&limit=1`
+          ),
+        }))
+      );
+
+      let successCount = 0;
+
+      results.forEach((result) => {
+        if (result.status !== "fulfilled") return;
+        successCount += 1;
+        catalogState.reviewSummaryById.set(
+          result.value.productId,
+          result.value.payload?.summary || {
+            total_reviews: 0,
+            average_rating: 0,
+          }
+        );
+      });
+
+      if (!successCount) {
+        throw new Error("Không thể tải đánh giá sản phẩm để lọc.");
+      }
+
+      catalogState.reviewsLoaded = true;
+      hideStatus(catalogStatus);
+    })();
+
+    try {
+      await catalogState.reviewLoadPromise;
+    } finally {
+      catalogState.reviewLoadPromise = null;
+    }
+  };
+
+  const applyCatalogFilters = async () => {
+    if (catalogState.filters.minRating > 0) {
+      await ensureCatalogReviewSummaries();
+    }
+
+    const filteredProducts = catalogState.allProducts.filter((product) => {
+      const price = getProductPrice(product);
+      const condition = String(product?.condition || "");
+      const rating = getCatalogProductRating(product);
+
+      if (
+        catalogState.filters.minPrice !== null &&
+        (!Number.isFinite(price) || price < catalogState.filters.minPrice)
+      ) {
+        return false;
+      }
+
+      if (
+        catalogState.filters.maxPrice !== null &&
+        (!Number.isFinite(price) || price > catalogState.filters.maxPrice)
+      ) {
+        return false;
+      }
+
+      if (
+        catalogState.filters.conditions.size > 0 &&
+        !catalogState.filters.conditions.has(condition)
+      ) {
+        return false;
+      }
+
+      if (
+        catalogState.filters.minRating > 0 &&
+        (!Number.isFinite(rating) || rating < catalogState.filters.minRating)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    syncCatalogRatingButtons();
+    hideStatus(catalogStatus);
+    renderCatalogProducts(filteredProducts);
+  };
+
+  const bindCatalogFilters = () => {
+    if (!catalogApplyFiltersBtn || catalogApplyFiltersBtn.dataset.bound === "true") {
+      return;
+    }
+
+    catalogApplyFiltersBtn.dataset.bound = "true";
+
+    catalogApplyFiltersBtn.addEventListener("click", async () => {
+      const minPrice = parseOptionalNumber(catalogPriceMinInput?.value);
+      const maxPrice = parseOptionalNumber(catalogPriceMaxInput?.value);
+
+      if (Number.isNaN(minPrice) || Number.isNaN(maxPrice)) {
+        showStatus(catalogStatus, "Khoảng giá không hợp lệ.", true);
+        return;
+      }
+
+      if (
+        (minPrice !== null && Number.isFinite(minPrice) && minPrice < 0) ||
+        (maxPrice !== null && Number.isFinite(maxPrice) && maxPrice < 0)
+      ) {
+        showStatus(catalogStatus, "Giá lọc phải lớn hơn hoặc bằng 0.", true);
+        return;
+      }
+
+      if (
+        minPrice !== null &&
+        maxPrice !== null &&
+        Number.isFinite(minPrice) &&
+        Number.isFinite(maxPrice) &&
+        minPrice > maxPrice
+      ) {
+        showStatus(catalogStatus, "Giá từ phải nhỏ hơn hoặc bằng giá đến.", true);
+        return;
+      }
+
+      catalogState.filters.minPrice = minPrice;
+      catalogState.filters.maxPrice = maxPrice;
+
+      try {
+        await applyCatalogFilters();
+      } catch (error) {
+        showStatus(
+          catalogStatus,
+          error instanceof Error ? error.message : "Không thể áp dụng bộ lọc.",
+          true
+        );
+      }
+    });
+
+    [catalogPriceMinInput, catalogPriceMaxInput].forEach((input) => {
+      input?.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        catalogApplyFiltersBtn.click();
+      });
+    });
+
+    catalogConditionInputs.forEach((input) => {
+      input.addEventListener("change", async () => {
+        catalogState.filters.conditions = new Set(
+          catalogConditionInputs
+            .filter((item) => item.checked)
+            .map((item) => String(item.value || ""))
+        );
+
+        try {
+          await applyCatalogFilters();
+        } catch (error) {
+          showStatus(
+            catalogStatus,
+            error instanceof Error ? error.message : "Không thể áp dụng bộ lọc.",
+            true
+          );
+        }
+      });
+    });
+
+    catalogRatingButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const nextRating = Number(button.dataset.catalogRating || 0);
+        catalogState.filters.minRating =
+          catalogState.filters.minRating === nextRating ? 0 : nextRating;
+
+        try {
+          await applyCatalogFilters();
+        } catch (error) {
+          showStatus(
+            catalogStatus,
+            error instanceof Error ? error.message : "Không thể áp dụng bộ lọc.",
+            true
+          );
+        }
+      });
+    });
+  };
+
   const bindCategoryCarousel = () => {
     if (!homeCategoryCarousel || homeCategoryCarousel.dataset.bound === "true") return;
 
@@ -418,10 +676,6 @@
 
       const selected = match.node;
       const breadcrumb = match.trail.map((item) => item.name).join(" / ");
-      const branchCount = Math.max(0, getSubtreeNodeCount(selected) - 1);
-      const leafCount = getSubtreeLeafCount(selected);
-      const totalProducts = Number(productsPayload?.pagination?.total || 0);
-
       document.title = `${selected.name} - Bambi`;
 
       if (catalogTitle) catalogTitle.textContent = selected.name;
@@ -429,24 +683,21 @@
       if (catalogDescription) {
         catalogDescription.textContent = `Đang hiển thị sản phẩm thuộc nhánh ${breadcrumb}.`;
       }
-      if (catalogProductCount) catalogProductCount.textContent = String(totalProducts);
-      if (catalogBranchCount) catalogBranchCount.textContent = String(branchCount);
-      if (catalogLeafCount) catalogLeafCount.textContent = String(leafCount);
       if (catalogSectionTitle) {
         catalogSectionTitle.textContent = `Sản phẩm thuộc ${selected.name}`;
       }
-      if (catalogCountLabel) {
-        catalogCountLabel.textContent = `${totalProducts} sản phẩm`;
-      }
+
+      catalogState.allProducts = Array.isArray(productsPayload?.data)
+        ? productsPayload.data
+        : [];
+      catalogState.reviewSummaryById = new Map();
+      catalogState.reviewsLoaded = false;
+      catalogState.reviewLoadPromise = null;
 
       hideStatus(catalogStatus);
       renderChildLinks(selected);
-      renderProducts(
-        productsPayload.data || [],
-        catalogProductGrid,
-        catalogEmpty,
-        "Chưa có sản phẩm đang bán trong danh mục này."
-      );
+      syncCatalogRatingButtons();
+      renderCatalogProducts(catalogState.allProducts);
     } catch (error) {
       if (catalogProductGrid) catalogProductGrid.innerHTML = "";
       showStatus(
@@ -467,6 +718,7 @@
   }
 
   if (page === "category") {
+    bindCatalogFilters();
     loadCategoryPage();
   }
 })();

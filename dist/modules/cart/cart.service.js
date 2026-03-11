@@ -25,6 +25,8 @@ const cartItemSelect = {
             sku: true,
             price: true,
             stock: true,
+            image_url: true,
+            option_values: true,
             products: {
                 select: {
                     id: true,

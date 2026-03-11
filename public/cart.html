@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Giỏ hàng | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260311-46" />
+  </head>
+  <body data-page="cart">
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <a href="/ui/shop-register.html">Kênh Người Bán</a>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <a class="logo" href="/ui/">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </a>
+        <div class="search-wrap">
+          <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
+          <button type="button">Tìm</button>
+        </div>
+        <div class="header-actions">
+          <a class="cart-entry is-active" href="/ui/cart.html" aria-label="Giỏ hàng">
+            <span class="cart-entry-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="9" cy="20" r="1.7"></circle>
+                <circle cx="18" cy="20" r="1.7"></circle>
+                <path d="M3 4h2.4l2.1 10.2a1 1 0 0 0 .98.8h8.83a1 1 0 0 0 .97-.76L20 7H6.2"></path>
+              </svg>
+            </span>
+            <span class="cart-entry-count" data-cart-count hidden>0</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container hero cart-page">
+      <section class="cart-page-hero">
+        <h1>Giỏ hàng của bạn</h1>
+      </section>
+
+      <div id="cartStatus" class="status" hidden></div>
+
+      <section id="cartContent" class="cart-shell" hidden>
+        <div class="cart-table-head">
+          <label class="cart-check" aria-label="Chọn tất cả sản phẩm">
+            <input id="cartSelectAllTop" type="checkbox" />
+          </label>
+          <span>Sản phẩm</span>
+          <span>Đơn giá</span>
+          <span>Số lượng</span>
+          <span>Số tiền</span>
+          <span>Thao tác</span>
+        </div>
+
+        <div id="cartGroupList" class="cart-group-list"></div>
+
+        <div class="cart-summary-bar">
+          <div class="cart-summary-actions">
+            <label class="cart-check" aria-label="Chọn tất cả sản phẩm">
+              <input id="cartSelectAllBottom" type="checkbox" />
+            </label>
+            <span class="cart-summary-meta" id="cartSelectionMeta">0 sản phẩm được chọn</span>
+            <button id="cartClearSelected" class="cart-clear-btn" type="button">
+              Xóa mục đã chọn
+            </button>
+          </div>
+          <div class="cart-summary-total">
+            <div>
+              <div class="cart-summary-note">Tạm tính</div>
+              <strong id="cartSummaryTotal">0đ</strong>
+            </div>
+            <button id="cartCheckoutBtn" class="cart-checkout-btn" type="button" disabled>
+              Mua hàng
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="cartEmptyState" class="cart-empty-state" hidden>
+        <span class="promo-tag">Giỏ hàng trống</span>
+        <h2>Chưa có sản phẩm nào trong giỏ</h2>
+        <p>Thêm vài món bạn đang quan tâm rồi quay lại đây để kiểm tra và đặt hàng.</p>
+        <a href="/ui/">Tiếp tục mua sắm</a>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Bambi Marketplace - Giỏ hàng storefront lấy dữ liệu thật từ cart, product và checkout API.
+    </footer>
+
+    <script src="/ui/store.js?v=20260311-4"></script>
+    <script src="/ui/cart.js?v=20260311-2"></script>
+  </body>
+</html>

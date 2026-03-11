@@ -4,6 +4,7 @@ const userName = document.querySelector("#userName");
 const logoutBtn = document.querySelector("#logoutBtn");
 const avatarImg = document.querySelector(".user-avatar .avatar-img");
 const avatarInitial = document.querySelector(".user-avatar .avatar-initial");
+const cartCountBadges = Array.from(document.querySelectorAll("[data-cart-count]"));
 const sellerChannelLinks = Array.from(
   document.querySelectorAll('a[href="/ui/shop-register.html"]')
 );
@@ -92,6 +93,8 @@ const clearAuth = () => {
   localStorage.removeItem(customerStorageKeys.sellerRefresh);
   localStorage.removeItem(customerStorageKeys.sellerBase);
   sellerChannelPromise = null;
+  cartCountPromise = null;
+  setCartCount(0, false);
 };
 
 const saveSession = (source, token, refreshToken) => {
@@ -122,6 +125,58 @@ const parseResponsePayload = async (response) => {
 
 let refreshPromise = null;
 let sellerChannelPromise = null;
+let cartCountPromise = null;
+
+const setCartCount = (count, authenticated = true) => {
+  const total = Math.max(0, Number(count) || 0);
+  const label = total > 99 ? "99+" : String(total);
+
+  cartCountBadges.forEach((badge) => {
+    badge.textContent = label;
+    badge.hidden = !authenticated;
+    badge.setAttribute("aria-label", `${total} sản phẩm trong giỏ hàng`);
+  });
+};
+
+const emitCartChanged = () => {
+  window.dispatchEvent(new Event("bambi:cart-changed"));
+};
+
+const refreshCartCount = async () => {
+  if (!cartCountBadges.length) {
+    return { total_quantity: 0, total_amount: 0 };
+  }
+
+  if (!getToken()) {
+    setCartCount(0, false);
+    return { total_quantity: 0, total_amount: 0 };
+  }
+
+  if (cartCountPromise) {
+    return cartCountPromise;
+  }
+
+  cartCountPromise = (async () => {
+    try {
+      const payload = await apiFetch("/cart", {}, { redirectOn401: false });
+      const summary = payload?.summary || {};
+      setCartCount(summary.total_quantity || 0, true);
+      return {
+        total_quantity: Number(summary.total_quantity || 0),
+        total_amount: Number(summary.total_amount || 0),
+      };
+    } catch (_error) {
+      setCartCount(0, true);
+      return { total_quantity: 0, total_amount: 0 };
+    }
+  })();
+
+  try {
+    return await cartCountPromise;
+  } finally {
+    cartCountPromise = null;
+  }
+};
 
 const refreshSession = async (preferredSource) => {
   if (refreshPromise) {
@@ -323,6 +378,15 @@ window.BambiStoreAuth = {
   resolveSellerChannelTarget,
 };
 
+window.BambiStoreCart = {
+  emitChange: emitCartChanged,
+  refreshCount: refreshCartCount,
+};
+
+window.addEventListener("bambi:cart-changed", () => {
+  refreshCartCount();
+});
+
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     clearAuth();
@@ -335,3 +399,4 @@ if (logoutBtn) {
 
 bindSellerChannelLinks();
 fetchMe();
+refreshCartCount();

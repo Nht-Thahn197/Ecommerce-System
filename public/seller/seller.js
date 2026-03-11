@@ -25,26 +25,18 @@
     dashboard: {
       breadcrumb: "Trang chủ / Tổng quan",
       title: "Kênh Người Bán",
-      subtitle:
-        "Theo dõi shop, quản lý sản phẩm và tạo sản phẩm mới trong một màn hình gọn hơn.",
     },
     products: {
       breadcrumb: "Trang chủ / Sản phẩm",
       title: "Sản phẩm",
-      subtitle:
-        "Lọc nhanh sản phẩm theo trạng thái, danh mục và thao tác ẩn hoặc bật hiển thị ngay.",
     },
     "new-product": {
       breadcrumb: "Trang chủ / Sản phẩm / Thêm 1 sản phẩm mới",
       title: "Thêm 1 sản phẩm mới",
-      subtitle:
-        "Soạn sản phẩm theo từng phần giống seller center, đồng thời xem preview và checklist hoàn thiện.",
     },
     "shop-profile": {
       breadcrumb: "Trang chủ / Hồ sơ shop",
       title: "Hồ sơ shop",
-      subtitle:
-        "Theo dõi thông tin cơ bản, thuế và định danh của shop trong cùng Seller Studio.",
     },
   };
 
@@ -58,21 +50,15 @@
     shell: document.querySelector(".seller-shell"),
     breadcrumb: document.querySelector("#sellerBreadcrumb"),
     pageTitle: document.querySelector("#sellerPageTitle"),
-    pageSubtitle: document.querySelector("#sellerPageSubtitle"),
     sellerStatus: document.querySelector("#sellerStatus"),
     sellerEmptyState: document.querySelector("#sellerEmptyState"),
     sellerViews: Array.from(document.querySelectorAll(".seller-view")),
     sellerNavLinks: Array.from(
       document.querySelectorAll(".seller-nav-link[data-view-target]")
     ),
-    sellerShopSummaryName: document.querySelector("#sellerShopSummaryName"),
-    sellerShopSummaryMeta: document.querySelector("#sellerShopSummaryMeta"),
-    sellerShopSelect: document.querySelector("#sellerShopSelect"),
-    reloadSellerData: document.querySelector("#reloadSellerData"),
     reloadProductsView: document.querySelector("#reloadProductsView"),
     sellerUserAvatar: document.querySelector("#sellerUserAvatar"),
     sellerUserName: document.querySelector("#sellerUserName"),
-    sellerUserRole: document.querySelector("#sellerUserRole"),
     logoutSeller: document.querySelector("#logoutSeller"),
     dashboardHeroStats: document.querySelector("#dashboardHeroStats"),
     dashboardSummaryCards: document.querySelector("#dashboardSummaryCards"),
@@ -212,16 +198,6 @@
       shopProfileView.dataset.view = "shop-profile";
       shopProfileView.innerHTML = `
         <article class="seller-panel seller-shop-profile-shell">
-          <div class="seller-panel-head seller-panel-head-wrap">
-            <div>
-              <span class="seller-eyebrow">Quản lý shop</span>
-              <h2>Hồ sơ shop</h2>
-              <p class="muted">Tổng hợp thông tin cơ bản, thuế và định danh của shop đang được duyệt.</p>
-            </div>
-            <div class="stack-actions">
-              <button class="seller-btn ghost" type="button" data-view-target="dashboard">Quay lại tổng quan</button>
-            </div>
-          </div>
           <div id="shopProfileSummary" class="seller-shop-profile-summary"></div>
           <div id="shopProfileTabs" class="seller-shop-profile-tabs"></div>
           <div id="shopProfileContent" class="seller-shop-profile-content"></div>
@@ -1259,19 +1235,11 @@
         ? {
             breadcrumb: "Trang chủ / Sản phẩm / Sửa sản phẩm",
             title: "Sửa sản phẩm",
-            subtitle:
-              "Cập nhật thông tin listing hiện có, xem preview trước khi lưu lại thay đổi.",
           }
         : VIEW_META[state.currentView] || VIEW_META.dashboard;
-    const currentShop = getCurrentShop();
 
     if (els.breadcrumb) els.breadcrumb.textContent = meta.breadcrumb;
     if (els.pageTitle) els.pageTitle.textContent = meta.title;
-    if (els.pageSubtitle) {
-      els.pageSubtitle.textContent = currentShop
-        ? `${meta.subtitle} Shop đang chọn: ${currentShop.name}.`
-        : meta.subtitle;
-    }
 
     document.title = `${meta.title} | Bambi Seller`;
   };
@@ -1315,11 +1283,6 @@
       state.user.full_name || state.user.email || "Tài khoản seller";
 
     if (els.sellerUserName) els.sellerUserName.textContent = displayName;
-    if (els.sellerUserRole) {
-      els.sellerUserRole.textContent = state.approvedShops.length
-        ? `${state.approvedShops.length} shop đã duyệt`
-        : "Chờ duyệt seller";
-    }
     if (els.sellerUserAvatar) {
       const avatarUrl = state.user.avatar_url || "";
       els.sellerUserAvatar.innerHTML = avatarUrl
@@ -1337,12 +1300,6 @@
       section.classList.toggle("hidden", !hasApprovedShop);
     });
 
-    if (els.sellerShopSelect) {
-      els.sellerShopSelect.disabled = !hasApprovedShop;
-      window.BambiCustomSelect?.refreshSelect(els.sellerShopSelect);
-    }
-
-    if (els.reloadSellerData) els.reloadSellerData.disabled = !hasApprovedShop;
     if (els.reloadProductsView) {
       els.reloadProductsView.disabled = !hasApprovedShop;
     }
@@ -1351,30 +1308,6 @@
       state.currentView = "dashboard";
       updateViewChrome();
     }
-  };
-
-  const populateShopSelect = () => {
-    if (!els.sellerShopSelect) return;
-
-    els.sellerShopSelect.innerHTML = state.approvedShops.length
-      ? state.approvedShops
-          .map(
-            (shop) =>
-              `<option value="${escapeHtml(shop.id)}">${escapeHtml(
-                shop.name
-              )}</option>`
-          )
-          .join("")
-      : '<option value="">Chưa có shop đã duyệt</option>';
-
-    if (
-      !state.approvedShops.some((shop) => shop.id === state.currentShopId) &&
-      state.approvedShops[0]
-    ) {
-      state.currentShopId = state.approvedShops[0].id;
-    }
-
-    setSelectValue(els.sellerShopSelect, state.currentShopId || "");
   };
 
   const populateCategorySelects = () => {
@@ -1404,39 +1337,6 @@
         ${optionsHtml}
       `;
       setSelectValue(els.productCategoryInput, state.draft.categoryId || "");
-    }
-  };
-
-  const updateShopSummary = () => {
-    const currentShop = getCurrentShop();
-    const activeCount = state.products.filter(
-      (product) => product.status === "active"
-    ).length;
-    const hiddenCount = state.products.filter(
-      (product) => product.status !== "active"
-    ).length;
-
-    if (els.sellerShopSummaryName) {
-      els.sellerShopSummaryName.textContent = currentShop
-        ? currentShop.name
-        : "Chưa có shop đã duyệt";
-    }
-
-    if (els.sellerShopSummaryMeta) {
-      if (!currentShop) {
-        els.sellerShopSummaryMeta.textContent =
-          "Hoàn tất hồ sơ seller để mở Seller Studio.";
-      } else {
-        const contact =
-          currentShop.contact_phone ||
-          currentShop.contact_email ||
-          "Chưa có liên hệ";
-        els.sellerShopSummaryMeta.textContent = `Đã duyệt ${
-          currentShop.approved_at
-            ? `từ ${formatDate(currentShop.approved_at)}`
-            : "và sẵn sàng bán hàng"
-        } · ${activeCount} đang hiển thị · ${hiddenCount} đang ẩn · ${contact}`;
-      }
     }
   };
 
@@ -1889,6 +1789,11 @@
           currentShop.name || "Shop"
         )}" />`
       : `<span>${escapeHtml(getInitial(currentShop.name || "S"))}</span>`;
+    const avatarFileLabel = state.shopProfileEditor.avatarFile?.name
+      ? state.shopProfileEditor.avatarFile.name
+      : getCurrentShopAvatarUrl()
+        ? "Đang dùng avatar hiện tại"
+        : "Chưa chọn tệp nào";
 
     els.shopProfileSummary.innerHTML = `
       <div class="seller-shop-profile-hero">
@@ -1948,28 +1853,6 @@
             </div>
           </div>
         </article>
-        <div class="seller-shop-profile-stats">
-          <article class="seller-shop-mini-stat">
-            <span>Ngày tạo</span>
-            <strong>${escapeHtml(formatDate(currentShop.created_at))}</strong>
-          </article>
-          <article class="seller-shop-mini-stat">
-            <span>Duyệt từ</span>
-            <strong>${escapeHtml(
-              currentShop.approved_at ? formatDate(currentShop.approved_at) : "Chưa rõ"
-            )}</strong>
-          </article>
-          <article class="seller-shop-mini-stat">
-            <span>Tài liệu</span>
-            <strong>${escapeHtml(formatCompactNumber(shopDocuments.length))}</strong>
-          </article>
-          <article class="seller-shop-mini-stat">
-            <span>Địa chỉ lấy hàng</span>
-            <strong>${escapeHtml(
-              pickupAddress ? "Đã cập nhật" : "Chưa có"
-            )}</strong>
-          </article>
-        </div>
       </div>
     `;
 
@@ -2004,32 +1887,37 @@
                     <div class="seller-shop-avatar seller-shop-avatar-large">${avatarMarkup}</div>
                     <div class="field seller-shop-avatar-field">
                       <label for="shopProfileAvatarInput">Avatar shop</label>
-                      <input
-                        id="shopProfileAvatarInput"
-                        class="input"
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg"
-                        ${state.shopProfileEditor.isSaving ? "disabled" : ""}
-                      />
+                      <div class="seller-file-input-row ${state.shopProfileEditor.isSaving ? "is-disabled" : ""}">
+                        <input
+                          id="shopProfileAvatarInput"
+                          class="seller-file-input-native"
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg"
+                          ${state.shopProfileEditor.isSaving ? "disabled" : ""}
+                        />
+                        <label
+                          for="shopProfileAvatarInput"
+                          class="seller-file-input-trigger"
+                          ${state.shopProfileEditor.isSaving ? 'aria-disabled="true"' : ""}
+                        >
+                          Chọn tệp
+                        </label>
+                        <span class="seller-file-input-name">${escapeHtml(avatarFileLabel)}</span>
+                      </div>
                       <div class="seller-inline-meta">
                         <span>Avatar này dùng ảnh đại diện tài khoản seller, tối đa 1MB.</span>
                       </div>
                     </div>
                   </div>
-                  <div class="seller-two-column">
-                    <div class="field">
-                      <label for="shopProfileNameInput">Tên shop</label>
-                      <input
-                        id="shopProfileNameInput"
-                        class="input"
-                        maxlength="255"
-                        value="${escapeHtml(state.shopProfileEditor.name)}"
-                        ${state.shopProfileEditor.isSaving ? "disabled" : ""}
-                      />
-                    </div>
-                    <div class="seller-tip-card muted">
-                      Chỉ có thể chỉnh sửa tên shop, avatar và mô tả ở màn này. Các thông tin thuế, định danh và liên hệ hiện ở chế độ chỉ xem.
-                    </div>
+                  <div class="field">
+                    <label for="shopProfileNameInput">Tên shop</label>
+                    <input
+                      id="shopProfileNameInput"
+                      class="input"
+                      maxlength="255"
+                      value="${escapeHtml(state.shopProfileEditor.name)}"
+                      ${state.shopProfileEditor.isSaving ? "disabled" : ""}
+                    />
                   </div>
                   <div class="field">
                     <label for="shopProfileDescriptionInput">Mô tả shop</label>
@@ -3665,7 +3553,6 @@
       "";
 
     resetShopProfileEditor();
-    populateShopSelect();
     updateUserInfo();
     toggleApprovedContent(Boolean(state.approvedShops.length));
   };
@@ -3710,7 +3597,6 @@
   };
 
   const renderAll = () => {
-    updateShopSummary();
     updateViewChrome();
     renderDashboard();
     renderShopProfile();
@@ -4001,17 +3887,6 @@
       });
     });
 
-    els.sellerShopSelect?.addEventListener("change", async (event) => {
-      const nextShopId = event.target.value || "";
-      if (!nextShopId || nextShopId === state.currentShopId) return;
-      resetShopProfileEditor();
-      state.currentShopId = nextShopId;
-      localStorage.setItem(SHOP_PREF_KEY, nextShopId);
-      updateShopSummary();
-      renderDraft();
-      await loadSellerData();
-    });
-
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && state.categoryPicker.isOpen) {
         closeCategoryPicker();
@@ -4080,22 +3955,54 @@
   };
 
   const bindDocumentEvents = () => {
+    els.shopProfileSummary?.addEventListener("click", async (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+
+      const actionButton = target.closest("[data-action]");
+      if (!actionButton) return;
+
+      const action = actionButton.dataset.action;
+      if (!["edit-shop-profile", "cancel-shop-profile-edit", "save-shop-profile"].includes(action)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (action === "edit-shop-profile") {
+        startShopProfileEdit();
+        return;
+      }
+
+      if (action === "cancel-shop-profile-edit") {
+        resetShopProfileEditor();
+        renderShopProfile();
+        return;
+      }
+
+      await saveShopProfile();
+    });
+
     document.addEventListener("click", async (event) => {
-      const viewButton = event.target.closest("[data-view-target]");
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+
+      const viewButton = target.closest("[data-view-target]");
       if (viewButton && state.approvedShops.length) {
         event.preventDefault();
         setView(viewButton.dataset.viewTarget || "dashboard");
         return;
       }
 
-      const productTab = event.target.closest("#productStatusTabs [data-status]");
+      const productTab = target.closest("#productStatusTabs [data-status]");
       if (productTab) {
         state.productFilters.status = productTab.dataset.status || "all";
         renderProductsView();
         return;
       }
 
-      const scrollTab = event.target.closest(
+      const scrollTab = target.closest(
         "#sellerFormTabs [data-scroll-target]"
       );
       if (scrollTab) {
@@ -4115,14 +4022,14 @@
         return;
       }
 
-      const shopProfileTab = event.target.closest("[data-shop-profile-tab]");
+      const shopProfileTab = target.closest("[data-shop-profile-tab]");
       if (shopProfileTab) {
         state.shopProfileTab = shopProfileTab.dataset.shopProfileTab || "basic";
         renderShopProfile();
         return;
       }
 
-      const actionButton = event.target.closest("[data-action]");
+      const actionButton = target.closest("[data-action]");
       if (!actionButton) return;
 
       const action = actionButton.dataset.action;
@@ -4215,10 +4122,6 @@
       }
     });
 
-    els.reloadSellerData?.addEventListener("click", async () => {
-      await loadSellerData();
-    });
-
     els.reloadProductsView?.addEventListener("click", async () => {
       await loadProducts();
       renderAll();
@@ -4289,7 +4192,6 @@
     try {
       showStatus("Đang tải Seller Studio...", { persist: true });
       await Promise.all([loadMe(), loadShops()]);
-      updateShopSummary();
 
       if (!state.approvedShops.length) {
         hideStatus();

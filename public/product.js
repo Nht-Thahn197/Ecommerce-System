@@ -1318,6 +1318,10 @@
         { redirectOn401: true }
       );
 
+      if (window.BambiStoreCart?.emitChange) {
+        window.BambiStoreCart.emitChange();
+      }
+
       showStatus(
         els.actionStatus,
         mode === "buy"

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bambi - Danh mục</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css?v=20260310-4" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260311-44" />
   </head>
   <body data-page="category">
     <div class="topbar">
@@ -55,7 +55,16 @@
           <button type="button">Tìm</button>
         </div>
         <div class="header-actions">
-          <a class="pill" href="/ui/">Về trang chủ</a>
+          <a class="cart-entry" href="/ui/cart.html" aria-label="Giỏ hàng">
+            <span class="cart-entry-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="9" cy="20" r="1.7"></circle>
+                <circle cx="18" cy="20" r="1.7"></circle>
+                <path d="M3 4h2.4l2.1 10.2a1 1 0 0 0 .98.8h8.83a1 1 0 0 0 .97-.76L20 7H6.2"></path>
+              </svg>
+            </span>
+            <span class="cart-entry-count" data-cart-count hidden>0</span>
+          </a>
         </div>
       </div>
     </header>
@@ -67,51 +76,108 @@
         <span id="catalogTrailLabel">Danh mục</span>
       </div>
 
-      <section class="catalog-hero">
-        <div class="catalog-intro">
-          <span class="promo-tag">Danh mục</span>
-          <h1 id="catalogTitle">Đang tải danh mục...</h1>
-          <p id="catalogDescription" class="section-subtitle">
-            Bambi sẽ hiển thị sản phẩm đúng theo danh mục bạn đang chọn.
-          </p>
-          <div id="catalogChildLinks" class="catalog-chip-list"></div>
-        </div>
+      <div class="catalog-layout">
+        <aside class="catalog-sidebar">
+          <div class="catalog-filters">
+            <section class="catalog-filter-card">
+              <div class="catalog-filter-head">
+                <h2>Khoảng giá</h2>
+              </div>
+              <div class="catalog-price-row">
+                <label class="catalog-price-field" for="catalogPriceMin">
+                  <input id="catalogPriceMin" type="number" min="0" step="1000" placeholder="TỪ" />
+                </label>
+                <span class="catalog-price-separator">-</span>
+                <label class="catalog-price-field" for="catalogPriceMax">
+                  <input id="catalogPriceMax" type="number" min="0" step="1000" placeholder="ĐẾN" />
+                </label>
+              </div>
+              <button id="catalogApplyFilters" class="catalog-filter-apply" type="button">
+                ÁP DỤNG
+              </button>
+            </section>
 
-        <div class="catalog-summary">
-          <div class="catalog-stat">
-            <span>Sản phẩm đang bán</span>
-            <strong id="catalogProductCount">0</strong>
-          </div>
-          <div class="catalog-stat">
-            <span>Nhánh con</span>
-            <strong id="catalogBranchCount">0</strong>
-          </div>
-          <div class="catalog-stat">
-            <span>Danh mục lá</span>
-            <strong id="catalogLeafCount">0</strong>
-          </div>
-        </div>
-      </section>
+            <section class="catalog-filter-card">
+              <div class="catalog-filter-head">
+                <h2>Tình trạng</h2>
+              </div>
+              <div class="catalog-check-list">
+                <label class="catalog-check-item">
+                  <input type="checkbox" value="used" data-catalog-condition />
+                  <span>Đã sử dụng</span>
+                </label>
+                <label class="catalog-check-item">
+                  <input type="checkbox" value="like_new" data-catalog-condition />
+                  <span>Như mới</span>
+                </label>
+                <label class="catalog-check-item">
+                  <input type="checkbox" value="new" data-catalog-condition />
+                  <span>Mới</span>
+                </label>
+              </div>
+            </section>
 
-      <section class="section">
-        <div class="section-title">
-          <h3 id="catalogSectionTitle">Sản phẩm trong danh mục</h3>
-          <span id="catalogCountLabel" class="section-link">0 sản phẩm</span>
+            <section class="catalog-filter-card">
+              <div class="catalog-filter-head">
+                <h2>Đánh giá</h2>
+              </div>
+              <div class="catalog-rating-list">
+                <button class="catalog-rating-btn" type="button" data-catalog-rating="5" aria-pressed="false">
+                  <span class="catalog-rating-stars">★★★★★</span>
+                </button>
+                <button class="catalog-rating-btn" type="button" data-catalog-rating="4" aria-pressed="false">
+                  <span class="catalog-rating-stars">★★★★☆</span>
+                  <span class="catalog-rating-label">trở lên</span>
+                </button>
+                <button class="catalog-rating-btn" type="button" data-catalog-rating="3" aria-pressed="false">
+                  <span class="catalog-rating-stars">★★★☆☆</span>
+                  <span class="catalog-rating-label">trở lên</span>
+                </button>
+                <button class="catalog-rating-btn" type="button" data-catalog-rating="2" aria-pressed="false">
+                  <span class="catalog-rating-stars">★★☆☆☆</span>
+                  <span class="catalog-rating-label">trở lên</span>
+                </button>
+                <button class="catalog-rating-btn" type="button" data-catalog-rating="1" aria-pressed="false">
+                  <span class="catalog-rating-stars">★☆☆☆☆</span>
+                  <span class="catalog-rating-label">trở lên</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        </aside>
+
+        <div class="catalog-content">
+          <section class="catalog-hero">
+            <div class="catalog-intro">
+              <span class="promo-tag">Danh mục</span>
+              <h1 id="catalogTitle">Đang tải danh mục...</h1>
+              <p id="catalogDescription" class="section-subtitle">
+                Bambi sẽ hiển thị sản phẩm đúng theo danh mục bạn đang chọn.
+              </p>
+              <div id="catalogChildLinks" class="catalog-chip-list"></div>
+            </div>
+          </section>
+
+          <section class="section catalog-results-section">
+            <div class="section-title">
+              <h3 id="catalogSectionTitle">Sản phẩm trong danh mục</h3>
+            </div>
+            <div id="catalogStatus" class="status" hidden></div>
+            <div id="catalogProductGrid" class="product-grid"></div>
+            <div id="catalogEmpty" class="catalog-empty" hidden>
+              Chưa có sản phẩm đang bán trong danh mục này.
+            </div>
+          </section>
         </div>
-        <div id="catalogStatus" class="status" hidden></div>
-        <div id="catalogProductGrid" class="product-grid"></div>
-        <div id="catalogEmpty" class="catalog-empty" hidden>
-          Chưa có sản phẩm đang bán trong danh mục này.
-        </div>
-      </section>
+      </div>
     </main>
 
     <footer class="footer">
       Bambi Marketplace - Duyệt sản phẩm theo danh mục gốc và toàn bộ nhánh con.
     </footer>
 
-    <script src="/ui/store.js?v=20260310-3"></script>
-    <script src="/ui/storefront.js?v=20260310-3"></script>
+    <script src="/ui/store.js?v=20260311-4"></script>
+    <script src="/ui/storefront.js?v=20260311-5"></script>
     <script src="/ui/custom-select.js?v=20260310-3"></script>
   </body>
 </html>

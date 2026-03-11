@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chi tiết sản phẩm | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css?v=20260311-36" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260311-44" />
   </head>
   <body data-page="product">
     <div class="topbar">
@@ -55,7 +55,16 @@
           <button type="button">Tìm</button>
         </div>
         <div class="header-actions">
-          <a class="pill" href="/ui/">Về trang chủ</a>
+          <a class="cart-entry" href="/ui/cart.html" aria-label="Giỏ hàng">
+            <span class="cart-entry-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="9" cy="20" r="1.7"></circle>
+                <circle cx="18" cy="20" r="1.7"></circle>
+                <path d="M3 4h2.4l2.1 10.2a1 1 0 0 0 .98.8h8.83a1 1 0 0 0 .97-.76L20 7H6.2"></path>
+              </svg>
+            </span>
+            <span class="cart-entry-count" data-cart-count hidden>0</span>
+          </a>
         </div>
       </div>
     </header>
@@ -296,7 +305,7 @@
       sản phẩm, đánh giá và giỏ hàng.
     </footer>
 
-    <script src="/ui/store.js?v=20260310-3"></script>
-    <script src="/ui/product.js?v=20260311-41"></script>
+    <script src="/ui/store.js?v=20260311-4"></script>
+    <script src="/ui/product.js?v=20260311-42"></script>
   </body>
 </html>

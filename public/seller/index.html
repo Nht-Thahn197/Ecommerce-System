@@ -6,7 +6,7 @@
     <title>Bambi Seller Studio</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="../shared.css" />
-    <link rel="stylesheet" href="./seller.css?v=20260311-5" />
+    <link rel="stylesheet" href="./seller.css?v=20260311-9" />
   </head>
   <body class="seller-body">
     <div class="seller-shell">
@@ -18,12 +18,6 @@
             <span>Studio quản lý bán hàng</span>
           </span>
         </a>
-
-        <section class="seller-shop-card">
-          <span class="seller-card-label">Shop đang vận hành</span>
-          <strong id="sellerShopSummaryName">Đang tải shop...</strong>
-          <p id="sellerShopSummaryMeta" class="muted">Đồng bộ dữ liệu sản phẩm và đơn hàng cho shop đã duyệt.</p>
-        </section>
 
         <section class="seller-nav-section">
           <p class="seller-nav-heading">Trang chính</p>
@@ -54,20 +48,6 @@
           </button>
         </section>
 
-        <section class="seller-nav-section">
-          <p class="seller-nav-heading">Hỗ trợ bán hàng</p>
-          <div class="seller-note-list">
-            <div class="seller-note-item">
-              <strong>Biến thể đầu tiên</strong>
-              <span>Tạo cùng sản phẩm để có giá và tồn kho ngay.</span>
-            </div>
-            <div class="seller-note-item">
-              <strong>Đơn gần đây</strong>
-              <span>Xử lý nhanh từ bảng tổng quan mà không cần rời trang.</span>
-            </div>
-          </div>
-        </section>
-
         <div class="seller-sidebar-foot">
           <button class="btn ghost" id="logoutSeller" type="button">Đăng xuất</button>
         </div>
@@ -78,23 +58,12 @@
           <div>
             <div class="seller-breadcrumb" id="sellerBreadcrumb">Trang chủ / Tổng quan</div>
             <h1 id="sellerPageTitle">Kênh Người Bán</h1>
-            <p id="sellerPageSubtitle" class="seller-topbar-copy">
-              Theo dõi shop, quản lý sản phẩm và tạo sản phẩm mới trong một màn hình gọn hơn.
-            </p>
           </div>
 
-          <div class="seller-topbar-actions">
-            <div class="field seller-compact-field">
-              <label for="sellerShopSelect">Shop</label>
-              <select class="select" id="sellerShopSelect"></select>
-            </div>
-            <button class="btn ghost" id="reloadSellerData" type="button">Tải lại</button>
-            <div class="seller-user-pill">
-              <span class="seller-user-avatar" id="sellerUserAvatar">B</span>
-              <div>
-                <strong id="sellerUserName">Đang tải tài khoản...</strong>
-                <span id="sellerUserRole">Seller Studio</span>
-              </div>
+          <div class="seller-user-pill">
+            <span class="seller-user-avatar" id="sellerUserAvatar">B</span>
+            <div>
+              <strong id="sellerUserName">Đang tải tài khoản...</strong>
             </div>
           </div>
         </header>
@@ -480,22 +449,13 @@
                     </div>
                   </div>
 
-                  <div class="seller-two-column">
-                    <div class="field">
-                      <label for="productConditionInput">Tình trạng</label>
-                      <select id="productConditionInput" class="select">
-                        <option value="new">Mới</option>
-                        <option value="like_new">Gần như mới</option>
-                        <option value="used">Đã qua sử dụng</option>
-                      </select>
-                    </div>
-                    <div class="field">
-                      <label>Bản nháp hiện tại</label>
-                      <div class="seller-tip-card muted">
-                        Ảnh, video, GTIN, kích thước và tình trạng giờ đã được lưu vào dữ liệu sản phẩm.
-                        Bạn có thể sao chép hoặc dùng lại các thông tin này ở các lần tạo listing tiếp theo.
-                      </div>
-                    </div>
+                  <div class="field">
+                    <label for="productConditionInput">Tình trạng</label>
+                    <select id="productConditionInput" class="select">
+                      <option value="new">Mới</option>
+                      <option value="like_new">Gần như mới</option>
+                      <option value="used">Đã qua sử dụng</option>
+                    </select>
                   </div>
                 </section>
 
@@ -587,6 +547,6 @@
     </div>
 
     <script src="/ui/custom-select.js"></script>
-    <script src="/ui/seller/seller.js?v=20260311-2"></script>
+    <script src="/ui/seller/seller.js?v=20260311-6"></script>
   </body>
 </html>
