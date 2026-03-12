@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tài khoản của tôi | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css?v=20260311-44" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260312-1" />
   </head>
   <body>
     <div class="topbar">
@@ -71,56 +71,80 @@
         <aside class="side-card">
           <h4>Tài khoản</h4>
           <nav class="side-menu">
-            <a class="active" href="/ui/account.html">Hồ sơ của tôi</a>
-            <a href="#">Địa chỉ</a>
+            <a class="active" data-account-nav="profile" href="#profile">Hồ sơ của tôi</a>
+            <a data-account-nav="addresses" href="#addresses">Địa chỉ</a>
             <a href="#">Đổi mật khẩu</a>
             <a href="#">Thông báo</a>
           </nav>
         </aside>
-        <section class="panel-card">
-          <h2 class="panel-title">Hồ Sơ Của Tôi</h2>
-          <p class="panel-sub">Quản lý thông tin hồ sơ để bảo mật tài khoản</p>
-          <div class="profile-grid">
-            <div>
-              <div class="form-row">
-                <label>Tên</label>
-                <input id="profileName" type="text" placeholder="Nhập tên" />
-              </div>
-              <div class="form-row">
-                <label>Email</label>
-                <input id="profileEmail" type="email" placeholder="Nhập email" />
-              </div>
-              <div class="form-row">
-                <label>Số điện thoại</label>
-                <input id="profilePhone" type="text" placeholder="Nhập số điện thoại" />
-              </div>
-              <div class="form-row">
-                <label>Giới tính</label>
-                <div class="radio-group">
-                  <label><input type="radio" name="gender" value="male" /> Nam</label>
-                  <label><input type="radio" name="gender" value="female" /> Nữ</label>
-                  <label><input type="radio" name="gender" value="other" /> Khác</label>
+
+        <div class="account-content">
+          <section class="panel-card account-panel" data-account-panel="profile" id="profile">
+            <h2 class="panel-title">Hồ Sơ Của Tôi</h2>
+            <p class="panel-sub">Quản lý thông tin hồ sơ để bảo mật tài khoản</p>
+            <div class="profile-grid">
+              <div>
+                <div class="form-row">
+                  <label>Tên</label>
+                  <input id="profileName" type="text" placeholder="Nhập tên" />
                 </div>
+                <div class="form-row">
+                  <label>Email</label>
+                  <input id="profileEmail" type="email" placeholder="Nhập email" />
+                </div>
+                <div class="form-row">
+                  <label>Số điện thoại</label>
+                  <input id="profilePhone" type="text" placeholder="Nhập số điện thoại" />
+                </div>
+                <div class="form-row">
+                  <label>Giới tính</label>
+                  <div class="radio-group">
+                    <label><input type="radio" name="gender" value="male" /> Nam</label>
+                    <label><input type="radio" name="gender" value="female" /> Nữ</label>
+                    <label><input type="radio" name="gender" value="other" /> Khác</label>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label>Ngày sinh</label>
+                  <input id="profileBirth" type="date" />
+                </div>
+                <button id="saveProfile" class="save-btn">Lưu</button>
+                <div id="profileStatus" class="status" style="margin-top: 12px"></div>
               </div>
-              <div class="form-row">
-                <label>Ngày sinh</label>
-                <input id="profileBirth" type="date" />
+              <div class="avatar-box">
+                <div class="avatar-circle">
+                  <span id="avatarLabel">Ảnh</span>
+                  <img id="avatarPreview" alt="Ảnh đại diện" />
+                </div>
+                <input id="avatarInput" type="file" accept="image/*" style="display: none" />
+                <button id="avatarButton">Chọn ảnh</button>
+                <p>Dung lượng file tối đa 1 MB</p>
+                <p>Định dạng: JPEG, PNG</p>
               </div>
-              <button id="saveProfile" class="save-btn">Lưu</button>
-              <div id="profileStatus" class="status" style="margin-top: 12px"></div>
             </div>
-            <div class="avatar-box">
-              <div class="avatar-circle">
-                <span id="avatarLabel">Ảnh</span>
-                <img id="avatarPreview" alt="Ảnh đại diện" />
+          </section>
+
+          <section
+            class="panel-card account-panel"
+            data-account-panel="addresses"
+            id="addresses"
+            hidden
+          >
+            <div class="address-panel-head">
+              <div>
+                <h2 class="panel-title">Địa Chỉ Của Tôi</h2>
+                <p class="panel-sub">Quản lý địa chỉ nhận hàng và địa chỉ mặc định.</p>
               </div>
-              <input id="avatarInput" type="file" accept="image/*" style="display: none" />
-              <button id="avatarButton">Chọn ảnh</button>
-              <p>Dung lượng file tối đa 1 MB</p>
-              <p>Định dạng: JPEG, PNG</p>
+              <button id="openAddressModalBtn" class="address-add-btn" type="button">
+                <span aria-hidden="true">+</span>
+                <span>Thêm địa chỉ mới</span>
+              </button>
             </div>
-          </div>
-        </section>
+
+            <div id="addressStatus" class="status" style="display: none; margin-bottom: 16px"></div>
+            <div id="addressList" class="address-list"></div>
+          </section>
+        </div>
       </div>
     </main>
 
@@ -128,8 +152,142 @@
       Bambi Marketplace - Trang tài khoản tham khảo phong cách Shopee
     </footer>
 
+    <div id="addressModal" class="account-modal" aria-hidden="true" hidden>
+      <div
+        class="account-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="addressModalTitle"
+      >
+        <div class="account-modal-head">
+          <h3 id="addressModalTitle">Địa chỉ mới</h3>
+          <button
+            id="closeAddressModalBtn"
+            class="account-modal-close"
+            type="button"
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+        </div>
+
+        <div id="addressModalStatus" class="status" style="display: none; margin-bottom: 16px"></div>
+
+        <form id="addressForm" class="address-form">
+          <div class="address-form-grid">
+            <label class="address-field">
+              <span>Họ và tên</span>
+              <input id="addressContactName" type="text" placeholder="Nhập họ và tên" />
+            </label>
+            <label class="address-field">
+              <span>Số điện thoại</span>
+              <input id="addressContactPhone" type="tel" placeholder="Nhập số điện thoại" />
+            </label>
+          </div>
+
+          <fieldset class="address-group">
+            <legend>Tỉnh/Thành phố, Quận/Huyện, Phường/Xã</legend>
+            <div class="address-region-grid">
+              <label class="address-field">
+                <span>Tỉnh/Thành phố</span>
+                <select id="addressProvince" class="select">
+                  <option value="">Chọn tỉnh/thành phố</option>
+                </select>
+              </label>
+              <label class="address-field">
+                <span>Quận/Huyện</span>
+                <select id="addressDistrict" class="select">
+                  <option value="">Chọn quận/huyện</option>
+                </select>
+              </label>
+              <label class="address-field">
+                <span>Phường/Xã</span>
+                <select id="addressWard" class="select">
+                  <option value="">Chọn phường/xã</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <label class="address-field">
+            <span>Địa chỉ cụ thể</span>
+            <input
+              id="addressDetail"
+              type="text"
+              autocomplete="off"
+              placeholder="Số nhà, tên đường, tòa nhà, mốc nhận hàng..."
+            />
+          </label>
+
+          <div class="address-map-card">
+            <div class="address-map-note">
+              <div class="address-map-icon" aria-hidden="true">!</div>
+              <div>
+                <strong>Vui lòng ghim địa chỉ chính xác</strong>
+                <p>Hãy chắc chắn vị trí trên bản đồ được ghim đúng để giao hàng thuận tiện hơn.</p>
+              </div>
+            </div>
+            <div class="address-map-preview">
+              <iframe
+                id="addressMapFrame"
+                class="address-map-frame"
+                title="Bản đồ địa chỉ"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+              ></iframe>
+              <div id="addressMapEmpty" class="address-map-empty">
+                Chọn khu vực và nhập địa chỉ cụ thể để xem bản đồ thật từ Google.
+              </div>
+              <a
+                id="addressMapLink"
+                class="address-map-link"
+                href="https://www.google.com/maps"
+                target="_blank"
+                rel="noopener noreferrer"
+                hidden
+              >
+                Mở trong Google Maps
+              </a>
+            </div>
+          </div>
+
+          <div class="address-type-block">
+            <span class="address-type-label">Loại địa chỉ:</span>
+            <div class="address-type-options">
+              <button type="button" class="address-type-btn active" data-address-type="home">
+                Nhà Riêng
+              </button>
+              <button type="button" class="address-type-btn" data-address-type="office">
+                Văn Phòng
+              </button>
+            </div>
+          </div>
+
+          <div class="address-flag-grid">
+            <label class="address-flag">
+              <input id="addressIsDefault" type="checkbox" />
+              <span>Đặt làm địa chỉ mặc định</span>
+            </label>
+            <label class="address-flag is-disabled">
+              <input type="checkbox" disabled />
+              <span>Đặt làm địa chỉ lấy hàng</span>
+            </label>
+            <label class="address-flag is-disabled">
+              <input type="checkbox" disabled />
+              <span>Đặt làm địa chỉ trả hàng</span>
+            </label>
+          </div>
+
+          <div class="address-form-actions">
+            <button id="cancelAddressBtn" class="address-cancel-btn" type="button">Trở Lại</button>
+            <button id="saveAddressBtn" class="address-submit-btn" type="submit">Hoàn thành</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script src="/ui/store.js?v=20260311-4"></script>
-    <script src="/ui/account.js"></script>
+    <script src="/ui/account.js?v=20260312-1"></script>
     <script src="/ui/custom-select.js"></script>
   </body>
 </html>

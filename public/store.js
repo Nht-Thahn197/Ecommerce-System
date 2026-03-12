@@ -18,7 +18,11 @@ const customerStorageKeys = {
   sellerRefresh: "bambi_seller_refresh",
 };
 
-const getLoginRedirect = () => {
+const getLoginRedirect = ({ preserveNext = true } = {}) => {
+  if (!preserveNext) {
+    return "/ui/login.html";
+  }
+
   const next = `${window.location.pathname}${window.location.search}`;
   return `/ui/login.html?next=${encodeURIComponent(next)}`;
 };
@@ -223,8 +227,8 @@ const refreshSession = async (preferredSource) => {
   }
 };
 
-const redirectToLogin = () => {
-  window.location.href = getLoginRedirect();
+const redirectToLogin = (options) => {
+  window.location.href = getLoginRedirect(options);
 };
 
 const apiFetch = async (path, options = {}, config = {}) => {
@@ -393,7 +397,7 @@ if (logoutBtn) {
     hideUser();
     sellerChannelPromise = null;
     setSellerChannelLinks(SELLER_CHANNEL_FALLBACK);
-    redirectToLogin();
+    redirectToLogin({ preserveNext: false });
   });
 }
 
