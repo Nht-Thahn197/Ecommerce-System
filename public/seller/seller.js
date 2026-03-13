@@ -34,6 +34,18 @@
       breadcrumb: "Trang chủ / Sản phẩm / Thêm 1 sản phẩm mới",
       title: "Thêm 1 sản phẩm mới",
     },
+    "orders-all": {
+      breadcrumb: "Trang chủ / Đơn hàng / Tất cả",
+      title: "Quản lý đơn hàng",
+    },
+    "orders-returns": {
+      breadcrumb: "Trang chủ / Đơn hàng / Trả hàng & Hủy",
+      title: "Trả hàng/Hoàn tiền",
+    },
+    "shipping-settings": {
+      breadcrumb: "Trang chủ / Đơn hàng / Cài đặt vận chuyển",
+      title: "Cài đặt vận chuyển",
+    },
     "shop-profile": {
       breadcrumb: "Trang chủ / Hồ sơ shop",
       title: "Hồ sơ shop",
@@ -45,6 +57,54 @@
     confirmed: { label: "Bàn giao", status: "shipping" },
     shipping: { label: "Đánh dấu giao", status: "delivered" },
   };
+
+  const ORDER_FILTER_GROUPS = {
+    all: [
+      { id: "all", label: "Tất cả", match: () => true },
+      { id: "pending", label: "Chờ xác nhận", match: (item) => item?.status === "pending" },
+      { id: "confirmed", label: "Chờ lấy hàng", match: (item) => item?.status === "confirmed" },
+      { id: "shipping", label: "Đang giao", match: (item) => item?.status === "shipping" },
+      { id: "delivered", label: "Đã giao", match: (item) => item?.status === "delivered" },
+      { id: "received", label: "Hoàn thành", match: (item) => item?.status === "received" },
+      {
+        id: "returns",
+        label: "Trả hàng/Hoàn tiền/Hủy",
+        match: (item) => ["returned", "cancelled"].includes(item?.status),
+      },
+    ],
+    returns: [
+      {
+        id: "all",
+        label: "Tất cả",
+        match: (item) => ["returned", "cancelled"].includes(item?.status),
+      },
+      { id: "returned", label: "Trả hàng/Hoàn tiền", match: (item) => item?.status === "returned" },
+      { id: "cancelled", label: "Đơn hủy", match: (item) => item?.status === "cancelled" },
+    ],
+  };
+
+  const SHIPPING_METHODS = [
+    {
+      key: "express",
+      label: "Hỏa tốc",
+      description: "Phù hợp đơn cần giao gấp trong nội thành.",
+    },
+    {
+      key: "standard",
+      label: "Nhanh",
+      description: "Luồng giao tiêu chuẩn cho đa số đơn hàng.",
+    },
+    {
+      key: "economy",
+      label: "Tiết kiệm",
+      description: "Chi phí thấp, phù hợp đơn không gấp.",
+    },
+    {
+      key: "selfPickup",
+      label: "Tự nhận hàng",
+      description: "Người mua tự nhận tại địa điểm của shop.",
+    },
+  ];
 
   const els = {
     shell: document.querySelector(".seller-shell"),
@@ -65,6 +125,19 @@
     dashboardPerformance: document.querySelector("#dashboardPerformance"),
     dashboardSuggestions: document.querySelector("#dashboardSuggestions"),
     recentOrdersTable: document.querySelector("#recentOrdersTable"),
+    ordersAllTabs: document.querySelector("#ordersAllTabs"),
+    ordersAllSummary: document.querySelector("#ordersAllSummary"),
+    ordersAllTable: document.querySelector("#ordersAllTable"),
+    ordersAllEmpty: document.querySelector("#ordersAllEmpty"),
+    ordersAllShopLabel: document.querySelector("#ordersAllShopLabel"),
+    ordersReturnsTabs: document.querySelector("#ordersReturnsTabs"),
+    ordersReturnsSummary: document.querySelector("#ordersReturnsSummary"),
+    ordersReturnsTable: document.querySelector("#ordersReturnsTable"),
+    ordersReturnsEmpty: document.querySelector("#ordersReturnsEmpty"),
+    ordersReturnsShopLabel: document.querySelector("#ordersReturnsShopLabel"),
+    reloadOrdersAll: document.querySelector("#reloadOrdersAll"),
+    reloadOrdersReturns: document.querySelector("#reloadOrdersReturns"),
+    shippingSettingsContent: document.querySelector("#shippingSettingsContent"),
     productStatusTabs: document.querySelector("#productStatusTabs"),
     productSearch: document.querySelector("#productSearch"),
     productCategoryFilter: document.querySelector("#productCategoryFilter"),
@@ -269,6 +342,10 @@
     categories: [],
     products: [],
     orderItems: [],
+    orderFilters: {
+      all: "all",
+      returns: "all",
+    },
     productFilters: {
       status: "all",
       search: "",
@@ -1153,10 +1230,13 @@
 
   const getCurrentShopOrders = () => {
     const productIds = new Set(state.products.map((product) => product.id));
-    if (!productIds.size) return [];
-    return state.orderItems.filter((item) =>
-      productIds.has(item?.product_variants?.products?.id)
-    );
+    const items = Array.isArray(state.orderItems) ? state.orderItems : [];
+    if (!productIds.size) return items;
+    return items.filter((item) => {
+      const productId = item?.product_variants?.products?.id;
+      if (!productId) return true;
+      return productIds.has(productId);
+    });
   };
 
   const getOrderItemAmount = (item) => {
@@ -1271,6 +1351,9 @@
     );
 
     if (nextView === "products") renderProductsView();
+    if (nextView === "orders-all") renderOrdersAllView();
+    if (nextView === "orders-returns") renderOrdersReturnsView();
+    if (nextView === "shipping-settings") renderShippingSettings();
     if (nextView === "new-product") renderDraft();
     if (nextView === "shop-profile") renderShopProfile();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1481,6 +1564,235 @@
     `;
   };
 
+  const getOrderFilters = (group) =>
+    ORDER_FILTER_GROUPS[group] || ORDER_FILTER_GROUPS.all;
+
+  const ensureOrderFilter = (group) => {
+    const filters = getOrderFilters(group);
+    const current = state.orderFilters[group];
+    if (!filters.some((filter) => filter.id === current)) {
+      state.orderFilters[group] = filters[0]?.id || "all";
+    }
+    return state.orderFilters[group];
+  };
+
+  const setOrderFilter = (group, value) => {
+    const filters = getOrderFilters(group);
+    if (!filters.some((filter) => filter.id === value)) return;
+    state.orderFilters[group] = value;
+    if (group === "returns") {
+      renderOrdersReturnsView();
+      return;
+    }
+    renderOrdersAllView();
+  };
+
+  const sortOrderItems = (items) =>
+    [...items].sort((left, right) => {
+      const leftTime = new Date(left?.orders?.created_at || left?.created_at || 0).getTime();
+      const rightTime = new Date(right?.orders?.created_at || right?.created_at || 0).getTime();
+      return rightTime - leftTime;
+    });
+
+  const renderOrderTabs = (group, container) => {
+    if (!container) return;
+    const filters = getOrderFilters(group);
+    const active = ensureOrderFilter(group);
+    container.innerHTML = filters
+      .map(
+        (filter) => `
+          <button
+            class="seller-tab ${filter.id === active ? "active" : ""}"
+            type="button"
+            data-order-filter="${escapeHtml(filter.id)}"
+            data-order-group="${escapeHtml(group)}"
+          >
+            ${escapeHtml(filter.label)}
+          </button>
+        `
+      )
+      .join("");
+  };
+
+  const renderOrderTable = (container, items) => {
+    if (!container) return;
+    if (!items.length) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="seller-order-table">
+        <thead>
+          <tr>
+            <th>Sản phẩm</th>
+            <th>Mã đơn</th>
+            <th>Trạng thái</th>
+            <th>Số lượng</th>
+            <th>Thành tiền</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items
+            .map((item) => {
+              const statusMeta = getOrderStatusMeta(item.status);
+              const action = getSellerOrderAction(item);
+              const productName =
+                item?.product_variants?.products?.name || "Sản phẩm";
+              const sku = item?.product_variants?.sku || "Chưa có SKU";
+
+              return `
+                <tr>
+                  <td>
+                    <div class="seller-product-name">
+                      <strong>${escapeHtml(productName)}</strong>
+                      <span class="muted">SKU: ${escapeHtml(sku)}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="seller-product-name">
+                      <strong>#${escapeHtml(shortId(item?.orders?.id))}</strong>
+                      <span class="muted">${escapeHtml(
+                        formatDate(item?.orders?.created_at || item?.created_at)
+                      )}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="chip ${escapeHtml(
+                      statusMeta.className
+                    )}">${escapeHtml(statusMeta.label)}</span>
+                  </td>
+                  <td>${escapeHtml(formatCompactNumber(item.quantity || 0))}</td>
+                  <td>
+                    <div class="seller-product-name">
+                      <strong>${escapeHtml(
+                        formatPrice(getOrderItemAmount(item))
+                      )}</strong>
+                      <span class="muted">${escapeHtml(
+                        item?.orders?.payment_status || "pending"
+                      )} · ${escapeHtml(
+                        item?.orders?.payment_method || "cod"
+                      )}</span>
+                    </div>
+                  </td>
+                  <td>
+                    ${
+                      action
+                        ? `<button
+                             class="seller-mini-btn"
+                             type="button"
+                             data-action="advance-order"
+                             data-item-id="${escapeHtml(item.id)}"
+                             data-next-status="${escapeHtml(action.status)}"
+                           >${escapeHtml(action.label)}</button>`
+                        : '<span class="muted">Không có bước tiếp theo</span>'
+                    }
+                  </td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    `;
+  };
+
+  const renderOrdersAllView = () => {
+    if (!els.ordersAllTabs || !els.ordersAllTable || !els.ordersAllSummary) return;
+    const shop = getCurrentShop();
+    const items = sortOrderItems(getCurrentShopOrders());
+    renderOrderTabs("all", els.ordersAllTabs);
+    const filters = getOrderFilters("all");
+    const active = ensureOrderFilter("all");
+    const matcher = filters.find((filter) => filter.id === active)?.match || (() => true);
+    const filtered = items.filter(matcher);
+
+    if (els.ordersAllSummary) {
+      els.ordersAllSummary.textContent = `${filtered.length} mục hiển thị · ${items.length} tổng`;
+    }
+    if (els.ordersAllShopLabel) {
+      els.ordersAllShopLabel.textContent = shop?.name ? `Shop: ${shop.name}` : "Chưa chọn shop";
+      els.ordersAllShopLabel.style.display = shop ? "inline-flex" : "none";
+    }
+
+    renderOrderTable(els.ordersAllTable, filtered);
+    if (els.ordersAllEmpty) {
+      els.ordersAllEmpty.classList.toggle("hidden", filtered.length > 0);
+    }
+  };
+
+  const renderOrdersReturnsView = () => {
+    if (!els.ordersReturnsTabs || !els.ordersReturnsTable || !els.ordersReturnsSummary) return;
+    const shop = getCurrentShop();
+    const items = sortOrderItems(getCurrentShopOrders());
+    renderOrderTabs("returns", els.ordersReturnsTabs);
+    const filters = getOrderFilters("returns");
+    const active = ensureOrderFilter("returns");
+    const matcher = filters.find((filter) => filter.id === active)?.match || (() => false);
+    const filtered = items.filter(matcher);
+
+    if (els.ordersReturnsSummary) {
+      els.ordersReturnsSummary.textContent = `${filtered.length} mục hiển thị · ${
+        items.filter((item) => ["returned", "cancelled"].includes(item?.status)).length
+      } tổng`;
+    }
+    if (els.ordersReturnsShopLabel) {
+      els.ordersReturnsShopLabel.textContent = shop?.name ? `Shop: ${shop.name}` : "Chưa chọn shop";
+      els.ordersReturnsShopLabel.style.display = shop ? "inline-flex" : "none";
+    }
+
+    renderOrderTable(els.ordersReturnsTable, filtered);
+    if (els.ordersReturnsEmpty) {
+      els.ordersReturnsEmpty.classList.toggle("hidden", filtered.length > 0);
+    }
+  };
+
+  const renderShippingSettings = () => {
+    if (!els.shippingSettingsContent) return;
+    const currentShop = getCurrentShop();
+
+    if (!currentShop) {
+      els.shippingSettingsContent.innerHTML = `
+        <div class="seller-empty-block">Chưa có shop đã duyệt để hiển thị cấu hình vận chuyển.</div>
+      `;
+      return;
+    }
+
+    const onboarding = getShopOnboardingData(currentShop);
+    const shippingConfig = onboarding?.shipping_config || {};
+    const enabledCount = SHIPPING_METHODS.filter((method) =>
+      Boolean(shippingConfig?.[method.key])
+    ).length;
+
+    els.shippingSettingsContent.innerHTML = `
+      <div class="seller-inline-alert">
+        Cấu hình vận chuyển của ${escapeHtml(currentShop.name || "shop")} đang lấy từ hồ sơ đã duyệt. Để thay đổi, hãy cập nhật hồ sơ shop hoặc đăng ký lại cấu hình với admin.
+      </div>
+      <div class="seller-shipping-card">
+        <div class="seller-shipping-head">
+          <strong>Phương thức vận chuyển</strong>
+          <span class="muted">${enabledCount}/${SHIPPING_METHODS.length} phương thức đang bật</span>
+        </div>
+        ${SHIPPING_METHODS.map((method) => {
+          const enabled = Boolean(shippingConfig?.[method.key]);
+          return `
+            <label class="seller-switch-row">
+              <span>
+                <strong>${escapeHtml(method.label)}</strong>
+                <small>${escapeHtml(method.description)} · ${
+                  enabled ? "Đang bật" : "Chưa bật"
+                }</small>
+              </span>
+              <input type="checkbox" ${enabled ? "checked" : ""} disabled />
+              <span class="seller-switch"></span>
+            </label>
+          `;
+        }).join("")}
+      </div>
+    `;
+  };
+
   const renderDashboard = () => {
     const metrics = getDashboardMetrics();
     const currentShop = getCurrentShop();
@@ -1637,7 +1949,7 @@
           description:
             "Xác nhận hoặc bàn giao đơn gần đây để không chậm tiến độ vận hành shop.",
           button: "Xem đơn",
-          target: "dashboard",
+          target: "orders-all",
         });
       }
 
@@ -3590,15 +3902,26 @@
   };
 
   const loadOrders = async () => {
-    const payload = await apiFetch("/orders/seller/items?limit=20", {}, {
+    const payload = await apiFetch("/orders/seller/items?limit=100", {}, {
       redirectOn401: true,
     });
     state.orderItems = payload?.items?.data || [];
   };
 
+  const reloadOrders = async () => {
+    await loadOrders();
+    renderDashboard();
+    renderOrdersAllView();
+    renderOrdersReturnsView();
+    showStatus("Đã tải lại dữ liệu đơn hàng.");
+  };
+
   const renderAll = () => {
     updateViewChrome();
     renderDashboard();
+    renderOrdersAllView();
+    renderOrdersReturnsView();
+    renderShippingSettings();
     renderShopProfile();
     renderProductsView();
     renderDraft();
@@ -4002,6 +4325,14 @@
         return;
       }
 
+      const orderTab = target.closest("[data-order-filter]");
+      if (orderTab) {
+        const group = orderTab.dataset.orderGroup || "all";
+        const value = orderTab.dataset.orderFilter || "all";
+        setOrderFilter(group, value);
+        return;
+      }
+
       const scrollTab = target.closest(
         "#sellerFormTabs [data-scroll-target]"
       );
@@ -4126,6 +4457,14 @@
       await loadProducts();
       renderAll();
       showStatus("Đã tải lại danh sách sản phẩm.");
+    });
+
+    els.reloadOrdersAll?.addEventListener("click", async () => {
+      await reloadOrders();
+    });
+
+    els.reloadOrdersReturns?.addEventListener("click", async () => {
+      await reloadOrders();
     });
 
     els.clearProductFilters?.addEventListener("click", () => {

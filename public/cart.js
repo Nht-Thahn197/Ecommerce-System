@@ -532,31 +532,7 @@
       return;
     }
 
-    if (els.checkoutBtn) {
-      els.checkoutBtn.disabled = true;
-    }
-
-    try {
-      showStatus("Đang tạo đơn hàng...");
-      await auth.apiFetch(
-        "/checkout",
-        {
-          method: "POST",
-          body: { payment_method: "cod" },
-        },
-        { redirectOn401: true }
-      );
-
-      window.BambiStoreCart?.emitChange?.();
-      showStatus("Đặt hàng thành công. Đang chuyển sang trang đơn mua.");
-
-      window.setTimeout(() => {
-        window.location.href = "/ui/orders.html";
-      }, 600);
-    } catch (error) {
-      showStatus(error instanceof Error ? error.message : "Không thể tạo đơn hàng.", true);
-      updateSummary();
-    }
+    window.location.href = "/ui/checkout.html";
   };
 
   const bindEvents = () => {

@@ -71,82 +71,38 @@
         <aside class="side-card">
           <h4>Đơn mua</h4>
           <nav class="side-menu">
-            <a class="active" href="/ui/orders.html">Tất cả</a>
-            <a href="#">Chờ thanh toán</a>
-            <a href="#">Vận chuyển</a>
-            <a href="#">Chờ giao hàng</a>
-            <a href="#">Hoàn thành</a>
-            <a href="#">Đã hủy</a>
-            <a href="#">Trả hàng/Hoàn tiền</a>
+            <a class="active" href="#" data-order-filter="all">Tất cả</a>
+            <a href="#" data-order-filter="pending">Chờ thanh toán</a>
+            <a href="#" data-order-filter="shipping">Vận chuyển</a>
+            <a href="#" data-order-filter="waiting">Chờ giao hàng</a>
+            <a href="#" data-order-filter="completed">Hoàn thành</a>
+            <a href="#" data-order-filter="cancelled">Đã hủy</a>
+            <a href="#" data-order-filter="returned">Trả hàng/Hoàn tiền</a>
           </nav>
         </aside>
         <section class="panel-card">
           <div class="order-tabs">
-            <a class="active" href="#">Tất cả</a>
-            <a href="#">Chờ thanh toán</a>
-            <a href="#">Vận chuyển</a>
-            <a href="#">Chờ giao hàng</a>
-            <a href="#">Hoàn thành</a>
-            <a href="#">Đã hủy</a>
-            <a href="#">Trả hàng/Hoàn tiền</a>
+            <a class="active" href="#" data-order-filter="all">Tất cả</a>
+            <a href="#" data-order-filter="pending">Chờ thanh toán</a>
+            <a href="#" data-order-filter="shipping">Vận chuyển</a>
+            <a href="#" data-order-filter="waiting">Chờ giao hàng</a>
+            <a href="#" data-order-filter="completed">Hoàn thành</a>
+            <a href="#" data-order-filter="cancelled">Đã hủy</a>
+            <a href="#" data-order-filter="returned">Trả hàng/Hoàn tiền</a>
           </div>
           <div class="order-search">
             <span>🔍</span>
             <span class="muted">Bạn có thể tìm kiếm theo tên Shop, ID đơn hàng hoặc Tên Sản phẩm</span>
           </div>
 
-          <div class="order-card">
-            <div class="order-header">
-              <div>
-                <strong>Rosslyn - Dụng cụ làm đẹp</strong>
-                <span class="badge" style="margin-left: 8px">Yêu thích</span>
-              </div>
-              <div class="order-status">Giao hàng thành công</div>
-            </div>
-            <div class="order-item">
-              <div class="order-thumb">Ảnh</div>
-              <div>
-                <div>Cốp đựng đồ trang điểm chống nước Rosslyn QT121</div>
-                <div class="muted">Phân loại: Đen 26x23x10 | x1</div>
-              </div>
-              <div>
-                <div class="muted" style="text-decoration: line-through">261.000đ</div>
-                <div class="price">179.620đ</div>
-              </div>
-            </div>
-            <div class="order-actions">
-              <div class="muted">Đang chờ Người bán đánh giá</div>
-              <div class="actions">
-                <button class="primary">Mua lại</button>
-                <button>Liên hệ người bán</button>
-                <button>Xem đánh giá shop</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="order-card">
-            <div class="order-header">
-              <div>
-                <strong>Gadget Pro</strong>
-              </div>
-              <div class="order-status">Đang vận chuyển</div>
-            </div>
-            <div class="order-item">
-              <div class="order-thumb">Ảnh</div>
-              <div>
-                <div>Bàn phím cơ K108 hotswap</div>
-                <div class="muted">Phân loại: Trắng | x1</div>
-              </div>
-              <div class="price">582.102đ</div>
-            </div>
-            <div class="order-actions">
-              <div class="muted">Dự kiến giao trong 2-3 ngày</div>
-              <div class="actions">
-                <button class="primary">Theo dõi</button>
-                <button>Liên hệ người bán</button>
-              </div>
-            </div>
-          </div>
+          <div id="orderStatus" class="status" hidden></div>
+          <div id="orderList"></div>
+          <section id="orderEmptyState" class="cart-empty-state" hidden>
+            <span class="promo-tag">Chưa có đơn</span>
+            <h2>Bạn chưa có đơn hàng nào</h2>
+            <p>Hãy tiếp tục mua sắm để tạo đơn hàng mới.</p>
+            <a href="/ui/">Tiếp tục mua sắm</a>
+          </section>
         </section>
       </div>
     </main>
@@ -157,5 +113,6 @@
 
     <script src="/ui/store.js?v=20260311-4"></script>
     <script src="/ui/custom-select.js"></script>
+    <script src="/ui/orders.js?v=20260313-1"></script>
   </body>
 </html>

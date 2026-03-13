@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Thanh toán | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260313-1" />
+  </head>
+  <body data-page="checkout">
+    <div class="topbar">
+      <div class="container">
+        <div class="top-links">
+          <a href="/ui/shop-register.html">Kênh Người Bán</a>
+          <span>Tải ứng dụng</span>
+          <span>Kết nối</span>
+        </div>
+        <div class="top-actions">
+          <span>Thông báo</span>
+          <span>Hỗ trợ</span>
+          <span>Tiếng Việt</span>
+          <span id="authButtons" class="auth-inline">
+            <a href="/ui/login.html">Đăng nhập</a>
+            <a href="/ui/register.html">Đăng ký</a>
+          </span>
+          <div id="userMenu" class="user-menu">
+            <div class="user-trigger" tabindex="0">
+              <span class="user-avatar">
+                <span class="avatar-initial">U</span>
+                <img class="avatar-img" alt="Ảnh đại diện" />
+              </span>
+              <span id="userName" class="user-name">Tài khoản</span>
+            </div>
+            <div class="user-dropdown">
+              <a href="/ui/account.html">Tài khoản của tôi</a>
+              <a href="/ui/orders.html">Đơn mua</a>
+              <button type="button" id="logoutBtn">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="header">
+      <div class="container header-inner">
+        <a class="logo" href="/ui/">
+          <div class="logo-badge">B</div>
+          <span>Bambi</span>
+        </a>
+        <div class="search-wrap">
+          <input type="text" placeholder="Tìm sản phẩm, thương hiệu, và tên shop" />
+          <button type="button">Tìm</button>
+        </div>
+        <div class="header-actions">
+          <a class="cart-entry" href="/ui/cart.html" aria-label="Giỏ hàng">
+            <span class="cart-entry-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="9" cy="20" r="1.7"></circle>
+                <circle cx="18" cy="20" r="1.7"></circle>
+                <path d="M3 4h2.4l2.1 10.2a1 1 0 0 0 .98.8h8.83a1 1 0 0 0 .97-.76L20 7H6.2"></path>
+              </svg>
+            </span>
+            <span class="cart-entry-count" data-cart-count hidden>0</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container hero checkout-page">
+      <section class="cart-page-hero checkout-hero">
+        <h1>Thanh toán</h1>
+        <p>Hoàn tất đơn hàng của bạn trước khi đặt mua.</p>
+      </section>
+
+      <div id="checkoutStatus" class="status" hidden></div>
+
+      <section id="checkoutContent" class="checkout-shell" hidden>
+        <section class="panel-card checkout-address-card">
+          <div class="checkout-address-head">
+            <div>
+              <h2>Địa chỉ nhận hàng</h2>
+              <p class="checkout-section-sub">
+                Kiểm tra lại thông tin giao hàng trước khi đặt.
+              </p>
+            </div>
+            <button id="changeAddressBtn" class="address-secondary-btn" type="button">
+              Thay đổi
+            </button>
+          </div>
+          <div id="checkoutAddressInfo" class="checkout-address-info" hidden></div>
+          <div id="checkoutAddressEmpty" class="checkout-address-empty" hidden>
+            <div>
+              <strong>Chưa có địa chỉ nhận hàng</strong>
+              <p>Bạn cần thêm địa chỉ trước khi có thể đặt hàng.</p>
+            </div>
+            <a class="checkout-link-btn" href="/ui/account.html#addresses">Thiết lập địa chỉ</a>
+          </div>
+        </section>
+
+        <section class="checkout-section">
+          <div class="checkout-section-head">
+            <h2>Thông tin sản phẩm</h2>
+            <span id="checkoutItemCount" class="checkout-section-sub"></span>
+          </div>
+          <div class="checkout-table-head">
+            <span>Sản phẩm</span>
+            <span>Đơn giá</span>
+            <span>Số lượng</span>
+            <span>Thành tiền</span>
+          </div>
+          <div id="checkoutShopList" class="checkout-shop-list"></div>
+        </section>
+
+        <section class="panel-card checkout-platform-voucher">
+          <div class="checkout-voucher-row">
+            <div>
+              <h3>Voucher của sàn</h3>
+              <p>Chức năng sẽ được cập nhật sau.</p>
+            </div>
+            <button class="ghost-btn" type="button" disabled>Chọn voucher</button>
+          </div>
+        </section>
+
+        <section class="panel-card checkout-payment">
+          <h3>Phương thức thanh toán</h3>
+          <div class="payment-options">
+            <label class="payment-option">
+              <input type="radio" name="paymentMethod" value="bambipay" />
+              <div class="payment-option-text">
+                <strong>Ví BambiPay</strong>
+                <span>Thanh toán nhanh qua ví điện tử.</span>
+              </div>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="paymentMethod" value="cod" checked />
+              <div class="payment-option-text">
+                <strong>Thanh toán khi nhận hàng</strong>
+                <span>Thanh toán tiền mặt khi nhận được hàng.</span>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel-card checkout-summary">
+          <div class="checkout-summary-row">
+            <span>Tạm tính</span>
+            <strong id="checkoutSubtotal">0đ</strong>
+          </div>
+          <div class="checkout-summary-row">
+            <span>Phí vận chuyển</span>
+            <strong id="checkoutShipping">0đ</strong>
+          </div>
+          <div class="checkout-summary-total">
+            <span>Tổng thanh toán</span>
+            <strong id="checkoutTotal">0đ</strong>
+          </div>
+          <p id="checkoutNote" class="checkout-note" hidden></p>
+          <button id="placeOrderBtn" class="cart-checkout-btn" type="button" disabled>
+            Đặt hàng
+          </button>
+        </section>
+      </section>
+
+      <section id="checkoutEmptyState" class="cart-empty-state" hidden>
+        <span class="promo-tag">Giỏ hàng trống</span>
+        <h2>Chưa có sản phẩm nào trong giỏ</h2>
+        <p>Hãy thêm sản phẩm vào giỏ rồi quay lại để thanh toán.</p>
+        <a href="/ui/">Tiếp tục mua sắm</a>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Bambi Marketplace - Trang thanh toán tham khảo phong cách Shopee.
+    </footer>
+
+    <div id="addressSelectModal" class="account-modal" aria-hidden="true" hidden>
+      <div
+        class="account-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="addressSelectTitle"
+      >
+        <div class="account-modal-head">
+          <h3 id="addressSelectTitle">Chọn địa chỉ nhận hàng</h3>
+          <button
+            id="closeAddressModalBtn"
+            class="account-modal-close"
+            type="button"
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+        </div>
+        <div id="addressSelectList" class="address-list checkout-address-list"></div>
+        <div class="checkout-modal-actions">
+          <a class="address-add-btn" href="/ui/account.html#addresses">
+            <span aria-hidden="true">+</span>
+            <span>Thêm địa chỉ mới</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script src="/ui/store.js?v=20260311-4"></script>
+    <script src="/ui/checkout.js?v=20260313-1"></script>
+  </body>
+</html>

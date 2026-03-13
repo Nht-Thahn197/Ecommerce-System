@@ -172,6 +172,7 @@
   padding: 24px;
   display: grid;
   gap: 18px;
+  align-content: start;
 }
 
 .seller-topbar {
@@ -1923,6 +1924,15 @@
 
 .seller-switch-row input:checked + .seller-switch::after {
   transform: translateX(20px);
+}
+
+.seller-switch-row input:disabled + .seller-switch {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.seller-switch-row input:disabled + .seller-switch::after {
+  box-shadow: none;
 }
 
 .seller-radio-row {

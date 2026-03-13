@@ -9,9 +9,9 @@
     <style>
       .auth-grid {
         margin-top: 24px;
-        display: grid;
-        grid-template-columns: 1.1fr 1fr;
-        gap: 18px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
       }
       .auth-card {
         background: white;
@@ -19,6 +19,7 @@
         padding: 22px;
         box-shadow: var(--shadow);
         border: 1px solid var(--line);
+        width: min(620px, 100%);
       }
       .auth-card h2 {
         margin: 0 0 8px;
@@ -69,7 +70,7 @@
       }
       @media (max-width: 900px) {
         .auth-grid {
-          grid-template-columns: 1fr;
+          justify-content: stretch;
         }
       }
     </style>
@@ -109,25 +110,9 @@
 
     <main class="container">
       <div class="auth-grid">
-        <div class="auth-hero">
-          <h2>Tạo tài khoản Bambi</h2>
-          <p>
-            Tham gia cộng đồng mua bán an toàn, nhận ưu đãi và quản lý đơn hàng
-            dễ dàng.
-          </p>
-          <ul>
-            <li>Ưu đãi độc quyền cho thành viên mới</li>
-            <li>Đăng nhập bằng email hoặc số điện thoại</li>
-            <li>Hỗ trợ mở shop trong vài phút</li>
-          </ul>
-        </div>
         <div class="auth-card">
           <h2>Đăng ký</h2>
           <form id="registerForm">
-            <div class="field">
-              <label>API Base URL</label>
-              <input id="baseUrl" class="input" value="http://localhost:3000" />
-            </div>
             <div class="field">
               <label>Họ và tên</label>
               <input class="input" name="full_name" />
@@ -158,7 +143,6 @@
     <script>
       const form = document.querySelector("#registerForm");
       const statusEl = document.querySelector("#status");
-      const baseUrlEl = document.querySelector("#baseUrl");
 
       const setStatus = (message, type = "info") => {
         if (!message) {
@@ -173,8 +157,7 @@
       };
 
       const apiFetch = async (path, options = {}) => {
-        const base = baseUrlEl.value.trim().replace(/\/$/, "");
-        const response = await fetch(base + path, {
+        const response = await fetch(path, {
           ...options,
           headers: { "Content-Type": "application/json" },
         });

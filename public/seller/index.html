@@ -31,6 +31,31 @@
         </section>
 
         <section class="seller-nav-section">
+          <p class="seller-nav-heading">Quản lý đơn hàng</p>
+          <button class="seller-nav-link" type="button" data-view-target="orders-all">
+            <span class="seller-nav-icon">DH</span>
+            <span class="seller-nav-copy">
+              <strong>Tất cả</strong>
+              <span>Danh sách toàn bộ đơn hàng</span>
+            </span>
+          </button>
+          <button class="seller-nav-link" type="button" data-view-target="orders-returns">
+            <span class="seller-nav-icon">TH</span>
+            <span class="seller-nav-copy">
+              <strong>Đơn trả hàng/Hoàn tiền hoặc đơn hủy</strong>
+              <span>Quản lý yêu cầu trả hàng và hủy</span>
+            </span>
+          </button>
+          <button class="seller-nav-link" type="button" data-view-target="shipping-settings">
+            <span class="seller-nav-icon">VC</span>
+            <span class="seller-nav-copy">
+              <strong>Cài đặt vận chuyển</strong>
+              <span>Thiết lập dịch vụ giao hàng</span>
+            </span>
+          </button>
+        </section>
+
+        <section class="seller-nav-section">
           <p class="seller-nav-heading">Quản lý sản phẩm</p>
           <button class="seller-nav-link" type="button" data-view-target="products">
             <span class="seller-nav-icon">SP</span>
@@ -133,6 +158,64 @@
               <div id="recentOrdersTable"></div>
             </article>
           </section>
+        </section>
+
+        <section class="seller-view hidden" data-view="orders-all">
+          <article class="seller-panel">
+            <div class="seller-panel-head seller-panel-head-wrap">
+              <div>
+                <h2>Quản lý đơn hàng</h2>
+                <p class="muted">Theo dõi tất cả đơn hàng của shop theo trạng thái.</p>
+              </div>
+              <div class="seller-actions">
+                <button class="seller-btn ghost" id="reloadOrdersAll" type="button">Tải lại</button>
+              </div>
+            </div>
+            <div id="ordersAllTabs" class="seller-tab-row"></div>
+            <div class="seller-toolbar-meta">
+              <span id="ordersAllSummary">0 đơn hàng</span>
+              <span id="ordersAllShopLabel" class="chip gray"></span>
+            </div>
+            <div id="ordersAllTable"></div>
+            <div id="ordersAllEmpty" class="seller-empty-block hidden">
+              Chưa có đơn hàng nào cho shop này.
+            </div>
+          </article>
+        </section>
+
+        <section class="seller-view hidden" data-view="orders-returns">
+          <article class="seller-panel">
+            <div class="seller-panel-head seller-panel-head-wrap">
+              <div>
+                <h2>Đơn trả hàng/Hoàn tiền hoặc đơn hủy</h2>
+                <p class="muted">Quản lý các yêu cầu trả hàng, hoàn tiền và đơn đã hủy.</p>
+              </div>
+              <div class="seller-actions">
+                <button class="seller-btn ghost" id="reloadOrdersReturns" type="button">Tải lại</button>
+              </div>
+            </div>
+            <div id="ordersReturnsTabs" class="seller-tab-row"></div>
+            <div class="seller-toolbar-meta">
+              <span id="ordersReturnsSummary">0 đơn hàng</span>
+              <span id="ordersReturnsShopLabel" class="chip gray"></span>
+            </div>
+            <div id="ordersReturnsTable"></div>
+            <div id="ordersReturnsEmpty" class="seller-empty-block hidden">
+              Chưa có đơn trả hàng hoặc đơn hủy nào.
+            </div>
+          </article>
+        </section>
+
+        <section class="seller-view hidden" data-view="shipping-settings">
+          <article class="seller-panel">
+            <div class="seller-panel-head">
+              <div>
+                <h2>Cài đặt vận chuyển</h2>
+                <p class="muted">Thiết lập các phương thức giao hàng mà shop hỗ trợ.</p>
+              </div>
+            </div>
+            <div id="shippingSettingsContent"></div>
+          </article>
         </section>
 
         <section class="seller-view hidden" data-view="products">
