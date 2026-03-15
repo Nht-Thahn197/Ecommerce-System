@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="vi">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quản lý shop | Bambi</title>
+    <title>Quản lý sản phẩm | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="../shared.css" />
     <link rel="stylesheet" href="./admin.css" />
@@ -40,11 +40,11 @@
       <main class="admin-main">
         <header class="admin-page-header">
           <div>
-            <div class="admin-breadcrumb">Trang quản trị / Quản lý shop</div>
-            <h1>Quản lý shop</h1>
-            <p>Tách riêng trang shop để duyệt hồ sơ nhanh, lọc theo tên hoặc chủ shop và giảm nhiễu từ các phần vận hành khác.</p>
+            <div class="admin-breadcrumb">Trang quản trị / Quản lý sản phẩm</div>
+            <h1>Quản lý sản phẩm</h1>
+            <p>Admin duyệt sản phẩm trước khi lên sàn, từ chối nếu chưa đạt và khóa khi có vi phạm.</p>
           </div>
-          <div class="admin-hero-tag">Duyệt hồ sơ shop theo hàng đợi</div>
+          <div class="admin-hero-tag">Duyệt & kiểm soát sản phẩm</div>
         </header>
 
         <div id="status" class="status" style="display: none"></div>
@@ -52,36 +52,50 @@
         <section class="admin-card hero-card">
           <div class="admin-section-head">
             <div>
-              <div class="kicker">Shop đăng ký</div>
-              <h2 style="margin-top: 8px;">Hàng đợi duyệt shop</h2>
-              <p>Dữ liệu trên trang này tập trung vào các shop đang chờ admin ra quyết định.</p>
+              <div class="kicker">Hàng đợi duyệt</div>
+              <h2 style="margin-top: 8px;">Tổng quan trạng thái sản phẩm</h2>
+              <p>Theo dõi nhanh số lượng sản phẩm theo từng trạng thái vận hành.</p>
             </div>
-            <button class="btn" id="reloadShops" type="button">Tải lại</button>
+            <button class="btn" id="reloadProducts" type="button">Tải lại</button>
           </div>
-          <div id="shopStats" class="stats-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));"></div>
+          <div id="productStats" class="stats-grid" style="grid-template-columns: repeat(6, minmax(0, 1fr));"></div>
+          <div id="productStatusBar" class="pillbar" style="margin-top: 16px;"></div>
         </section>
 
         <section class="admin-card">
           <div class="toolbar-row">
             <div>
-              <h2>Danh sách shop chờ duyệt</h2>
-              <p class="muted">Lọc theo tên shop, mã shop, chủ shop hoặc trạng thái.</p>
+              <h2>Danh sách sản phẩm</h2>
+              <p class="muted">Lọc theo tên, SKU, shop hoặc trạng thái để xử lý nhanh.</p>
             </div>
-            <span class="chip gray" id="shopCountLabel">0 shop</span>
+            <span class="chip gray" id="productCountLabel">0 sản phẩm</span>
           </div>
           <div class="toolbar-form">
-            <input id="shopQuery" class="input" placeholder="Tìm theo tên shop, email chủ shop hoặc mã shop" />
-            <button class="btn" id="applyShopFilter" type="button">Lọc</button>
-            <button class="btn ghost" id="clearShopFilter" type="button">Xoá lọc</button>
+            <input id="productQuery" class="input" placeholder="Tìm theo tên, SKU, shop hoặc mã sản phẩm" />
+            <select id="productStatusFilter" class="select">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="pending">Chờ duyệt</option>
+              <option value="rejected">Chưa được đăng</option>
+              <option value="active">Đang hiển thị</option>
+              <option value="locked">Bị khóa</option>
+              <option value="inactive">Đang ẩn</option>
+            </select>
+            <select id="productsLimit" class="select">
+              <option value="50">50 sản phẩm</option>
+              <option value="100">100 sản phẩm</option>
+              <option value="200">200 sản phẩm</option>
+            </select>
+            <button class="btn" id="applyProductFilter" type="button">Lọc</button>
+            <button class="btn ghost" id="clearProductFilter" type="button">Xoá lọc</button>
           </div>
           <div class="divider"></div>
-          <div id="shopsTable"></div>
+          <div id="productsTable"></div>
         </section>
       </main>
     </div>
 
     <script src="/ui/admin/admin.js"></script>
-    <script src="/ui/admin/shops.js"></script>
+    <script src="/ui/admin/products.js"></script>
     <script src="/ui/custom-select.js"></script>
   </body>
 </html>

@@ -383,7 +383,7 @@ export const createProduct = async (
       video_url: normalizeString(input.video_url, 500) ?? null,
       media_gallery: mediaGallery ?? Prisma.DbNull,
       variant_config: normalizeVariantConfig(input.variant_config) ?? Prisma.DbNull,
-      status: input.status || "active",
+      status: input.status || "pending",
       shop_id: shopId,
     },
   });
@@ -396,7 +396,7 @@ export const updateProduct = async (
 ) => {
   const product = await prisma.products.findUnique({
     where: { id: productId },
-    select: { id: true, shop_id: true },
+    select: { id: true, shop_id: true, status: true },
   });
 
   if (!product?.shop_id) {
@@ -419,6 +419,10 @@ export const updateProduct = async (
   const data: Prisma.productsUncheckedUpdateInput = {
     status: input.status,
   };
+
+  if (product.status === "locked" && input.status && input.status !== "locked") {
+    data.status = "locked";
+  }
 
   if (input.name !== undefined) {
     const name = input.name?.trim();

@@ -41,6 +41,7 @@ body::after {
   filter: blur(4px);
   z-index: 0;
   animation: float 14s ease-in-out infinite;
+  pointer-events: none;
 }
 
 body::after {

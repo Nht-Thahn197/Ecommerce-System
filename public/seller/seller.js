@@ -1228,6 +1228,122 @@
       return total + (Number.isFinite(stock) ? stock : 0);
     }, 0);
 
+  const getEditingProduct = () =>
+    state.editingProductId
+      ? state.products.find((product) => product.id === state.editingProductId)
+      : null;
+
+  const getEditingProductStatus = () => getEditingProduct()?.status || "";
+
+  const getProductStatusCounts = (products = []) => {
+    const counts = {
+      all: products.length,
+      active: 0,
+      pending: 0,
+      rejected: 0,
+      locked: 0,
+      inactive: 0,
+    };
+
+    products.forEach((product) => {
+      switch (product?.status) {
+        case "active":
+          counts.active += 1;
+          break;
+        case "pending":
+          counts.pending += 1;
+          break;
+        case "rejected":
+          counts.rejected += 1;
+          break;
+        case "locked":
+          counts.locked += 1;
+          break;
+        case "inactive":
+          counts.inactive += 1;
+          break;
+        default:
+          break;
+      }
+    });
+
+    return counts;
+  };
+
+  const resolveDraftStatus = (requestedStatus) => {
+    const currentStatus = getEditingProductStatus();
+
+    if (currentStatus === "locked") {
+      return "locked";
+    }
+
+    if (requestedStatus === "inactive") {
+      if (currentStatus === "pending" || currentStatus === "rejected") {
+        return currentStatus;
+      }
+      return "inactive";
+    }
+
+    if (currentStatus === "active") return "active";
+    if (currentStatus === "pending") return "pending";
+    if (currentStatus === "rejected") return "pending";
+    if (currentStatus === "inactive") return "pending";
+    return "pending";
+  };
+
+  const getPublishButtonLabel = () => {
+    if (!state.editingProductId) return "Gửi duyệt";
+
+    const status = getEditingProductStatus();
+    switch (status) {
+      case "active":
+        return "Cập nhật & Hiển thị";
+      case "pending":
+        return "Cập nhật & Chờ duyệt";
+      case "rejected":
+        return "Gửi duyệt lại";
+      case "locked":
+        return "Cập nhật (bị khóa)";
+      case "inactive":
+      default:
+        return "Gửi duyệt";
+    }
+  };
+
+  const getHiddenButtonLabel = () => {
+    if (!state.editingProductId) return "Lưu & Ẩn";
+
+    const status = getEditingProductStatus();
+    if (status === "pending" || status === "rejected" || status === "locked") {
+      return "Cập nhật";
+    }
+    return "Cập nhật & Ẩn";
+  };
+
+  const getProductSaveMessage = (status, mode) => {
+    const isCreate = mode === "create";
+    switch (status) {
+      case "active":
+        return isCreate
+          ? "Đã tạo và hiển thị sản phẩm."
+          : "Đã cập nhật và hiển thị sản phẩm.";
+      case "pending":
+        return isCreate
+          ? "Đã gửi sản phẩm mới để admin duyệt."
+          : "Đã gửi sản phẩm để admin duyệt.";
+      case "inactive":
+        return isCreate
+          ? "Đã lưu sản phẩm ở trạng thái ẩn."
+          : "Đã cập nhật sản phẩm ở trạng thái ẩn.";
+      case "rejected":
+        return "Đã cập nhật sản phẩm bị từ chối.";
+      case "locked":
+        return "Đã cập nhật thông tin, sản phẩm vẫn đang bị khóa.";
+      default:
+        return isCreate ? "Đã lưu sản phẩm." : "Đã cập nhật sản phẩm.";
+    }
+  };
+
   const getCurrentShopOrders = () => {
     const productIds = new Set(state.products.map((product) => product.id));
     const items = Array.isArray(state.orderItems) ? state.orderItems : [];
@@ -1267,10 +1383,22 @@
     }
   };
 
-  const getProductStatusMeta = (status) =>
-    status === "active"
-      ? { label: "Đang hiển thị", className: "" }
-      : { label: "Đang ẩn", className: "gray" };
+  const getProductStatusMeta = (status) => {
+    switch (status) {
+      case "active":
+        return { label: "Đang hiển thị", className: "" };
+      case "pending":
+        return { label: "Chờ duyệt", className: "orange" };
+      case "rejected":
+        return { label: "Chưa được đăng", className: "gray" };
+      case "locked":
+        return { label: "Bị khóa", className: "gray" };
+      case "inactive":
+        return { label: "Đang ẩn", className: "gray" };
+      default:
+        return { label: status || "Không rõ", className: "gray" };
+    }
+  };
 
   const getSellerOrderAction = (item) =>
     SELLER_ORDER_ACTIONS[item?.status] || null;
@@ -1297,6 +1425,13 @@
     if (!els.sellerStatus) return;
     window.clearTimeout(state.statusTimer);
     els.sellerStatus.style.display = "none";
+  };
+
+  const getEventTarget = (event) => {
+    const target = event?.target;
+    if (target instanceof Element) return target;
+    if (target && target.parentElement) return target.parentElement;
+    return null;
   };
 
   const isEditingDraft = () => Boolean(state.editingProductId);
@@ -1429,8 +1564,8 @@
     const activeProducts = products.filter(
       (product) => product.status === "active"
     );
-    const hiddenProducts = products.filter(
-      (product) => product.status !== "active"
+    const inactiveProducts = products.filter(
+      (product) => product.status === "inactive"
     );
     const lowStockProducts = products.filter(
       (product) => getProductStock(product) > 0 && getProductStock(product) <= 5
@@ -1461,7 +1596,7 @@
     return {
       totalProducts: products.length,
       activeProducts: activeProducts.length,
-      hiddenProducts: hiddenProducts.length,
+      hiddenProducts: inactiveProducts.length,
       lowStockProducts: lowStockProducts.length,
       totalStock,
       orders: orders.length,
@@ -1843,7 +1978,8 @@
         {
           title: "Tổng sản phẩm",
           value: formatCompactNumber(metrics.totalProducts),
-          note: "Bao gồm sản phẩm đang hiển thị và đang ẩn.",
+          note:
+            "Bao gồm sản phẩm hiển thị, chờ duyệt, chưa được đăng, bị khóa và đang ẩn.",
         },
         {
           title: "Đang ẩn",
@@ -2416,17 +2552,13 @@
   const renderProductTabs = () => {
     if (!els.productStatusTabs) return;
 
-    const counts = {
-      all: state.products.length,
-      active: state.products.filter((product) => product.status === "active")
-        .length,
-      inactive: state.products.filter((product) => product.status !== "active")
-        .length,
-    };
-
+    const counts = getProductStatusCounts(state.products);
     const labels = {
       all: "Tất cả",
       active: "Đang hoạt động",
+      pending: "Chờ duyệt",
+      rejected: "Chưa được đăng",
+      locked: "Bị khóa",
       inactive: "Đang ẩn",
     };
 
@@ -2453,19 +2585,19 @@
     renderProductTabs();
 
     const filtered = getFilteredProducts();
-    const activeCount = state.products.filter(
-      (product) => product.status === "active"
-    ).length;
-    const hiddenCount = state.products.filter(
-      (product) => product.status !== "active"
-    ).length;
+    const counts = getProductStatusCounts(state.products);
 
     if (els.productsSummary) {
-      els.productsSummary.textContent = `${formatCompactNumber(
-        filtered.length
-      )}/${formatCompactNumber(state.products.length)} sản phẩm · ${formatCompactNumber(
-        activeCount
-      )} đang hiển thị · ${formatCompactNumber(hiddenCount)} đang ẩn`;
+      els.productsSummary.textContent = [
+        `${formatCompactNumber(filtered.length)}/${formatCompactNumber(
+          state.products.length
+        )} sản phẩm`,
+        `${formatCompactNumber(counts.active)} đang hiển thị`,
+        `${formatCompactNumber(counts.pending)} chờ duyệt`,
+        `${formatCompactNumber(counts.rejected)} chưa được đăng`,
+        `${formatCompactNumber(counts.locked)} bị khóa`,
+        `${formatCompactNumber(counts.inactive)} đang ẩn`,
+      ].join(" · ");
     }
 
     if (!els.productsTable) return;
@@ -2510,6 +2642,11 @@
             .map((product) => {
               const variant = getPrimaryVariant(product);
               const productStatus = getProductStatusMeta(product.status);
+              const canToggle =
+                product.status === "active" || product.status === "inactive";
+              const toggleLabel = product.status === "active" ? "Ẩn" : "Gửi duyệt";
+              const toggleNextStatus =
+                product.status === "active" ? "inactive" : "pending";
               return `
                 <tr>
                   <td>
@@ -2551,19 +2688,23 @@
                       >
                         Sửa
                       </button>
-                      <button
-                        class="seller-mini-btn ${
-                          product.status === "active" ? "warn" : ""
-                        }"
-                        type="button"
-                        data-action="toggle-product"
-                        data-product-id="${escapeHtml(product.id)}"
-                        data-next-status="${
-                          product.status === "active" ? "inactive" : "active"
-                        }"
-                      >
-                        ${product.status === "active" ? "Ẩn" : "Hiển thị"}
-                      </button>
+                      ${
+                        canToggle
+                          ? `
+                            <button
+                              class="seller-mini-btn ${
+                                product.status === "active" ? "warn" : ""
+                              }"
+                              type="button"
+                              data-action="toggle-product"
+                              data-product-id="${escapeHtml(product.id)}"
+                              data-next-status="${toggleNextStatus}"
+                            >
+                              ${toggleLabel}
+                            </button>
+                          `
+                          : ""
+                      }
                     </div>
                   </td>
                 </tr>
@@ -3098,14 +3239,10 @@
         : "Làm lại form";
     }
     if (els.saveProductHidden) {
-      els.saveProductHidden.textContent = isEditingDraft()
-        ? "Cập nhật & Ẩn"
-        : "Lưu & Ẩn";
+      els.saveProductHidden.textContent = getHiddenButtonLabel();
     }
     if (els.saveProductVisible) {
-      els.saveProductVisible.textContent = isEditingDraft()
-        ? "Cập nhật & Hiển thị"
-        : "Lưu & Hiển thị";
+      els.saveProductVisible.textContent = getPublishButtonLabel();
     }
     renderChecklist();
     renderMediaPanels();
@@ -3618,11 +3755,7 @@
       await Promise.all([loadProducts(), loadOrders()]);
       renderAll();
       setView("products");
-      showStatus(
-        status === "active"
-          ? "Đã tạo và hiển thị sản phẩm mới."
-          : "Đã lưu sản phẩm ở trạng thái ẩn."
-      );
+      showStatus(getProductSaveMessage(status, "create"));
     } catch (error) {
       showStatus(
         error instanceof Error ? error.message : "Không thể tạo sản phẩm.",
@@ -3709,11 +3842,7 @@
       await Promise.all([loadProducts(), loadOrders()]);
       renderAll();
       setView("products");
-      showStatus(
-        status === "active"
-          ? "Đã cập nhật và hiển thị sản phẩm."
-          : "Đã cập nhật sản phẩm ở trạng thái ẩn."
-      );
+      showStatus(getProductSaveMessage(status, "update"));
     } catch (error) {
       showStatus(
         error instanceof Error ? error.message : "Không thể cập nhật sản phẩm.",
@@ -3798,7 +3927,9 @@
       showStatus(
         nextStatus === "active"
           ? "Sản phẩm đã được bật hiển thị."
-          : "Sản phẩm đã được chuyển sang trạng thái ẩn."
+          : nextStatus === "pending"
+            ? "Sản phẩm đã được gửi duyệt."
+            : "Sản phẩm đã được chuyển sang trạng thái ẩn."
       );
     } catch (error) {
       showStatus(
@@ -3884,15 +4015,21 @@
     }
 
     const shopId = encodeURIComponent(state.currentShopId);
-    const [activePayload, inactivePayload] = await Promise.all([
-      apiFetch(`/products?shop_id=${shopId}&status=active&limit=100`, {}, {}),
-      apiFetch(`/products?shop_id=${shopId}&status=inactive&limit=100`, {}, {}),
-    ]);
+    const statusList = ["active", "inactive", "pending", "rejected", "locked"];
+    const payloads = await Promise.all(
+      statusList.map((status) =>
+        apiFetch(
+          `/products?shop_id=${shopId}&status=${status}&limit=100`,
+          {},
+          {}
+        )
+      )
+    );
 
     const merged = new Map();
-    [...(activePayload?.data || []), ...(inactivePayload?.data || [])].forEach(
-      (product) => merged.set(product.id, product)
-    );
+    payloads.forEach((payload) => {
+      (payload?.data || []).forEach((product) => merged.set(product.id, product));
+    });
 
     state.products = Array.from(merged.values()).sort(
       (left, right) =>
@@ -4279,7 +4416,7 @@
 
   const bindDocumentEvents = () => {
     els.shopProfileSummary?.addEventListener("click", async (event) => {
-      const target = event.target instanceof Element ? event.target : null;
+      const target = getEventTarget(event);
       if (!target) return;
 
       const actionButton = target.closest("[data-action]");
@@ -4308,7 +4445,7 @@
     });
 
     document.addEventListener("click", async (event) => {
-      const target = event.target instanceof Element ? event.target : null;
+      const target = getEventTarget(event);
       if (!target) return;
 
       const viewButton = target.closest("[data-view-target]");
@@ -4499,11 +4636,11 @@
     });
 
     els.saveProductHidden?.addEventListener("click", async () => {
-      await saveDraft("inactive");
+      await saveDraft(resolveDraftStatus("inactive"));
     });
 
     els.saveProductVisible?.addEventListener("click", async () => {
-      await saveDraft("active");
+      await saveDraft(resolveDraftStatus("active"));
     });
 
     els.logoutSeller?.addEventListener("click", () => {

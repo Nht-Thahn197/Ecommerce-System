@@ -1,4 +1,0 @@
-[0310/143652.470:ERROR:third_party\crashpad\crashpad\client\settings.cc:736] Settings version is not 7
-[0310/143652.472:ERROR:third_party\crashpad\crashpad\util\win\registration_protocol_win.cc:108] CreateFile: Access is denied. (0x5)
-[18060:8264:0310/143652.615:FATAL:mojo\public\cpp\platform\platform_channel.cc:170] Check failed: . : Access is denied. (0x5)
-[0310/143652.615:ERROR:third_party\crashpad\crashpad\client\crashpad_client_win.cc:154] crash server failed to launch
