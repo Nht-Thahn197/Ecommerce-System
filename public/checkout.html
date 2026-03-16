@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Thanh toán | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css?v=20260313-1" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260316-1" />
   </head>
   <body data-page="checkout">
     <div class="topbar">
@@ -112,12 +112,32 @@
         </section>
 
         <section class="panel-card checkout-platform-voucher">
-          <div class="checkout-voucher-row">
-            <div>
-              <h3>Voucher của sàn</h3>
-              <p>Chức năng sẽ được cập nhật sau.</p>
+          <div class="checkout-voucher-stack">
+            <div class="checkout-voucher-row">
+              <div>
+                <h3>Voucher giảm giá</h3>
+                <p id="checkoutDiscountVoucherText">
+                  Đang kiểm tra các voucher giảm giá phù hợp cho giỏ hàng của bạn.
+                </p>
+                <div id="checkoutDiscountVoucherMeta" class="checkout-voucher-meta" hidden></div>
+              </div>
+              <button id="chooseDiscountVoucherBtn" class="ghost-btn" type="button" disabled>
+                Chọn voucher
+              </button>
             </div>
-            <button class="ghost-btn" type="button" disabled>Chọn voucher</button>
+
+            <div class="checkout-voucher-row">
+              <div>
+                <h3>Voucher giảm phí vận chuyển</h3>
+                <p id="checkoutShippingVoucherText">
+                  Đang kiểm tra các voucher giảm phí vận chuyển phù hợp cho giỏ hàng của bạn.
+                </p>
+                <div id="checkoutShippingVoucherMeta" class="checkout-voucher-meta" hidden></div>
+              </div>
+              <button id="chooseShippingVoucherBtn" class="ghost-btn" type="button" disabled>
+                Chọn voucher
+              </button>
+            </div>
           </div>
         </section>
 
@@ -149,6 +169,14 @@
           <div class="checkout-summary-row">
             <span>Phí vận chuyển</span>
             <strong id="checkoutShipping">0đ</strong>
+          </div>
+          <div id="checkoutProductDiscountRow" class="checkout-summary-row checkout-discount-row" hidden>
+            <span>Voucher giảm giá</span>
+            <strong id="checkoutProductDiscount">-0đ</strong>
+          </div>
+          <div id="checkoutShippingDiscountRow" class="checkout-summary-row checkout-discount-row" hidden>
+            <span>Voucher giảm phí vận chuyển</span>
+            <strong id="checkoutShippingDiscount">-0đ</strong>
           </div>
           <div class="checkout-summary-total">
             <span>Tổng thanh toán</span>
@@ -201,7 +229,34 @@
       </div>
     </div>
 
+    <div id="platformVoucherModal" class="account-modal" aria-hidden="true" hidden>
+      <div
+        class="account-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="platformVoucherTitle"
+      >
+        <div class="account-modal-head">
+          <div>
+            <h3 id="platformVoucherTitle">Chọn voucher của sàn</h3>
+            <p id="platformVoucherSubtitle" class="checkout-modal-subtitle">
+              Các voucher dưới đây đã được lọc theo giỏ hàng hiện tại của bạn.
+            </p>
+          </div>
+          <button
+            id="closePlatformVoucherModalBtn"
+            class="account-modal-close"
+            type="button"
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+        </div>
+        <div id="platformVoucherList" class="checkout-voucher-list"></div>
+      </div>
+    </div>
+
     <script src="/ui/store.js?v=20260311-4"></script>
-    <script src="/ui/checkout.js?v=20260313-1"></script>
+    <script src="/ui/checkout.js?v=20260316-1"></script>
   </body>
 </html>

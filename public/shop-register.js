@@ -48,10 +48,14 @@
     addressContactName: document.querySelector("#addressContactName"),
     addressContactPhone: document.querySelector("#addressContactPhone"),
     addressRegionPreview: document.querySelector("#addressRegionPreview"),
+    addressModalStatus: document.querySelector("#addressModalStatus"),
     regionPickerPanel: document.querySelector("#regionPickerPanel"),
     regionStageBtns: Array.from(document.querySelectorAll(".region-stage-btn")),
     addressDetail: document.querySelector("#addressDetail"),
     mapPreviewLabel: document.querySelector("#mapPreviewLabel"),
+    addressMapFrame: document.querySelector("#addressMapFrame"),
+    addressMapEmpty: document.querySelector("#addressMapEmpty"),
+    addressMapLink: document.querySelector("#addressMapLink"),
     addressOpenButtons: Array.from(document.querySelectorAll("[data-open-address]")),
     uploadInputs: {
       business_license: document.querySelector("#businessLicenseInput"),
@@ -80,7 +84,7 @@
     identity_extra: "Tài liệu bổ sung",
   };
 
-  const PROVINCES = [
+  const PROVINCE_FALLBACKS = [
     "An Giang", "Bà Rịa - Vũng Tàu", "Bạc Liêu", "Bắc Giang", "Bắc Kạn",
     "Bắc Ninh", "Bến Tre", "Bình Dương", "Bình Định", "Bình Phước", "Bình Thuận",
     "Cà Mau", "Cần Thơ", "Cao Bằng", "Đà Nẵng", "Đắk Lắk", "Đắk Nông", "Điện Biên",
@@ -93,78 +97,21 @@
     "Tiền Giang", "TP. Hồ Chí Minh", "Trà Vinh", "Tuyên Quang", "Vĩnh Long",
     "Vĩnh Phúc", "Yên Bái"
   ];
-
-  const REGION_LIBRARY = {
-    "Hà Nội": {
-      districts: {
-        "Ba Đình": ["Điện Biên", "Kim Mã", "Liễu Giai", "Ngọc Hà", "Phúc Xá"],
-        "Cầu Giấy": ["Dịch Vọng", "Dịch Vọng Hậu", "Mai Dịch", "Nghĩa Đô", "Yên Hòa"],
-        "Hà Đông": ["Biên Giang", "Dương Nội", "Hà Cầu", "Kiến Hưng", "Mộ Lao", "Phú La", "Phú Lương", "Quang Trung", "Văn Quán", "Yên Nghĩa"],
-        "Long Biên": ["Bồ Đề", "Gia Thụy", "Ngọc Lâm", "Ngọc Thụy", "Phúc Đồng", "Việt Hưng"],
-        "Nam Từ Liêm": ["Cầu Diễn", "Mễ Trì", "Mỹ Đình 1", "Mỹ Đình 2", "Phú Đô", "Tây Mỗ"],
-      },
-    },
-    "TP. Hồ Chí Minh": {
-      districts: {
-        "Quận 1": ["Bến Nghé", "Bến Thành", "Cầu Kho", "Đa Kao", "Nguyễn Cư Trinh"],
-        "Quận 3": ["Phường 1", "Phường 2", "Phường 3", "Phường 4", "Phường 5"],
-        "Quận 7": ["Bình Thuận", "Phú Mỹ", "Phú Thuận", "Tân Hưng", "Tân Kiểng", "Tân Phong"],
-        "Bình Thạnh": ["Phường 11", "Phường 12", "Phường 13", "Phường 14", "Phường 15", "Phường 22", "Phường 25"],
-        "Thành phố Thủ Đức": ["An Khánh", "An Lợi Đông", "Bình Thọ", "Cát Lái", "Hiệp Bình Chánh", "Linh Chiểu", "Linh Đông", "Thảo Điền", "Trường Thọ"],
-      },
-    },
-    "Đà Nẵng": {
-      districts: {
-        "Hải Châu": ["Bình Hiên", "Hải Châu 1", "Hải Châu 2", "Hòa Cường Bắc", "Hòa Cường Nam"],
-        "Thanh Khê": ["An Khê", "Chính Gián", "Tam Thuận", "Tân Chính", "Thạc Gián"],
-        "Sơn Trà": ["An Hải Bắc", "An Hải Đông", "Mân Thái", "Nại Hiên Đông", "Phước Mỹ"],
-        "Ngũ Hành Sơn": ["Hòa Hải", "Hòa Quý", "Khuê Mỹ", "Mỹ An"],
-      },
-    },
-    "Hải Phòng": {
-      districts: {
-        "Lê Chân": ["An Biên", "An Dương", "Cát Dài", "Dư Hàng", "Lam Sơn", "Nghĩa Xá"],
-        "Ngô Quyền": ["Cầu Đất", "Đằng Giang", "Đông Khê", "Lạc Viên", "Lê Lợi", "Máy Chai"],
-        "Hải An": ["Cát Bi", "Đằng Hải", "Đằng Lâm", "Đông Hải 1", "Thành Tô", "Tràng Cát"],
-      },
-    },
-    "Cần Thơ": {
-      districts: {
-        "Ninh Kiều": ["An Bình", "An Cư", "An Hòa", "An Khánh", "Tân An", "Xuân Khánh"],
-        "Bình Thủy": ["An Thới", "Bình Thủy", "Long Hòa", "Long Tuyền", "Thới An Đông"],
-        "Cái Răng": ["Ba Láng", "Hưng Phú", "Hưng Thạnh", "Lê Bình", "Phú Thứ", "Thường Thạnh"],
-      },
-    },
-    "An Giang": {
-      districts: {
-        "Long Xuyên": ["Bình Đức", "Bình Khánh", "Đông Xuyên", "Mỹ Bình", "Mỹ Hòa", "Mỹ Phước"],
-        "Châu Đốc": ["Châu Phú A", "Châu Phú B", "Núi Sam", "Vĩnh Mỹ", "Vĩnh Nguơn"],
-        "Tân Châu": ["Long Hưng", "Long Sơn", "Long Thạnh", "Long Châu", "Long Phú"],
-      },
-    },
-    "Bình Dương": {
-      districts: {
-        "Thủ Dầu Một": ["Chánh Mỹ", "Định Hòa", "Hiệp An", "Hiệp Thành", "Phú Cường", "Phú Hòa"],
-        "Thuận An": ["An Phú", "Bình Chuẩn", "Lái Thiêu", "Thuận Giao", "Vĩnh Phú"],
-        "Dĩ An": ["An Bình", "Bình An", "Đông Hòa", "Tân Bình", "Tân Đông Hiệp"],
-      },
-    },
-    "Bắc Ninh": {
-      districts: {
-        "Bắc Ninh": ["Đại Phúc", "Hạp Lĩnh", "Khắc Niệm", "Kinh Bắc", "Ninh Xá", "Vệ An"],
-        "Từ Sơn": ["Châu Khê", "Đình Bảng", "Đồng Kỵ", "Tân Hồng", "Trang Hạ"],
-        "Quế Võ": ["Phố Mới", "Việt Hùng", "Bằng An", "Nhân Hòa", "Phù Lãng"],
-      },
-    },
-  };
+  const PROVINCE_TREE_CACHE_KEY = "bambi_shop_province_tree_v1";
+  const WARD_CACHE_PREFIX = "bambi_shop_ward_tree_v1";
+  const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+  const ADDRESS_API_BASE = "https://provinces.open-api.vn/api/v1";
 
   const deepClone = (value) => JSON.parse(JSON.stringify(value));
   const emptyAddress = () => ({
     contact_name: "",
     contact_phone: "",
     province: "",
+    province_code: "",
     district: "",
+    district_code: "",
     ward: "",
+    ward_code: "",
     detail: "",
   });
 
@@ -354,6 +301,130 @@
       return map[char] || char;
     });
 
+  const normalizeLookup = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  const readCache = (key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.timestamp || !Array.isArray(parsed?.data)) return null;
+      return {
+        data: parsed.data,
+        fresh: Date.now() - Number(parsed.timestamp) < CACHE_TTL_MS,
+      };
+    } catch (_error) {
+      return null;
+    }
+  };
+
+  const writeCache = (key, data) => {
+    try {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          timestamp: Date.now(),
+          data,
+        })
+      );
+    } catch (_error) {
+      // Ignore cache write failures.
+    }
+  };
+
+  const formatDivisionName = (name = "") => {
+    let next = String(name || "").trim();
+    if (!next) return "";
+    if (next === "Thành phố Hồ Chí Minh") return "TP. Hồ Chí Minh";
+    [
+      /^Tỉnh\s+/i,
+      /^Thành phố\s+/i,
+      /^Quận\s+/i,
+      /^Huyện\s+/i,
+      /^Thị xã\s+/i,
+      /^Thị trấn\s+/i,
+      /^Phường\s+/i,
+      /^Xã\s+/i,
+    ].forEach((pattern) => {
+      next = next.replace(pattern, "");
+    });
+    return next.trim();
+  };
+
+  const buildFallbackProvinceTree = () =>
+    PROVINCE_FALLBACKS.map((province, index) => ({
+      code: `fallback-p-${index}`,
+      value: province,
+      label: province,
+      rawName: province,
+      districts: [],
+    }));
+
+  const transformWardList = (wards = []) =>
+    wards
+      .map((ward) => ({
+        code: String(ward.code || ""),
+        value: formatDivisionName(ward.name),
+        label: formatDivisionName(ward.name),
+        rawName: ward.name || "",
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "vi"));
+
+  const transformProvinceTree = (items = []) =>
+    items
+      .map((province) => ({
+        code: String(province.code || ""),
+        value: formatDivisionName(province.name),
+        label: formatDivisionName(province.name),
+        rawName: province.name || "",
+        districts: (province.districts || [])
+          .map((district) => ({
+            code: String(district.code || ""),
+            value: formatDivisionName(district.name),
+            label: formatDivisionName(district.name),
+            rawName: district.name || "",
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label, "vi")),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "vi"));
+
+  const fetchJson = async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Fetch failed with status ${response.status}`);
+    }
+    return response.json();
+  };
+
+  const findRegionOption = (options = [], code = "", value = "") =>
+    String(code || "").trim()
+      ? options.find((item) => String(item.code || "") === String(code || "").trim()) || null
+      : normalizeLookup(value)
+      ? options.find((item) => normalizeLookup(item.value) === normalizeLookup(value)) || null
+      : null;
+
+  const getGoogleMapsEmbedKey = () =>
+    String(
+      window.BAMBI_GOOGLE_MAPS_EMBED_KEY ||
+        document.querySelector('meta[name="google-maps-embed-key"]')?.content ||
+        ""
+    ).trim();
+
+  const getGoogleMapsEmbedUrl = (query) =>
+    getGoogleMapsEmbedKey()
+      ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(
+          getGoogleMapsEmbedKey()
+        )}&q=${encodeURIComponent(query)}`
+      : `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+
+  const getGoogleMapsSearchUrl = (query) =>
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+
   const formatDateTime = (value) => {
     if (!value) return "-";
     const date = new Date(value);
@@ -413,6 +484,15 @@
     addressTarget: "pickup",
     addressForm: emptyAddress(),
     regionStage: "province",
+    regionRequestId: 0,
+    mapTimer: 0,
+    location: {
+      provinceTree: null,
+      provinceTreePromise: null,
+      wardCache: {},
+      wardPromises: {},
+      source: "unknown",
+    },
   };
 
   const countUploadedFiles = () =>
@@ -494,6 +574,166 @@
     refs.pageAlert.classList.toggle("error", type === "error");
   };
 
+  const updateAddressModalStatus = (message = "", type = "info") => {
+    if (!refs.addressModalStatus) return;
+    if (!message) {
+      refs.addressModalStatus.textContent = "";
+      refs.addressModalStatus.classList.add("hidden");
+      refs.addressModalStatus.classList.remove("error");
+      return;
+    }
+
+    refs.addressModalStatus.textContent = message;
+    refs.addressModalStatus.classList.remove("hidden");
+    refs.addressModalStatus.classList.toggle("error", type === "error");
+  };
+
+  const resetAddressMapPreview = (message) => {
+    if (refs.mapPreviewLabel) {
+      refs.mapPreviewLabel.textContent =
+        message || "Chọn khu vực và nhập địa chỉ chi tiết để xem bản đồ thật từ Google Maps.";
+    }
+    if (refs.addressMapFrame) {
+      refs.addressMapFrame.hidden = true;
+      refs.addressMapFrame.removeAttribute("src");
+    }
+    if (refs.addressMapEmpty) {
+      refs.addressMapEmpty.hidden = false;
+    }
+    if (refs.addressMapLink) {
+      refs.addressMapLink.hidden = true;
+      refs.addressMapLink.href = "https://www.google.com/maps";
+    }
+  };
+
+  const updateAddressMapPreview = (address = state.addressForm) => {
+    const previewText =
+      buildAddressText(address) ||
+      "Chọn khu vực và nhập địa chỉ chi tiết để xem bản đồ thật từ Google Maps.";
+    if (refs.mapPreviewLabel) {
+      refs.mapPreviewLabel.textContent = previewText;
+    }
+
+    if (!refs.addressMapFrame || !refs.addressMapEmpty || !refs.addressMapLink) return;
+
+    const query = [address.detail, address.ward, address.district, address.province, "Việt Nam"]
+      .filter(Boolean)
+      .join(", ");
+    const visible = Boolean(address.province && address.district && address.detail);
+
+    refs.addressMapEmpty.hidden = visible;
+    refs.addressMapFrame.hidden = !visible;
+    refs.addressMapLink.hidden = !visible;
+
+    if (!visible) {
+      refs.addressMapFrame.removeAttribute("src");
+      refs.addressMapLink.href = "https://www.google.com/maps";
+      return;
+    }
+
+    refs.addressMapFrame.src = getGoogleMapsEmbedUrl(query);
+    refs.addressMapLink.href = getGoogleMapsSearchUrl(query);
+  };
+
+  const scheduleAddressMapUpdate = () => {
+    if (state.mapTimer) {
+      window.clearTimeout(state.mapTimer);
+    }
+    state.mapTimer = window.setTimeout(() => {
+      updateAddressMapPreview();
+    }, 180);
+  };
+
+  const loadProvinceTree = async () => {
+    if (state.location.provinceTree?.length) {
+      return state.location.provinceTree;
+    }
+
+    if (state.location.provinceTreePromise) {
+      return state.location.provinceTreePromise;
+    }
+
+    state.location.provinceTreePromise = (async () => {
+      const cached = readCache(PROVINCE_TREE_CACHE_KEY);
+      if (cached?.fresh) {
+        state.location.source = "cache";
+        state.location.provinceTree = cached.data;
+        return cached.data;
+      }
+
+      try {
+        const provinceTree = transformProvinceTree(
+          await fetchJson(`${ADDRESS_API_BASE}/?depth=2`)
+        );
+        state.location.source = "api";
+        state.location.provinceTree = provinceTree;
+        writeCache(PROVINCE_TREE_CACHE_KEY, provinceTree);
+        return provinceTree;
+      } catch (_error) {
+        if (cached?.data?.length) {
+          state.location.source = "cache";
+          state.location.provinceTree = cached.data;
+          return cached.data;
+        }
+
+        const fallback = buildFallbackProvinceTree();
+        state.location.source = "fallback";
+        state.location.provinceTree = fallback;
+        return fallback;
+      } finally {
+        state.location.provinceTreePromise = null;
+      }
+    })();
+
+    return state.location.provinceTreePromise;
+  };
+
+  const getDistrictOptions = (provinceCode, provinceValue) =>
+    findRegionOption(state.location.provinceTree || [], provinceCode, provinceValue)?.districts || [];
+
+  const loadWards = async (districtCode, districtValue = "") => {
+    const cacheKey = `${WARD_CACHE_PREFIX}:${districtCode || districtValue}`;
+    if (districtCode && state.location.wardCache[districtCode]) {
+      return state.location.wardCache[districtCode];
+    }
+
+    const cached = readCache(cacheKey);
+    if (cached?.fresh) {
+      if (districtCode) {
+        state.location.wardCache[districtCode] = cached.data;
+      }
+      return cached.data;
+    }
+
+    if (!districtCode || String(districtCode).startsWith("fallback-")) {
+      return cached?.data || [];
+    }
+
+    if (state.location.wardPromises[districtCode]) {
+      return state.location.wardPromises[districtCode];
+    }
+
+    state.location.wardPromises[districtCode] = (async () => {
+      try {
+        const data = await fetchJson(`${ADDRESS_API_BASE}/d/${districtCode}?depth=2`);
+        const wards = transformWardList(data?.wards || []);
+        state.location.wardCache[districtCode] = wards;
+        writeCache(cacheKey, wards);
+        return wards;
+      } catch (_error) {
+        if (cached?.data?.length) {
+          state.location.wardCache[districtCode] = cached.data;
+          return cached.data;
+        }
+        return [];
+      } finally {
+        delete state.location.wardPromises[districtCode];
+      }
+    })();
+
+    return state.location.wardPromises[districtCode];
+  };
+
   const getSelectedRadio = (name) =>
     document.querySelector(`input[name="${name}"]:checked`)?.value || "";
 
@@ -549,8 +789,11 @@
         contact_phone:
           address.contact_phone || merged.shopInfo.pickupAddress.contact_phone,
         province: address.province || merged.shopInfo.pickupAddress.province,
+        province_code: "",
         district: address.district || merged.shopInfo.pickupAddress.district,
+        district_code: "",
         ward: address.ward || merged.shopInfo.pickupAddress.ward,
+        ward_code: "",
         detail: address.detail || merged.shopInfo.pickupAddress.detail,
       };
     }
@@ -566,8 +809,11 @@
         contact_phone:
           taxAddress.contact_phone || merged.tax.taxAddress.contact_phone,
         province: taxAddress.province || merged.tax.taxAddress.province,
+        province_code: "",
         district: taxAddress.district || merged.tax.taxAddress.district,
+        district_code: "",
         ward: taxAddress.ward || merged.tax.taxAddress.ward,
+        ward_code: "",
         detail: taxAddress.detail || merged.tax.taxAddress.detail,
       };
     }
@@ -1117,7 +1363,7 @@
     }
   };
 
-  const openAddressModal = (target) => {
+  const openAddressModal = async (target) => {
     state.addressTarget = target;
     state.addressForm = deepClone(getAddressByTarget(target));
     state.regionStage = !state.addressForm.province
@@ -1135,46 +1381,72 @@
     refs.addressContactPhone.value = state.addressForm.contact_phone || "";
     refs.addressDetail.value = state.addressForm.detail || "";
 
-    renderAddressModalState();
+    updateAddressModalStatus("Đang tải dữ liệu khu vực...");
+    resetAddressMapPreview();
     refs.addressModal.classList.remove("hidden");
     refs.addressModal.setAttribute("aria-hidden", "false");
+    await renderAddressModalState();
   };
 
   const closeAddressModal = () => {
+    if (state.mapTimer) {
+      window.clearTimeout(state.mapTimer);
+      state.mapTimer = 0;
+    }
+    updateAddressModalStatus();
     refs.addressModal.classList.add("hidden");
     refs.addressModal.setAttribute("aria-hidden", "true");
   };
 
-  const renderAddressModalState = () => {
+  const renderAddressModalState = async () => {
     refs.addressRegionPreview.textContent =
       buildAddressRegionText(state.addressForm) || "Chưa chọn khu vực";
-    refs.mapPreviewLabel.textContent =
-      buildAddressText(state.addressForm) ||
-      "Địa chỉ sẽ xuất hiện tại đây sau khi bạn chọn khu vực và nhập chi tiết.";
 
     refs.regionStageBtns.forEach((button) => {
       button.classList.toggle("active", button.dataset.regionStage === state.regionStage);
     });
 
-    renderRegionPanel();
+    updateAddressMapPreview(state.addressForm);
+    await renderRegionPanel();
   };
 
-  const renderRegionPanel = () => {
+  const renderRegionPanel = async () => {
+    const requestId = ++state.regionRequestId;
+    refs.regionPickerPanel.innerHTML =
+      '<div class="region-loading"><p class="field-help">Đang tải danh sách khu vực...</p></div>';
+
     let options = [];
     let manualLabel = "";
     let manualValue = "";
     let emptyMessage = "";
 
+    const provinceTree = await loadProvinceTree();
+    if (requestId !== state.regionRequestId) return;
+
+    if (state.location.source === "fallback") {
+      updateAddressModalStatus(
+        "Không tải được dữ liệu địa giới đầy đủ từ API. Bạn vẫn có thể chọn tỉnh/thành phố và nhập quận/huyện, phường/xã thủ công.",
+        "info"
+      );
+    } else {
+      updateAddressModalStatus();
+    }
+
     if (state.regionStage === "province") {
-      options = PROVINCES;
+      options = provinceTree;
     }
 
     if (state.regionStage === "district") {
       if (!state.addressForm.province) {
         emptyMessage = "Hãy chọn tỉnh/thành phố trước.";
       } else {
-        options = Object.keys(REGION_LIBRARY[state.addressForm.province]?.districts || {});
-        manualLabel = "Nhập quận/huyện nếu chưa có trong danh sách";
+        options = getDistrictOptions(
+          state.addressForm.province_code,
+          state.addressForm.province
+        );
+        manualLabel = options.length
+          ? "Không thấy quận/huyện phù hợp? Nhập thủ công bên dưới"
+          : "API chưa trả về quận/huyện cho tỉnh này. Bạn có thể nhập thủ công.";
         manualValue = state.addressForm.district || "";
       }
     }
@@ -1183,14 +1455,22 @@
       if (!state.addressForm.district) {
         emptyMessage = "Hãy chọn quận/huyện trước.";
       } else {
-        options = REGION_LIBRARY[state.addressForm.province]?.districts?.[state.addressForm.district] || [];
-        manualLabel = "Nhập phường/xã nếu chưa có trong danh sách";
+        options = await loadWards(
+          state.addressForm.district_code,
+          state.addressForm.district
+        );
+        if (requestId !== state.regionRequestId) return;
+        manualLabel = options.length
+          ? "Không thấy phường/xã phù hợp? Nhập thủ công bên dưới"
+          : "API chưa trả về phường/xã cho quận/huyện này. Bạn có thể nhập thủ công.";
         manualValue = state.addressForm.ward || "";
       }
     }
 
     if (emptyMessage) {
-      refs.regionPickerPanel.innerHTML = `<div class="manual-wrap"><p class="field-help">${escapeHtml(emptyMessage)}</p></div>`;
+      refs.regionPickerPanel.innerHTML = `<div class="region-empty-state"><p class="field-help">${escapeHtml(
+        emptyMessage
+      )}</p></div>`;
       return;
     }
 
@@ -1199,13 +1479,33 @@
           <div class="region-list">
             ${options
               .map((option) => {
-                const active = state.regionStage === "province"
-                  ? state.addressForm.province === option
-                  : state.regionStage === "district"
-                  ? state.addressForm.district === option
-                  : state.addressForm.ward === option;
+                const active =
+                  state.regionStage === "province"
+                    ? Boolean(
+                        option.code && state.addressForm.province_code
+                          ? state.addressForm.province_code === option.code
+                          : normalizeLookup(state.addressForm.province) ===
+                            normalizeLookup(option.value)
+                      )
+                    : state.regionStage === "district"
+                    ? Boolean(
+                        option.code && state.addressForm.district_code
+                          ? state.addressForm.district_code === option.code
+                          : normalizeLookup(state.addressForm.district) ===
+                            normalizeLookup(option.value)
+                      )
+                    : Boolean(
+                        option.code && state.addressForm.ward_code
+                          ? state.addressForm.ward_code === option.code
+                          : normalizeLookup(state.addressForm.ward) ===
+                            normalizeLookup(option.value)
+                      );
 
-                return `<button type="button" class="region-option ${active ? "active" : ""}" data-region-option="${escapeHtml(option)}">${escapeHtml(option)}</button>`;
+                return `<button type="button" class="region-option ${active ? "active" : ""}" data-region-code="${escapeHtml(
+                  option.code || ""
+                )}" data-region-value="${escapeHtml(option.value)}">${escapeHtml(
+                  option.label || option.value
+                )}</button>`;
               })
               .join("")}
           </div>
@@ -1218,12 +1518,21 @@
         : `
           <div class="manual-wrap">
             <label class="field-help">${escapeHtml(manualLabel)}</label>
-            <input id="manualRegionInput" class="manual-input" type="text" value="${escapeHtml(manualValue)}" placeholder="${state.regionStage === "district" ? "Nhập quận/huyện" : "Nhập phường/xã"}" />
-            <button type="button" class="secondary-btn" data-use-manual-region>${state.regionStage === "district" ? "Dùng quận/huyện này" : "Dùng phường/xã này"}</button>
+            <input id="manualRegionInput" class="manual-input" type="text" value="${escapeHtml(
+              manualValue
+            )}" placeholder="${
+              state.regionStage === "district" ? "Nhập quận/huyện" : "Nhập phường/xã"
+            }" />
+            <button type="button" class="secondary-btn" data-use-manual-region>${
+              state.regionStage === "district" ? "Dùng quận/huyện này" : "Dùng phường/xã này"
+            }</button>
           </div>
         `;
 
-    refs.regionPickerPanel.innerHTML = `${listHtml}${manualHtml}`;
+    refs.regionPickerPanel.innerHTML =
+      listHtml || manualHtml
+        ? `${listHtml}${manualHtml}`
+        : '<div class="region-empty-state"><p class="field-help">Chưa có dữ liệu khu vực phù hợp.</p></div>';
   };
 
   const saveAddressFromModal = () => {
@@ -1244,21 +1553,27 @@
     closeAddressModal();
   };
 
-  const handleRegionOptionClick = (value) => {
+  const handleRegionOptionClick = (code, value) => {
     if (state.regionStage === "province") {
       state.addressForm.province = value;
+      state.addressForm.province_code = code || "";
       state.addressForm.district = "";
+      state.addressForm.district_code = "";
       state.addressForm.ward = "";
+      state.addressForm.ward_code = "";
       state.regionStage = "district";
     } else if (state.regionStage === "district") {
       state.addressForm.district = value;
+      state.addressForm.district_code = code || "";
       state.addressForm.ward = "";
+      state.addressForm.ward_code = "";
       state.regionStage = "ward";
     } else {
       state.addressForm.ward = value;
+      state.addressForm.ward_code = code || "";
     }
 
-    renderAddressModalState();
+    void renderAddressModalState();
   };
 
   const handleManualRegionUse = () => {
@@ -1271,13 +1586,16 @@
 
     if (state.regionStage === "district") {
       state.addressForm.district = value;
+      state.addressForm.district_code = "";
       state.addressForm.ward = "";
+      state.addressForm.ward_code = "";
       state.regionStage = "ward";
     } else if (state.regionStage === "ward") {
       state.addressForm.ward = value;
+      state.addressForm.ward_code = "";
     }
 
-    renderAddressModalState();
+    void renderAddressModalState();
   };
 
   const handleRefreshStatus = async () => {
@@ -1375,7 +1693,7 @@
     refs.addressOpenButtons.forEach((button) => {
       button.addEventListener("click", () => {
         updatePageAlert();
-        openAddressModal(button.dataset.openAddress || "pickup");
+        void openAddressModal(button.dataset.openAddress || "pickup");
       });
     });
 
@@ -1402,20 +1720,29 @@
         }
 
         state.regionStage = nextStage;
-        renderAddressModalState();
+        void renderAddressModalState();
       });
     });
 
     refs.regionPickerPanel?.addEventListener("click", (event) => {
-      const regionButton = event.target.closest("[data-region-option]");
+      const regionButton = event.target.closest("[data-region-value]");
       if (regionButton) {
-        handleRegionOptionClick(regionButton.dataset.regionOption || "");
+        handleRegionOptionClick(
+          regionButton.dataset.regionCode || "",
+          regionButton.dataset.regionValue || ""
+        );
         return;
       }
 
       if (event.target.closest("[data-use-manual-region]")) {
         handleManualRegionUse();
       }
+    });
+
+    refs.regionPickerPanel?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.target.id !== "manualRegionInput") return;
+      event.preventDefault();
+      handleManualRegionUse();
     });
 
     refs.addressContactName?.addEventListener("input", () => {
@@ -1426,7 +1753,7 @@
     });
     refs.addressDetail?.addEventListener("input", () => {
       state.addressForm.detail = refs.addressDetail.value;
-      renderAddressModalState();
+      scheduleAddressMapUpdate();
     });
 
     Object.entries(refs.uploadInputs).forEach(([docType, input]) => {

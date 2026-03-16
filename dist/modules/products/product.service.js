@@ -327,7 +327,7 @@ const createProduct = async (userId, input) => {
             video_url: normalizeString(input.video_url, 500) ?? null,
             media_gallery: mediaGallery ?? client_1.Prisma.DbNull,
             variant_config: normalizeVariantConfig(input.variant_config) ?? client_1.Prisma.DbNull,
-            status: input.status || "active",
+            status: input.status || "pending",
             shop_id: shopId,
         },
     });
@@ -336,7 +336,7 @@ exports.createProduct = createProduct;
 const updateProduct = async (userId, productId, input) => {
     const product = await prisma_1.default.products.findUnique({
         where: { id: productId },
-        select: { id: true, shop_id: true },
+        select: { id: true, shop_id: true, status: true },
     });
     if (!product?.shop_id) {
         throw new Error("Product not found");
@@ -354,6 +354,9 @@ const updateProduct = async (userId, productId, input) => {
     const data = {
         status: input.status,
     };
+    if (product.status === "locked" && input.status && input.status !== "locked") {
+        data.status = "locked";
+    }
     if (input.name !== undefined) {
         const name = input.name?.trim();
         if (!name) {

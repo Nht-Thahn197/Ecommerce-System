@@ -454,6 +454,8 @@
           <button id="closeAddressModalBtn" type="button" class="icon-btn" aria-label="Đóng">×</button>
         </div>
 
+        <div id="addressModalStatus" class="modal-status hidden"></div>
+
         <div class="modal-grid">
           <div class="field">
             <label class="required" for="addressContactName">Họ và tên liên hệ</label>
@@ -481,9 +483,37 @@
           </div>
         </div>
 
-        <div class="map-mock">
-          <div class="map-label" id="mapPreviewLabel">Địa chỉ sẽ xuất hiện tại đây sau khi bạn chọn khu vực và nhập chi tiết.</div>
-          <div class="map-pin"></div>
+        <div class="address-map-card seller-address-map-card">
+          <div class="address-map-note">
+            <div class="address-map-icon" aria-hidden="true">!</div>
+            <div>
+              <strong>Vị trí lấy hàng trên Google Maps</strong>
+              <p id="mapPreviewLabel">Chọn khu vực và nhập địa chỉ chi tiết để xem bản đồ thật từ Google Maps.</p>
+            </div>
+          </div>
+          <div class="address-map-preview">
+            <iframe
+              id="addressMapFrame"
+              class="address-map-frame"
+              title="Bản đồ địa chỉ lấy hàng"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              hidden
+            ></iframe>
+            <div id="addressMapEmpty" class="address-map-empty">
+              Chọn đầy đủ tỉnh/thành phố, quận/huyện và nhập địa chỉ chi tiết để xem vị trí thật trên Google Maps.
+            </div>
+            <a
+              id="addressMapLink"
+              class="address-map-link"
+              href="https://www.google.com/maps"
+              target="_blank"
+              rel="noopener noreferrer"
+              hidden
+            >
+              Mở trong Google Maps
+            </a>
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -494,6 +524,7 @@
     </div>
 
     <script src="/ui/store.js"></script>
+    <script src="/ui/runtime-config.js"></script>
     <script src="/ui/shop-register.js"></script>
     <script src="/ui/custom-select.js"></script>
   </body>

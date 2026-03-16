@@ -18,6 +18,15 @@ import categoryRoutes from "./modules/categories/category.route";
 const app = express();
 
 app.use(express.json());
+app.get("/ui/runtime-config.js", (_req, res) => {
+  res.type("application/javascript");
+  res.setHeader("Cache-Control", "no-store");
+  res.send(
+    `window.BAMBI_GOOGLE_MAPS_EMBED_KEY = ${JSON.stringify(
+      process.env.GOOGLE_MAPS_EMBED_KEY || process.env.GOOGLE_MAPS_API_KEY || ""
+    )};`
+  );
+});
 app.use("/ui", express.static(path.join(process.cwd(), "public")));
 
 app.get("/", (req, res) => {

@@ -1,7 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkout = void 0;
+exports.checkout = exports.checkoutPreview = void 0;
 const checkout_service_1 = require("./checkout.service");
+const checkoutPreview = async (req, res) => {
+    try {
+        if (!req.userId)
+            return res.status(401).json({ message: "Unauthorized" });
+        const result = await (0, checkout_service_1.previewCheckout)(req.userId, req.body || {});
+        res.json(result);
+    }
+    catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+exports.checkoutPreview = checkoutPreview;
 const checkout = async (req, res) => {
     try {
         if (!req.userId)

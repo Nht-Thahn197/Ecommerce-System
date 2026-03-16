@@ -232,8 +232,35 @@
     });
   };
 
+  const ensureVoucherNavLink = () => {
+    $$(".admin-nav").forEach((nav) => {
+      if (!nav || nav.querySelector('[data-page="vouchers"]')) return;
+
+      const link = document.createElement("a");
+      link.className = "admin-nav-link";
+      link.href = "/ui/admin/vouchers.html";
+      link.dataset.page = "vouchers";
+      link.innerHTML = `
+        <span class="admin-nav-icon">MG</span>
+        <span class="admin-nav-copy">
+          <strong>Quản lý mã giảm giá</strong>
+          <span>Voucher toàn sàn</span>
+        </span>
+      `;
+
+      const productsLink = nav.querySelector('[data-page="products"]');
+      if (productsLink?.nextSibling) {
+        nav.insertBefore(link, productsLink.nextSibling);
+        return;
+      }
+
+      nav.appendChild(link);
+    });
+  };
+
   const initShell = (pageKey) => {
     bindSettings();
+    ensureVoucherNavLink();
     if (!hasToken()) {
       redirectToLogin();
       return;

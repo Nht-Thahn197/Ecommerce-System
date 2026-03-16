@@ -12,12 +12,29 @@
     itemCount: document.querySelector("#checkoutItemCount"),
     subtotal: document.querySelector("#checkoutSubtotal"),
     shipping: document.querySelector("#checkoutShipping"),
+    productDiscount: document.querySelector("#checkoutProductDiscount"),
+    productDiscountRow: document.querySelector("#checkoutProductDiscountRow"),
+    shippingDiscount: document.querySelector("#checkoutShippingDiscount"),
+    shippingDiscountRow: document.querySelector("#checkoutShippingDiscountRow"),
     total: document.querySelector("#checkoutTotal"),
     note: document.querySelector("#checkoutNote"),
     placeOrderBtn: document.querySelector("#placeOrderBtn"),
     addressModal: document.querySelector("#addressSelectModal"),
     addressModalList: document.querySelector("#addressSelectList"),
     closeAddressModalBtn: document.querySelector("#closeAddressModalBtn"),
+    discountVoucherText: document.querySelector("#checkoutDiscountVoucherText"),
+    discountVoucherMeta: document.querySelector("#checkoutDiscountVoucherMeta"),
+    chooseDiscountVoucherBtn: document.querySelector("#chooseDiscountVoucherBtn"),
+    shippingVoucherText: document.querySelector("#checkoutShippingVoucherText"),
+    shippingVoucherMeta: document.querySelector("#checkoutShippingVoucherMeta"),
+    chooseShippingVoucherBtn: document.querySelector("#chooseShippingVoucherBtn"),
+    platformVoucherModal: document.querySelector("#platformVoucherModal"),
+    platformVoucherTitle: document.querySelector("#platformVoucherTitle"),
+    platformVoucherSubtitle: document.querySelector("#platformVoucherSubtitle"),
+    platformVoucherList: document.querySelector("#platformVoucherList"),
+    closePlatformVoucherModalBtn: document.querySelector(
+      "#closePlatformVoucherModalBtn"
+    ),
   };
 
   if (!els.shopList) return;
@@ -27,12 +44,12 @@
     fast: {
       label: "Nhanh",
       fee: 15000,
-      note: "Giao trong 2-3 ngày (tùy theo shop)",
+      note: "Giao trong 2-3 ngay (tuy theo shop)",
     },
     express: {
-      label: "Hỏa tốc",
+      label: "Hoa toc",
       fee: 35000,
-      note: "Ưu tiên giao sớm trong ngày",
+      note: "Uu tien giao som trong ngay",
     },
   };
 
@@ -43,6 +60,27 @@
     selectedAddressId: "",
     shipping: {},
     submitting: false,
+    previewLoading: false,
+    previewError: "",
+    selectionErrors: {
+      discount: "",
+      shipping: "",
+    },
+    selectedVoucherCodes: {
+      discount: "",
+      shipping: "",
+    },
+    platformVouchers: {
+      discount: [],
+      shipping: [],
+    },
+    selectedPlatformVouchers: {
+      discount: null,
+      shipping: null,
+    },
+    activeVoucherKind: "discount",
+    pricing: null,
+    previewRequestId: 0,
   };
 
   const formatCurrency = (value) => {
@@ -52,6 +90,19 @@
       currency: "VND",
       maximumFractionDigits: 0,
     }).format(Number.isFinite(amount) ? amount : 0);
+  };
+
+  const formatDateTime = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return new Intl.DateTimeFormat("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
   };
 
   const escapeHtml = (value) =>
@@ -110,7 +161,11 @@
 
   const getItemTitle = (item) => {
     const product = getItemProduct(item);
-    return product?.name || `Sản phẩm #${getProductId(item) || item?.id || ""}`;
+    return (
+      product?.name ||
+      item?.product_variants?.products?.name ||
+      `Sản phẩm #${getProductId(item) || item?.id || ""}`
+    );
   };
 
   const getItemImage = (item) => {
@@ -127,6 +182,7 @@
     const optionValues = Array.isArray(item?.product_variants?.option_values)
       ? item.product_variants.option_values.filter(Boolean)
       : [];
+
     return optionValues.length ? optionValues.join(" / ") : "Mặc định";
   };
 
@@ -195,6 +251,7 @@
   const ensureDefaultAddress = (items) => {
     if (!items.length) return [];
     const defaultId = items.find((address) => address.is_default)?.id || items[0].id;
+
     return items.map((address) => ({
       ...address,
       is_default: address.id === defaultId,
@@ -211,6 +268,305 @@
 
   const getAddressTypeLabel = (type) => (type === "office" ? "Văn phòng" : "Nhà riêng");
 
+  const syncModalLock = () => {
+    const hasOpenModal = Boolean(
+      document.querySelector(".account-modal:not([hidden])")
+    );
+    document.body.classList.toggle("account-modal-open", hasOpenModal);
+  };
+
+  const openModal = (modal) => {
+    if (!modal) return;
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    syncModalLock();
+  };
+
+  const closeModal = (modal) => {
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    syncModalLock();
+  };
+
+  const getShippingTotal = () => {
+    const groups = getGroups();
+
+    return groups.reduce((sum, group) => {
+      const method = state.shipping[group.id] || "fast";
+      const option = SHIPPING_OPTIONS[method] || SHIPPING_OPTIONS.fast;
+      return sum + option.fee;
+    }, 0);
+  };
+
+  const getFallbackPricing = () => {
+    const subtotal = state.items.reduce(
+      (sum, item) => sum + getItemPrice(item) * Number(item?.quantity || 0),
+      0
+    );
+    const shippingTotal = state.items.length ? getShippingTotal() : 0;
+    const itemCount = state.items.reduce(
+      (sum, item) => sum + Number(item?.quantity || 0),
+      0
+    );
+
+    return {
+      subtotal,
+      shipping_total: shippingTotal,
+      product_discount_total: 0,
+      shipping_discount_total: 0,
+      discount_total: 0,
+      total_amount: subtotal + shippingTotal,
+      item_count: itemCount,
+    };
+  };
+
+  const getCurrentPricing = () => state.pricing || getFallbackPricing();
+
+  const buildVoucherHeadline = (voucher) => {
+    const discountText =
+      voucher.discount_type === "percent"
+        ? `${Number(voucher.discount_value || 0)}%`
+        : formatCurrency(voucher.discount_value || 0);
+
+    return voucher.voucher_kind === "shipping"
+      ? `Giảm ${discountText} phí vận chuyển cho đơn từ ${formatCurrency(
+          voucher.min_order_amount || 0
+        )}`
+      : `Giảm ${discountText} cho đơn từ ${formatCurrency(
+          voucher.min_order_amount || 0
+        )}`;
+  };
+
+  const buildVoucherSummary = (voucher) => {
+    const parts = [
+      `Áp dụng ${voucher.category_name ? `cho ${voucher.category_name}` : "toàn sàn"}`,
+      `Hiệu lực ${formatDateTime(voucher.starts_at)} - ${formatDateTime(voucher.ends_at)}`,
+    ];
+
+    if (voucher.discount_type === "percent" && voucher.max_discount_amount) {
+      parts.push(`Tối đa ${formatCurrency(voucher.max_discount_amount)}`);
+    }
+
+    return parts.join(" • ");
+  };
+
+  const getVoucherKindMeta = (kind) =>
+    kind === "shipping"
+      ? {
+          title: "Voucher giảm phí vận chuyển",
+          subtitle: "Các voucher dưới đây giảm trực tiếp vào phí vận chuyển của đơn hàng.",
+          empty: "Chưa có voucher giảm phí vận chuyển phù hợp với giỏ hàng hiện tại.",
+          available: "voucher giảm phí vận chuyển",
+          selected: "Đã áp dụng voucher giảm phí vận chuyển",
+        }
+      : {
+          title: "Voucher giảm giá",
+          subtitle: "Các voucher dưới đây giảm trực tiếp vào giá trị đơn hàng của bạn.",
+          empty: "Chưa có voucher giảm giá phù hợp với giỏ hàng hiện tại.",
+          available: "voucher giảm giá",
+          selected: "Đã áp dụng voucher giảm giá",
+        };
+
+  const getVoucherElements = (kind) =>
+    kind === "shipping"
+      ? {
+          text: els.shippingVoucherText,
+          meta: els.shippingVoucherMeta,
+          button: els.chooseShippingVoucherBtn,
+        }
+      : {
+          text: els.discountVoucherText,
+          meta: els.discountVoucherMeta,
+          button: els.chooseDiscountVoucherBtn,
+        };
+
+  const renderPlatformVoucher = (kind) => {
+    const { button, text, meta } = getVoucherElements(kind);
+    const vouchers = state.platformVouchers[kind] || [];
+    const selectedVoucher = state.selectedPlatformVouchers[kind];
+    const selectionError = state.selectionErrors[kind];
+    const copy = getVoucherKindMeta(kind);
+
+    if (!button || !text || !meta) return;
+
+    button.disabled =
+      state.previewLoading || state.submitting || !state.items.length || !!state.previewError;
+
+    if (state.previewLoading) {
+      text.textContent = "Đang cập nhật voucher và tổng tiền...";
+      button.textContent = "Đang tải...";
+      meta.hidden = true;
+      meta.innerHTML = "";
+      return;
+    }
+
+    if (state.previewError) {
+      text.textContent = state.previewError;
+      button.textContent = "Thử lại";
+      meta.hidden = true;
+      meta.innerHTML = "";
+      return;
+    }
+
+    if (selectedVoucher) {
+      text.textContent = `${copy.selected} ${selectedVoucher.code}.`;
+      button.textContent = "Đổi voucher";
+      meta.hidden = false;
+      meta.innerHTML = [
+        `<span class="checkout-voucher-chip is-code">${escapeHtml(
+          selectedVoucher.code
+        )}</span>`,
+        `<span class="checkout-voucher-chip">Tiết kiệm ${escapeHtml(
+          formatCurrency(selectedVoucher.estimated_discount || 0)
+        )}</span>`,
+      ].join("");
+      return;
+    }
+
+    const fallbackText = selectionError
+      ? selectionError
+      : vouchers.length
+      ? `Có ${vouchers.length} ${copy.available} phù hợp với giỏ hàng của bạn.`
+      : copy.empty;
+
+    text.textContent = fallbackText;
+    button.textContent = vouchers.length ? "Chọn voucher" : "Không có voucher";
+    button.disabled = button.disabled || vouchers.length === 0;
+    meta.hidden = true;
+    meta.innerHTML = "";
+  };
+
+  const renderPlatformVoucherList = () => {
+    if (!els.platformVoucherList) return;
+
+    const kind = state.activeVoucherKind;
+    const vouchers = state.platformVouchers[kind] || [];
+    const selectedCode = state.selectedVoucherCodes[kind] || "";
+    const copy = getVoucherKindMeta(kind);
+
+    if (els.platformVoucherTitle) {
+      els.platformVoucherTitle.textContent = copy.title;
+    }
+
+    if (els.platformVoucherSubtitle) {
+      els.platformVoucherSubtitle.textContent = copy.subtitle;
+    }
+
+    const clearCard = `
+      <button
+        class="checkout-voucher-card ${selectedCode ? "" : "is-active"}"
+        type="button"
+        data-platform-voucher-code=""
+      >
+        <div class="checkout-voucher-card-main">
+          <strong>Không dùng voucher</strong>
+          <span>Giữ nguyên tổng thanh toán hiện tại.</span>
+        </div>
+      </button>
+    `;
+
+    if (!vouchers.length) {
+      els.platformVoucherList.innerHTML = `
+        ${clearCard}
+        <div class="address-empty-card">
+          <strong>Chưa có voucher phù hợp</strong>
+          <p>${escapeHtml(copy.empty)}</p>
+        </div>
+      `;
+      return;
+    }
+
+    els.platformVoucherList.innerHTML = [
+      clearCard,
+      ...vouchers.map((voucher) => {
+        const isActive = selectedCode === voucher.code;
+        return `
+          <button
+            class="checkout-voucher-card ${isActive ? "is-active" : ""}"
+            type="button"
+            data-platform-voucher-code="${escapeHtml(voucher.code)}"
+          >
+            <div class="checkout-voucher-card-head">
+              <span class="checkout-voucher-card-code">${escapeHtml(voucher.code)}</span>
+              <span class="checkout-voucher-card-save">Tiết kiệm ${escapeHtml(
+                formatCurrency(voucher.estimated_discount || 0)
+              )}</span>
+            </div>
+            <div class="checkout-voucher-card-main">
+              <strong>${escapeHtml(buildVoucherHeadline(voucher))}</strong>
+              <span>${escapeHtml(buildVoucherSummary(voucher))}</span>
+            </div>
+          </button>
+        `;
+      }),
+    ].join("");
+  };
+
+  const renderSummary = () => {
+    const pricing = getCurrentPricing();
+
+    if (els.subtotal) {
+      els.subtotal.textContent = formatCurrency(pricing.subtotal);
+    }
+
+    if (els.shipping) {
+      els.shipping.textContent = formatCurrency(pricing.shipping_total);
+    }
+
+    if (els.productDiscount && els.productDiscountRow) {
+      const hasProductDiscount = Number(pricing.product_discount_total || 0) > 0;
+      els.productDiscountRow.hidden = !hasProductDiscount;
+      els.productDiscount.textContent = `-${formatCurrency(
+        pricing.product_discount_total || 0
+      )}`;
+    }
+
+    if (els.shippingDiscount && els.shippingDiscountRow) {
+      const hasShippingDiscount = Number(pricing.shipping_discount_total || 0) > 0;
+      els.shippingDiscountRow.hidden = !hasShippingDiscount;
+      els.shippingDiscount.textContent = `-${formatCurrency(
+        pricing.shipping_discount_total || 0
+      )}`;
+    }
+
+    if (els.total) {
+      els.total.textContent = formatCurrency(pricing.total_amount);
+    }
+
+    if (els.itemCount) {
+      const itemCount = Number(pricing.item_count || 0);
+      els.itemCount.textContent = itemCount ? `${itemCount} sản phẩm` : "";
+    }
+
+    const hasAddress = Boolean(getSelectedAddress());
+    const canOrder =
+      state.items.length > 0 &&
+      hasAddress &&
+      !state.submitting &&
+      !state.previewLoading &&
+      !state.previewError;
+
+    if (els.placeOrderBtn) {
+      els.placeOrderBtn.disabled = !canOrder;
+      els.placeOrderBtn.textContent = state.submitting ? "Đang đặt hàng..." : "Đặt hàng";
+    }
+
+    if (els.note) {
+      if (state.previewError && state.items.length > 0) {
+        els.note.textContent = state.previewError;
+        els.note.hidden = false;
+      } else if (!hasAddress && state.items.length > 0) {
+        els.note.textContent =
+          "Vui lòng thêm địa chỉ nhận hàng trước khi đặt hàng.";
+        els.note.hidden = false;
+      } else {
+        els.note.textContent = "";
+        els.note.hidden = true;
+      }
+    }
+  };
+
   const renderAddress = () => {
     const selected = getSelectedAddress();
 
@@ -223,7 +579,7 @@
       if (els.changeAddressBtn) {
         els.changeAddressBtn.disabled = true;
       }
-      updateSummary();
+      renderSummary();
       return;
     }
 
@@ -252,7 +608,7 @@
     if (els.changeAddressBtn) {
       els.changeAddressBtn.disabled = false;
     }
-    updateSummary();
+    renderSummary();
   };
 
   const renderAddressModalList = () => {
@@ -272,9 +628,11 @@
       .map((address) => {
         const isSelected = address.id === state.selectedAddressId;
         const tags = [];
+
         if (address.is_default) {
           tags.push('<span class="address-tag is-default">Mặc định</span>');
         }
+
         tags.push(
           `<span class="address-tag">${escapeHtml(getAddressTypeLabel(address.address_type))}</span>`
         );
@@ -313,74 +671,6 @@
       .join("");
   };
 
-  const openAddressModal = () => {
-    if (!els.addressModal) return;
-    renderAddressModalList();
-    els.addressModal.hidden = false;
-    els.addressModal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("account-modal-open");
-  };
-
-  const closeAddressModal = () => {
-    if (!els.addressModal) return;
-    els.addressModal.hidden = true;
-    els.addressModal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("account-modal-open");
-  };
-
-  const getShippingTotal = () => {
-    const groups = getGroups();
-    return groups.reduce((sum, group) => {
-      const method = state.shipping[group.id] || "fast";
-      const option = SHIPPING_OPTIONS[method] || SHIPPING_OPTIONS.fast;
-      return sum + option.fee;
-    }, 0);
-  };
-
-  const updateSummary = () => {
-    const subtotal = state.items.reduce(
-      (sum, item) => sum + getItemPrice(item) * Number(item?.quantity || 0),
-      0
-    );
-    const shippingTotal = state.items.length ? getShippingTotal() : 0;
-    const total = subtotal + shippingTotal;
-    const itemCount = state.items.reduce(
-      (sum, item) => sum + Number(item?.quantity || 0),
-      0
-    );
-
-    if (els.subtotal) {
-      els.subtotal.textContent = formatCurrency(subtotal);
-    }
-    if (els.shipping) {
-      els.shipping.textContent = formatCurrency(shippingTotal);
-    }
-    if (els.total) {
-      els.total.textContent = formatCurrency(total);
-    }
-    if (els.itemCount) {
-      els.itemCount.textContent = itemCount ? `${itemCount} sản phẩm` : "";
-    }
-
-    const hasAddress = Boolean(getSelectedAddress());
-    const canOrder = state.items.length > 0 && hasAddress && !state.submitting;
-
-    if (els.placeOrderBtn) {
-      els.placeOrderBtn.disabled = !canOrder;
-      els.placeOrderBtn.textContent = state.submitting ? "Đang đặt hàng..." : "Đặt hàng";
-    }
-
-    if (els.note) {
-      if (!hasAddress && state.items.length > 0) {
-        els.note.textContent = "Vui lòng thêm địa chỉ nhận hàng trước khi đặt hàng.";
-        els.note.hidden = false;
-      } else {
-        els.note.textContent = "";
-        els.note.hidden = true;
-      }
-    }
-  };
-
   const renderShopList = () => {
     const groups = getGroups();
 
@@ -391,6 +681,7 @@
           (sum, item) => sum + Number(item?.quantity || 0),
           0
         );
+
         if (!state.shipping[shopId]) {
           state.shipping[shopId] = "fast";
         }
@@ -481,7 +772,7 @@
               <div class="checkout-shop-voucher">
                 <div>
                   <h4>Voucher của shop</h4>
-                  <p>Chức năng sẽ cập nhật sau.</p>
+                  <p>Chức năng này sẽ được cập nhật sau.</p>
                 </div>
                 <button class="ghost-btn" type="button" disabled>Chọn voucher</button>
               </div>
@@ -529,6 +820,92 @@
     }
   };
 
+  const refreshCheckoutPreview = async ({ silent = false } = {}) => {
+    if (!ensureAuth() || !state.items.length) return;
+
+    const requestId = ++state.previewRequestId;
+    state.previewLoading = true;
+    state.previewError = "";
+    state.selectionErrors = { discount: "", shipping: "" };
+    renderPlatformVoucher("discount");
+    renderPlatformVoucher("shipping");
+    renderSummary();
+
+    try {
+      const payload = await auth.apiFetch(
+        "/checkout/preview",
+        {
+          method: "POST",
+          body: {
+            shipping_methods: state.shipping,
+            platform_discount_voucher_code:
+              state.selectedVoucherCodes.discount || null,
+            platform_shipping_voucher_code:
+              state.selectedVoucherCodes.shipping || null,
+          },
+        },
+        { redirectOn401: true }
+      );
+
+      if (requestId !== state.previewRequestId) return;
+
+      state.platformVouchers = {
+        discount: Array.isArray(payload?.vouchers?.discount)
+          ? payload.vouchers.discount
+          : [],
+        shipping: Array.isArray(payload?.vouchers?.shipping)
+          ? payload.vouchers.shipping
+          : [],
+      };
+      state.selectedPlatformVouchers = {
+        discount: payload?.selected_vouchers?.discount || null,
+        shipping: payload?.selected_vouchers?.shipping || null,
+      };
+      state.selectedVoucherCodes = {
+        discount: payload?.selected_voucher_codes?.discount || "",
+        shipping: payload?.selected_voucher_codes?.shipping || "",
+      };
+      state.selectionErrors = {
+        discount: payload?.selection_errors?.discount || "",
+        shipping: payload?.selection_errors?.shipping || "",
+      };
+      state.pricing = payload?.pricing || null;
+      state.shipping = payload?.shipping_methods || state.shipping;
+      state.previewError = "";
+
+      renderShopList();
+      renderPlatformVoucher("discount");
+      renderPlatformVoucher("shipping");
+      renderPlatformVoucherList();
+      renderSummary();
+    } catch (error) {
+      if (requestId !== state.previewRequestId) return;
+
+      state.platformVouchers = { discount: [], shipping: [] };
+      state.selectedPlatformVouchers = { discount: null, shipping: null };
+      state.selectedVoucherCodes = { discount: "", shipping: "" };
+      state.selectionErrors = { discount: "", shipping: "" };
+      state.pricing = null;
+      state.previewError =
+        error instanceof Error ? error.message : "Không thể tính được tổng đơn hàng.";
+
+      renderPlatformVoucher("discount");
+      renderPlatformVoucher("shipping");
+      renderPlatformVoucherList();
+      renderSummary();
+
+      if (!silent) {
+        showStatus(state.previewError, true);
+      }
+    } finally {
+      if (requestId !== state.previewRequestId) return;
+      state.previewLoading = false;
+      renderPlatformVoucher("discount");
+      renderPlatformVoucher("shipping");
+      renderSummary();
+    }
+  };
+
   const loadCart = async () => {
     if (!ensureAuth()) return;
 
@@ -543,18 +920,30 @@
         hideStatus();
         state.items = [];
         state.productMap = new Map();
-        updateSummary();
+        state.platformVouchers = { discount: [], shipping: [] };
+        state.selectedPlatformVouchers = { discount: null, shipping: null };
+        state.selectedVoucherCodes = { discount: "", shipping: "" };
+        state.selectionErrors = { discount: "", shipping: "" };
+        state.pricing = null;
+        state.previewError = "";
+        renderPlatformVoucher("discount");
+        renderPlatformVoucher("shipping");
+        renderSummary();
         return;
       }
 
       const productMap = await loadProductDetails(items);
       state.items = items;
       state.productMap = productMap;
+      state.shipping = {};
       renderShopList();
+      renderSummary();
+      renderPlatformVoucher("discount");
+      renderPlatformVoucher("shipping");
+      await refreshCheckoutPreview({ silent: true });
       hideStatus();
       els.content.hidden = false;
       els.empty.hidden = true;
-      updateSummary();
     } catch (error) {
       els.content.hidden = true;
       els.empty.hidden = false;
@@ -563,12 +952,12 @@
   };
 
   const placeOrder = async () => {
-    if (state.submitting) return;
+    if (state.submitting || state.previewLoading || state.previewError) return;
 
     const selectedAddress = getSelectedAddress();
     if (!selectedAddress) {
       showStatus("Bạn cần thêm địa chỉ nhận hàng trước khi đặt.", true);
-      updateSummary();
+      renderSummary();
       return;
     }
 
@@ -579,13 +968,22 @@
 
     try {
       state.submitting = true;
-      updateSummary();
+      renderPlatformVoucher("discount");
+      renderPlatformVoucher("shipping");
+      renderSummary();
       showStatus("Đang đặt hàng...");
       await auth.apiFetch(
         "/checkout",
         {
           method: "POST",
-          body: { payment_method: paymentMethod },
+          body: {
+            payment_method: paymentMethod,
+            shipping_methods: state.shipping,
+            platform_discount_voucher_code:
+              state.selectedVoucherCodes.discount || null,
+            platform_shipping_voucher_code:
+              state.selectedVoucherCodes.shipping || null,
+          },
         },
         { redirectOn401: true }
       );
@@ -598,49 +996,108 @@
       showStatus(error instanceof Error ? error.message : "Không thể đặt hàng.", true);
     } finally {
       state.submitting = false;
-      updateSummary();
+      renderPlatformVoucher("discount");
+      renderPlatformVoucher("shipping");
+      renderSummary();
     }
   };
 
   const bindEvents = () => {
     els.changeAddressBtn?.addEventListener("click", () => {
       if (!state.addresses.length) return;
-      openAddressModal();
+      renderAddressModalList();
+      openModal(els.addressModal);
     });
 
     els.closeAddressModalBtn?.addEventListener("click", () => {
-      closeAddressModal();
+      closeModal(els.addressModal);
     });
 
-    els.addressModal?.addEventListener("click", (event) => {
-      if (event.target === els.addressModal) {
-        closeAddressModal();
+    els.closePlatformVoucherModalBtn?.addEventListener("click", () => {
+      closeModal(els.platformVoucherModal);
+    });
+
+    const handleVoucherButtonClick = async (kind) => {
+      const { button } = getVoucherElements(kind);
+      if (!button) return;
+
+      if (button.disabled) {
+        if (state.previewError) {
+          await refreshCheckoutPreview();
+        }
+        return;
       }
+
+      state.activeVoucherKind = kind;
+      renderPlatformVoucherList();
+      openModal(els.platformVoucherModal);
+    };
+
+    els.chooseDiscountVoucherBtn?.addEventListener("click", async () => {
+      await handleVoucherButtonClick("discount");
+    });
+
+    els.chooseShippingVoucherBtn?.addEventListener("click", async () => {
+      await handleVoucherButtonClick("shipping");
+    });
+
+    [els.addressModal, els.platformVoucherModal].forEach((modal) => {
+      modal?.addEventListener("click", (event) => {
+        if (event.target === modal) {
+          closeModal(modal);
+        }
+      });
     });
 
     els.addressModalList?.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-select-address]");
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("[data-select-address]");
       if (!button) return;
+
       const addressId = String(button.dataset.selectAddress || "");
       if (!addressId) return;
+
       state.selectedAddressId = addressId;
       renderAddress();
-      closeAddressModal();
+      closeModal(els.addressModal);
     });
 
-    els.shopList.addEventListener("change", (event) => {
-      const input = event.target.closest("input[data-shipping-option]");
+    els.platformVoucherList?.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("[data-platform-voucher-code]");
+      if (!button) return;
+
+      state.selectedVoucherCodes[state.activeVoucherKind] = String(
+        button.dataset.platformVoucherCode || ""
+      );
+      closeModal(els.platformVoucherModal);
+      await refreshCheckoutPreview({ silent: true });
+    });
+
+    els.shopList.addEventListener("change", async (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const input = target.closest("input[data-shipping-option]");
       if (!input) return;
+
       const shopId = String(input.dataset.shopId || "");
       const method = String(input.value || "fast");
       if (!shopId) return;
+
       state.shipping[shopId] = method;
       const optionGroup = input.closest(".checkout-shipping-options");
       optionGroup?.querySelectorAll(".checkout-ship-option").forEach((label) => {
         const radio = label.querySelector("input[data-shipping-option]");
         label.classList.toggle("is-active", Boolean(radio?.checked));
       });
-      updateSummary();
+
+      renderSummary();
+      await refreshCheckoutPreview({ silent: true });
     });
 
     document.querySelectorAll('input[name="paymentMethod"]').forEach((input) => {
@@ -656,6 +1113,10 @@
 
   bindEvents();
   updatePaymentStyles();
+  renderPlatformVoucher("discount");
+  renderPlatformVoucher("shipping");
+  renderSummary();
   loadCart();
   loadAddresses();
+
 })();

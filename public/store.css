@@ -3861,11 +3861,19 @@ body[data-page="product"] .hero {
   color: #8b7f6f;
   padding: 8px 14px;
   border-radius: 10px;
-  cursor: not-allowed;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.ghost-btn:hover:not(:disabled) {
+  border-color: rgba(255, 122, 0, 0.38);
+  color: var(--brand-dark);
+  background: rgba(255, 247, 240, 0.82);
 }
 
 .ghost-btn:disabled {
   opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .checkout-shipping-options {
@@ -3924,6 +3932,16 @@ body[data-page="product"] .hero {
   flex-wrap: wrap;
 }
 
+.checkout-voucher-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.checkout-voucher-stack .checkout-voucher-row + .checkout-voucher-row {
+  padding-top: 18px;
+  border-top: 1px dashed rgba(17, 24, 39, 0.12);
+}
+
 .checkout-voucher-row h3 {
   margin: 0;
   font-size: 16px;
@@ -3933,6 +3951,110 @@ body[data-page="product"] .hero {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.checkout-voucher-meta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkout-voucher-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255, 245, 235, 0.9);
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.checkout-voucher-chip.is-code {
+  background: rgba(255, 122, 0, 0.12);
+  color: var(--accent);
+}
+
+.checkout-modal-subtitle {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.checkout-voucher-list {
+  display: grid;
+  gap: 12px;
+}
+
+.checkout-voucher-card {
+  appearance: none;
+  width: 100%;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 16px;
+  background: white;
+  padding: 16px 18px;
+  display: grid;
+  gap: 10px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.checkout-voucher-card:hover {
+  border-color: rgba(255, 122, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.checkout-voucher-card.is-active {
+  border-color: rgba(255, 122, 0, 0.48);
+  background: rgba(255, 247, 240, 0.88);
+  box-shadow: 0 18px 26px rgba(255, 122, 0, 0.1);
+}
+
+.checkout-voucher-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.checkout-voucher-card-code {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 122, 0, 0.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.checkout-voucher-card-save {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-dark);
+}
+
+.checkout-voucher-card-main {
+  display: grid;
+  gap: 6px;
+}
+
+.checkout-voucher-card-main strong {
+  font-size: 15px;
+}
+
+.checkout-voucher-card-main span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .checkout-payment h3 {
@@ -3991,6 +4113,10 @@ body[data-page="product"] .hero {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.checkout-discount-row strong {
+  color: #15803d;
 }
 
 .checkout-summary-total {

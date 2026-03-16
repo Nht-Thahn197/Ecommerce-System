@@ -14,7 +14,30 @@ model categories {
   created_at       DateTime?    @default(now()) @db.Timestamp(6)
   categories       categories?  @relation("categoriesTocategories", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_categories categories[] @relation("categoriesTocategories")
+  platform_vouchers platform_vouchers[]
   products         products[]
+}
+
+model platform_vouchers {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                String    @unique @db.VarChar(50)
+  voucher_kind        String    @default("discount") @db.VarChar(20)
+  discount_type       String    @db.VarChar(20)
+  discount_value      Decimal   @db.Decimal(12, 2)
+  min_order_amount    Decimal   @default(0) @db.Decimal(12, 2)
+  category_id         Int?
+  max_discount_amount Decimal?  @db.Decimal(12, 2)
+  starts_at           DateTime  @db.Timestamp(6)
+  ends_at             DateTime  @db.Timestamp(6)
+  is_active           Boolean?  @default(true)
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  updated_at          DateTime? @default(now()) @db.Timestamp(6)
+  categories          categories? @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([category_id])
+  @@index([is_active])
+  @@index([voucher_kind])
+  @@index([starts_at, ends_at])
 }
 
 model order_items {

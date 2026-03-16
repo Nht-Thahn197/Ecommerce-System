@@ -14,3 +14,23 @@ export interface AdminProductsQuery {
 export interface UpdateProductStatusInput {
   status?: string;
 }
+
+export interface AdminVouchersQuery {
+  limit?: string;
+  page?: string;
+  q?: string;
+  status?: string;
+}
+
+export interface AdminVoucherInput {
+  code?: string;
+  voucher_kind?: string;
+  discount_type?: string;
+  discount_value?: number | string;
+  min_order_amount?: number | string;
+  category_id?: number | string | null;
+  max_discount_amount?: number | string | null;
+  starts_at?: string;
+  ends_at?: string;
+  is_active?: boolean;
+}

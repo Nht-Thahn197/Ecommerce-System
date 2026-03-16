@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quản lý mã giảm giá | Bambi</title>
+    <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="/ui/admin/">
+          <span class="admin-brand-mark">B</span>
+          <div class="admin-brand-copy">
+            <strong>Bambi Admin</strong>
+            <span>Hệ thống quản trị sàn</span>
+          </div>
+        </a>
+
+        <section class="admin-sidebar-section">
+          <p class="admin-sidebar-heading">Điều hướng</p>
+          <nav class="admin-nav">
+            <a class="admin-nav-link" href="/ui/admin/" data-page="dashboard">
+              <span class="admin-nav-icon">TQ</span>
+              <span class="admin-nav-copy">
+                <strong>Tổng quan</strong>
+                <span>Chỉ số vận hành</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/categories.html" data-page="categories">
+              <span class="admin-nav-icon">DM</span>
+              <span class="admin-nav-copy">
+                <strong>Quản lý danh mục</strong>
+                <span>Cây danh mục sản phẩm</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/shops.html" data-page="shops">
+              <span class="admin-nav-icon">QS</span>
+              <span class="admin-nav-copy">
+                <strong>Quản lý shop</strong>
+                <span>Duyệt và theo dõi shop</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/products.html" data-page="products">
+              <span class="admin-nav-icon">SP</span>
+              <span class="admin-nav-copy">
+                <strong>Quản lý sản phẩm</strong>
+                <span>Duyệt, từ chối, khóa sản phẩm</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/users.html" data-page="users">
+              <span class="admin-nav-icon">ND</span>
+              <span class="admin-nav-copy">
+                <strong>Quản lý người dùng</strong>
+                <span>Danh sách tài khoản</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/returns.html" data-page="returns">
+              <span class="admin-nav-icon">TH</span>
+              <span class="admin-nav-copy">
+                <strong>Trả hàng & tranh chấp</strong>
+                <span>Xử lý khiếu nại</span>
+              </span>
+            </a>
+            <a class="admin-nav-link" href="/ui/admin/orders.html" data-page="orders">
+              <span class="admin-nav-icon">DH</span>
+              <span class="admin-nav-copy">
+                <strong>Đơn gần đây</strong>
+                <span>Theo dõi dòng đơn mới</span>
+              </span>
+            </a>
+          </nav>
+        </section>
+
+        <div class="admin-sidebar-foot">
+          <button class="btn secondary" id="logoutAdmin" type="button">Đăng xuất quản trị</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-page-header">
+          <div>
+            <div class="admin-breadcrumb">Trang quản trị / Quản lý mã giảm giá</div>
+            <h1>Quản lý mã giảm giá của sàn</h1>
+            <p>Tạo, sửa và xóa voucher toàn sàn với điều kiện đơn hàng, ngành hàng áp dụng, loại ưu đãi và khung thời gian hiệu lực.</p>
+          </div>
+          <div class="admin-hero-tag">Voucher sàn + 2 loại ưu đãi</div>
+        </header>
+
+        <div id="status" class="status" style="display: none"></div>
+
+        <section class="admin-card hero-card">
+          <div class="admin-section-head">
+            <div>
+              <div class="kicker">Voucher của sàn</div>
+              <h2 style="margin-top: 8px">Tổng quan mã giảm giá đang vận hành</h2>
+              <p>Theo dõi voucher đang chạy, sắp bắt đầu, đã hết hạn và đang tạm tắt trong một màn hình.</p>
+            </div>
+            <div class="admin-hero-tag">CRUD mã giảm giá</div>
+          </div>
+          <div id="voucherStats" class="stats-grid voucher-stats-grid"></div>
+        </section>
+
+        <section class="page-grid">
+          <section class="admin-card span-8">
+            <div class="toolbar-row">
+              <div>
+                <h2>Danh sách voucher</h2>
+                <p class="muted">Voucher có thể giảm giá đơn hàng hoặc giảm phí vận chuyển, hỗ trợ giá trị cố định hoặc phần trăm.</p>
+              </div>
+              <span class="chip gray" id="voucherCountLabel">0 voucher</span>
+            </div>
+
+            <div class="stack-actions">
+              <button class="btn" id="createVoucherBtn" type="button">Tạo mã mới</button>
+              <button class="btn ghost" id="reloadVouchers" type="button">Tải lại</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="toolbar-form">
+              <input id="voucherQuery" class="input" placeholder="Tìm theo mã voucher hoặc ngành hàng" />
+              <select id="voucherStatusFilter" class="select">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="running">Đang diễn ra</option>
+                <option value="upcoming">Sắp bắt đầu</option>
+                <option value="expired">Đã kết thúc</option>
+                <option value="inactive">Tạm tắt</option>
+              </select>
+              <button class="btn" id="applyVoucherFilter" type="button">Lọc</button>
+              <button class="btn ghost" id="clearVoucherFilter" type="button">Xóa lọc</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div id="voucherTable"></div>
+
+            <div id="voucherPagination" class="pagination-shell" hidden>
+              <div class="pagination-summary" id="voucherPaginationSummary"></div>
+              <div class="pagination-controls">
+                <label class="pagination-size" for="voucherPageSize">
+                  <span>Mỗi trang</span>
+                  <select id="voucherPageSize" class="select">
+                    <option value="10">10</option>
+                    <option value="15" selected>15</option>
+                    <option value="20">20</option>
+                  </select>
+                </label>
+                <div class="pagination-buttons">
+                  <button class="btn ghost" id="voucherPrevPage" type="button">Trang trước</button>
+                  <span class="chip gray" id="voucherPageLabel">Trang 1/1</span>
+                  <button class="btn ghost" id="voucherNextPage" type="button">Trang sau</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="admin-card span-4">
+            <div class="toolbar-row">
+              <div>
+                <h2 id="voucherFormTitle">Tạo voucher mới</h2>
+                <p class="muted" id="voucherFormDescription">Tạo mã giảm giá cho toàn sàn với điều kiện và khung giờ áp dụng rõ ràng.</p>
+              </div>
+              <span class="chip" id="voucherFormModeTag">Tạo mới</span>
+            </div>
+
+            <form id="voucherForm" class="voucher-form-grid">
+              <input id="voucherId" type="hidden" />
+
+              <div class="field">
+                <label for="voucherCode">Mã giảm giá</label>
+                <input id="voucherCode" class="input" type="text" maxlength="50" placeholder="Ví dụ: BAMBI10K" required />
+              </div>
+
+              <div class="field">
+                <label for="voucherKind">Loại voucher</label>
+                <select id="voucherKind" class="select">
+                  <option value="discount">Voucher giảm giá</option>
+                  <option value="shipping">Voucher giảm phí vận chuyển</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="voucherDiscountType">Kiểu giảm giá</label>
+                <select id="voucherDiscountType" class="select">
+                  <option value="amount">Giảm số tiền</option>
+                  <option value="percent">Giảm phần trăm</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="voucherDiscountValue">Giá trị giảm</label>
+                <input id="voucherDiscountValue" class="input" type="number" min="0" step="1000" placeholder="Ví dụ: 10000 hoặc 10" required />
+              </div>
+
+              <div class="field">
+                <label for="voucherMinOrderAmount">Điều kiện đơn tối thiểu</label>
+                <input id="voucherMinOrderAmount" class="input" type="number" min="0" step="1000" placeholder="Ví dụ: 500000" />
+              </div>
+
+              <div class="field">
+                <label for="voucherCategoryId">Ngành hàng áp dụng</label>
+                <select id="voucherCategoryId" class="select">
+                  <option value="">Tất cả ngành hàng</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="voucherMaxDiscountAmount">Giảm tối đa</label>
+                <input id="voucherMaxDiscountAmount" class="input" type="number" min="0" step="1000" placeholder="Chỉ dùng cho voucher %" />
+              </div>
+
+              <div class="field">
+                <label for="voucherStartsAt">Bắt đầu</label>
+                <input id="voucherStartsAt" class="input" type="datetime-local" required />
+              </div>
+
+              <div class="field">
+                <label for="voucherEndsAt">Kết thúc</label>
+                <input id="voucherEndsAt" class="input" type="datetime-local" required />
+              </div>
+
+              <label class="voucher-toggle">
+                <input id="voucherIsActive" type="checkbox" checked />
+                <span>Bật voucher ngay khi đến thời gian hiệu lực</span>
+              </label>
+
+              <div class="stack-actions">
+                <button class="btn" id="submitVoucherForm" type="submit">Tạo voucher</button>
+                <button class="btn ghost" id="resetVoucherForm" type="button">Khôi phục</button>
+                <button class="btn danger" id="deleteVoucherBtn" type="button" style="display: none">Xóa voucher</button>
+              </div>
+            </form>
+
+            <div class="divider"></div>
+
+            <div class="voucher-preview-card">
+              <div class="kicker">Xem trước</div>
+              <strong id="voucherPreviewHeadline" class="voucher-preview-headline">Giảm 10.000đ cho đơn từ 0đ</strong>
+              <p id="voucherPreviewSummary" class="muted">Áp dụng toàn sàn trong khung thời gian đã chọn.</p>
+              <div id="voucherPreviewMeta" class="voucher-preview-meta"></div>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <script src="/ui/admin/admin.js"></script>
+    <script src="/ui/admin/vouchers.js"></script>
+    <script src="/ui/custom-select.js"></script>
+  </body>
+</html>

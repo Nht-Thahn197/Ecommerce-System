@@ -21,6 +21,11 @@ const return_route_1 = __importDefault(require("./modules/returns/return.route")
 const category_route_1 = __importDefault(require("./modules/categories/category.route"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
+app.get("/ui/runtime-config.js", (_req, res) => {
+    res.type("application/javascript");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(`window.BAMBI_GOOGLE_MAPS_EMBED_KEY = ${JSON.stringify(process.env.GOOGLE_MAPS_EMBED_KEY || process.env.GOOGLE_MAPS_API_KEY || "")};`);
+});
 app.use("/ui", express_1.default.static(path_1.default.join(process.cwd(), "public")));
 app.get("/", (req, res) => {
     res.send("🦌 Bambi E-Commerce API is running...");
