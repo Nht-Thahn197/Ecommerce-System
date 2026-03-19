@@ -1,6 +1,8 @@
-import { Prisma } from "@prisma/client";
 import prisma from "../libs/prisma";
-import { recalculateOrderStatus } from "../modules/orders/order.service";
+import {
+  applySellerPayoutForReceivedItem,
+  recalculateOrderStatus,
+} from "../modules/orders/order.service";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const AUTO_RECEIVE_DAYS = 7;
@@ -13,12 +15,6 @@ const AUTO_RECEIVE_INTERVAL_MS = Number(
 const PAYOUT_INTERVAL_MS = Number(
   process.env.PAYOUT_INTERVAL_MS || 60 * 60 * 1000
 );
-
-const PLATFORM_FEE_PERCENT = (() => {
-  const raw = Number(process.env.PLATFORM_FEE_PERCENT || "0");
-  if (!Number.isFinite(raw) || raw < 0) return 0;
-  return raw > 1 ? raw / 100 : raw;
-})();
 
 const addDays = (date: Date, days: number) =>
   new Date(date.getTime() + days * DAY_MS);
@@ -71,8 +67,6 @@ export const runAutoReceiveJob = async () => {
 
 export const runPayoutJob = async () => {
   const now = new Date();
-  const feeRate = new Prisma.Decimal(PLATFORM_FEE_PERCENT);
-
   const items = await prisma.order_items.findMany({
     where: {
       status: "received",
@@ -82,11 +76,6 @@ export const runPayoutJob = async () => {
     },
     select: {
       id: true,
-      quantity: true,
-      price: true,
-      shop_id: true,
-      payout_available_at: true,
-      shops: { select: { owner_id: true } },
     },
   });
 
@@ -94,48 +83,7 @@ export const runPayoutJob = async () => {
 
   await prisma.$transaction(async (tx) => {
     for (const item of items) {
-      if (!item.shop_id || !item.shops?.owner_id) continue;
-
-      const gross = new Prisma.Decimal(item.price).mul(item.quantity);
-      const fee = gross.mul(feeRate);
-      const net = gross.sub(fee);
-
-      const wallet =
-        (await tx.wallets.findFirst({
-          where: { user_id: item.shops.owner_id },
-          select: { id: true },
-        })) ||
-        (await tx.wallets.create({
-          data: { user_id: item.shops.owner_id, balance: 0 },
-          select: { id: true },
-        }));
-
-      await tx.wallets.update({
-        where: { id: wallet.id },
-        data: { balance: { increment: net } },
-      });
-
-      await tx.wallet_transactions.create({
-        data: {
-          wallet_id: wallet.id,
-          amount: net,
-          type: "payout",
-          reference_id: item.id,
-        },
-      });
-
-      await tx.shop_payouts.create({
-        data: {
-          order_item_id: item.id,
-          shop_id: item.shop_id,
-          gross_amount: gross,
-          fee_amount: fee,
-          net_amount: net,
-          status: "paid",
-          available_at: item.payout_available_at || now,
-          paid_at: now,
-        },
-      });
+      await applySellerPayoutForReceivedItem(tx, item.id, now);
     }
   });
 

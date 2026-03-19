@@ -4,6 +4,7 @@ import path from "path";
 import multer from "multer";
 import { authMiddleware } from "../../middleware/auth.middleware";
 import {
+  changeMyPassword,
   login,
   logout,
   logoutAll,
@@ -50,6 +51,7 @@ router.post("/logout", logout);
 router.post("/logout-all", authMiddleware, logoutAll);
 router.get("/me", authMiddleware, me);
 router.patch("/me", authMiddleware, updateMe);
+router.patch("/me/password", authMiddleware, changeMyPassword);
 router.post(
   "/me/avatar",
   authMiddleware,

@@ -5,6 +5,7 @@ import multer from "multer";
 import {
   authMiddleware,
   requireAdmin,
+  requireSeller,
 } from "../../middleware/auth.middleware";
 import {
   listPending,
@@ -16,6 +17,13 @@ import {
   uploadDocument,
   updateStatus,
 } from "./shop.controller";
+import {
+  createShopVoucherHandler,
+  deleteShopVoucherHandler,
+  listShopVoucherHandler,
+  shopVoucherDetailHandler,
+  updateShopVoucherHandler,
+} from "./shop-voucher.controller";
 
 const router = Router();
 
@@ -107,6 +115,26 @@ router.post(
 router.get("/me", authMiddleware, myShops);
 router.post("/:id/avatar", authMiddleware, avatarUpload.single("avatar"), uploadAvatar);
 router.patch("/:id/profile", authMiddleware, updateProfile);
+router.get("/:id/vouchers", authMiddleware, requireSeller, listShopVoucherHandler);
+router.get(
+  "/:id/vouchers/:voucherId",
+  authMiddleware,
+  requireSeller,
+  shopVoucherDetailHandler
+);
+router.post("/:id/vouchers", authMiddleware, requireSeller, createShopVoucherHandler);
+router.patch(
+  "/:id/vouchers/:voucherId",
+  authMiddleware,
+  requireSeller,
+  updateShopVoucherHandler
+);
+router.delete(
+  "/:id/vouchers/:voucherId",
+  authMiddleware,
+  requireSeller,
+  deleteShopVoucherHandler
+);
 router.get("/pending", authMiddleware, requireAdmin, listPending);
 router.patch(
   "/:id/status",

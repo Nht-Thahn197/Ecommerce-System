@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tài khoản của tôi | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css?v=20260312-1" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260319-49" />
   </head>
   <body>
     <div class="topbar">
@@ -73,8 +73,11 @@
           <nav class="side-menu">
             <a class="active" data-account-nav="profile" href="#profile">Hồ sơ của tôi</a>
             <a data-account-nav="addresses" href="#addresses">Địa chỉ</a>
-            <a href="#">Đổi mật khẩu</a>
-            <a href="#">Thông báo</a>
+            <a data-account-nav="password" href="#password">Đổi mật khẩu</a>
+            <a data-account-nav="notifications" href="#notifications">
+              <span>Thông báo</span>
+              <span id="notificationNavBadge" class="account-nav-badge" hidden>0</span>
+            </a>
           </nav>
         </aside>
 
@@ -144,12 +147,78 @@
             <div id="addressStatus" class="status" style="display: none; margin-bottom: 16px"></div>
             <div id="addressList" class="address-list"></div>
           </section>
+
+          <section
+            class="panel-card account-panel"
+            data-account-panel="password"
+            id="password"
+            hidden
+          >
+            <h2 class="panel-title">Đổi Mật Khẩu</h2>
+            <p class="panel-sub">Để bảo vệ tài khoản, vui lòng nhập mật khẩu hiện tại và đặt mật khẩu mới.</p>
+            <div class="account-form-shell">
+              <div class="form-row">
+                <label for="currentPassword">Mật khẩu cũ</label>
+                <input
+                  id="currentPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Nhập mật khẩu hiện tại"
+                />
+              </div>
+              <div class="form-row">
+                <label for="newPassword">Mật khẩu mới</label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="Nhập mật khẩu mới"
+                />
+              </div>
+              <div class="form-row">
+                <label for="confirmNewPassword">Xác nhận mật khẩu mới</label>
+                <input
+                  id="confirmNewPassword"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="Nhập lại mật khẩu mới"
+                />
+              </div>
+              <button id="savePassword" class="save-btn" type="button">Cập nhật mật khẩu</button>
+              <div id="passwordStatus" class="status" style="display: none; margin-top: 12px"></div>
+            </div>
+          </section>
+
+          <section
+            class="panel-card account-panel"
+            data-account-panel="notifications"
+            id="notifications"
+            hidden
+          >
+            <div class="notification-panel-head">
+              <div>
+                <h2 class="panel-title">Thông Báo</h2>
+                <p id="notificationSummary" class="panel-sub">
+                  Theo dõi cập nhật đơn hàng và yêu cầu trả hàng theo thời gian gần thực.
+                </p>
+              </div>
+              <button
+                id="markAllNotificationsReadBtn"
+                class="address-secondary-btn"
+                type="button"
+              >
+                Đánh dấu đã đọc tất cả
+              </button>
+            </div>
+            <div id="notificationStatus" class="status" style="display: none; margin-bottom: 16px"></div>
+            <div id="notificationList" class="notification-list"></div>
+          </section>
         </div>
       </div>
     </main>
 
     <footer class="footer">
-      Bambi Marketplace - Mua bán mọi thứ một cách nhanh chóng
+      Bambi Marketplace - Mua sắm trực tuyến an toàn và tiện lợi. © 2024 Bambi Inc. All rights reserved.
     </footer>
 
     <div id="addressModal" class="account-modal" aria-hidden="true" hidden>
@@ -287,7 +356,7 @@
     </div>
 
     <script src="/ui/store.js?v=20260311-4"></script>
-    <script src="/ui/account.js?v=20260312-1"></script>
+    <script src="/ui/account.js?v=20260319-4"></script>
     <script src="/ui/custom-select.js"></script>
   </body>
 </html>

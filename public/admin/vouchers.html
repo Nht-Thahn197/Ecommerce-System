@@ -84,9 +84,7 @@
           <div>
             <div class="admin-breadcrumb">Trang quản trị / Quản lý mã giảm giá</div>
             <h1>Quản lý mã giảm giá của sàn</h1>
-            <p>Tạo, sửa và xóa voucher toàn sàn với điều kiện đơn hàng, ngành hàng áp dụng, loại ưu đãi và khung thời gian hiệu lực.</p>
           </div>
-          <div class="admin-hero-tag">Voucher sàn + 2 loại ưu đãi</div>
         </header>
 
         <div id="status" class="status" style="display: none"></div>
@@ -94,11 +92,8 @@
         <section class="admin-card hero-card">
           <div class="admin-section-head">
             <div>
-              <div class="kicker">Voucher của sàn</div>
-              <h2 style="margin-top: 8px">Tổng quan mã giảm giá đang vận hành</h2>
-              <p>Theo dõi voucher đang chạy, sắp bắt đầu, đã hết hạn và đang tạm tắt trong một màn hình.</p>
+              <div class="kicker voucher-kicker">Voucher của sàn</div>
             </div>
-            <div class="admin-hero-tag">CRUD mã giảm giá</div>
           </div>
           <div id="voucherStats" class="stats-grid voucher-stats-grid"></div>
         </section>
@@ -108,7 +103,6 @@
             <div class="toolbar-row">
               <div>
                 <h2>Danh sách voucher</h2>
-                <p class="muted">Voucher có thể giảm giá đơn hàng hoặc giảm phí vận chuyển, hỗ trợ giá trị cố định hoặc phần trăm.</p>
               </div>
               <span class="chip gray" id="voucherCountLabel">0 voucher</span>
             </div>
@@ -213,13 +207,209 @@
               </div>
 
               <div class="field">
-                <label for="voucherStartsAt">Bắt đầu</label>
-                <input id="voucherStartsAt" class="input" type="datetime-local" required />
+                <label for="voucherStartsAtTrigger">Bắt đầu</label>
+                <div class="datetime-picker" data-input-id="voucherStartsAt">
+                  <input id="voucherStartsAt" type="datetime-local" hidden />
+                  <button
+                    id="voucherStartsAtTrigger"
+                    class="datetime-trigger"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded="false"
+                    aria-controls="voucherStartsAtPanel"
+                  >
+                    <span class="datetime-trigger-copy">
+                      <span class="datetime-trigger-kicker">Thời gian bắt đầu</span>
+                      <strong class="datetime-trigger-value" data-role="display">Chọn ngày và giờ</strong>
+                    </span>
+                    <span class="datetime-trigger-arrow" aria-hidden="true"></span>
+                  </button>
+                  <button class="datetime-backdrop" type="button" tabindex="-1" aria-hidden="true"></button>
+                  <div id="voucherStartsAtPanel" class="datetime-panel" hidden>
+                    <div class="datetime-panel-grid">
+                      <div class="field datetime-calendar-field">
+                        <label>Ngày</label>
+                        <div class="datetime-calendar" data-role="calendar">
+                          <input id="voucherStartsAtDate" type="hidden" data-role="date" />
+                          <div class="datetime-calendar-head">
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-prev"
+                              aria-label="Tháng trước"
+                            >
+                              &lsaquo;
+                            </button>
+                            <strong class="datetime-calendar-title" data-role="month-label"></strong>
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-next"
+                              aria-label="Tháng sau"
+                            >
+                              &rsaquo;
+                            </button>
+                          </div>
+                          <div class="datetime-calendar-weekdays">
+                            <span>T2</span>
+                            <span>T3</span>
+                            <span>T4</span>
+                            <span>T5</span>
+                            <span>T6</span>
+                            <span>T7</span>
+                            <span>CN</span>
+                          </div>
+                          <div class="datetime-calendar-grid" data-role="calendar-grid"></div>
+                          <div class="datetime-calendar-footer">
+                            <button class="datetime-preset" type="button" data-role="calendar-today">
+                              Hôm nay
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="voucherStartsAtHour">Giờ</label>
+                        <select
+                          id="voucherStartsAtHour"
+                          class="select datetime-select"
+                          data-role="hour"
+                        ></select>
+                      </div>
+                      <div class="field">
+                        <label for="voucherStartsAtMinute">Phút</label>
+                        <select
+                          id="voucherStartsAtMinute"
+                          class="select datetime-select"
+                          data-role="minute"
+                        ></select>
+                      </div>
+                    </div>
+                    <div class="datetime-presets">
+                      <button class="datetime-preset" type="button" data-role="preset" data-preset="now">
+                        Bây giờ
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="plus-1-day"
+                      >
+                        +1 ngày
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="end-of-day"
+                      >
+                        Cuối ngày
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="field">
-                <label for="voucherEndsAt">Kết thúc</label>
-                <input id="voucherEndsAt" class="input" type="datetime-local" required />
+                <label for="voucherEndsAtTrigger">Kết thúc</label>
+                <div class="datetime-picker" data-input-id="voucherEndsAt">
+                  <input id="voucherEndsAt" type="datetime-local" hidden />
+                  <button
+                    id="voucherEndsAtTrigger"
+                    class="datetime-trigger"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded="false"
+                    aria-controls="voucherEndsAtPanel"
+                  >
+                    <span class="datetime-trigger-copy">
+                      <span class="datetime-trigger-kicker">Thời gian kết thúc</span>
+                      <strong class="datetime-trigger-value" data-role="display">Chọn ngày và giờ</strong>
+                    </span>
+                    <span class="datetime-trigger-arrow" aria-hidden="true"></span>
+                  </button>
+                  <button class="datetime-backdrop" type="button" tabindex="-1" aria-hidden="true"></button>
+                  <div id="voucherEndsAtPanel" class="datetime-panel" hidden>
+                    <div class="datetime-panel-grid">
+                      <div class="field datetime-calendar-field">
+                        <label>Ngày</label>
+                        <div class="datetime-calendar" data-role="calendar">
+                          <input id="voucherEndsAtDate" type="hidden" data-role="date" />
+                          <div class="datetime-calendar-head">
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-prev"
+                              aria-label="Tháng trước"
+                            >
+                              &lsaquo;
+                            </button>
+                            <strong class="datetime-calendar-title" data-role="month-label"></strong>
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-next"
+                              aria-label="Tháng sau"
+                            >
+                              &rsaquo;
+                            </button>
+                          </div>
+                          <div class="datetime-calendar-weekdays">
+                            <span>T2</span>
+                            <span>T3</span>
+                            <span>T4</span>
+                            <span>T5</span>
+                            <span>T6</span>
+                            <span>T7</span>
+                            <span>CN</span>
+                          </div>
+                          <div class="datetime-calendar-grid" data-role="calendar-grid"></div>
+                          <div class="datetime-calendar-footer">
+                            <button class="datetime-preset" type="button" data-role="calendar-today">
+                              Hôm nay
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="voucherEndsAtHour">Giờ</label>
+                        <select
+                          id="voucherEndsAtHour"
+                          class="select datetime-select"
+                          data-role="hour"
+                        ></select>
+                      </div>
+                      <div class="field">
+                        <label for="voucherEndsAtMinute">Phút</label>
+                        <select
+                          id="voucherEndsAtMinute"
+                          class="select datetime-select"
+                          data-role="minute"
+                        ></select>
+                      </div>
+                    </div>
+                    <div class="datetime-presets">
+                      <button class="datetime-preset" type="button" data-role="preset" data-preset="now">
+                        Bây giờ
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="plus-1-day"
+                      >
+                        +1 ngày
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="end-of-day"
+                      >
+                        Cuối ngày
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <label class="voucher-toggle">

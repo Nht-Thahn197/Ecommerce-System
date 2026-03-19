@@ -25,6 +25,40 @@ export const getReviews = async (
   }
 };
 
+export const uploadReviewMedia = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const validationError = (req as any).fileValidationError as
+      | string
+      | undefined;
+
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const files = ((req as any).files || {}) as Record<
+      string,
+      Express.Multer.File[]
+    >;
+    const images = files.images || [];
+    const video = files.video || [];
+
+    if (!images.length && !video.length) {
+      return res.status(400).json({ message: "Khong co file media" });
+    }
+
+    res.json({
+      media: {
+        image_urls: images.map((file) => `/ui/uploads/reviews/${file.filename}`),
+        video_urls: video.map((file) => `/ui/uploads/reviews/${file.filename}`),
+      },
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 export const addReview = async (
   req: AuthRequest<{}, {}, CreateReviewInput>,
   res: Response

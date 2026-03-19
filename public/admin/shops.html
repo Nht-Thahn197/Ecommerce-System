@@ -42,9 +42,7 @@
           <div>
             <div class="admin-breadcrumb">Trang quản trị / Quản lý shop</div>
             <h1>Quản lý shop</h1>
-            <p>Tách riêng trang shop để duyệt hồ sơ nhanh, lọc theo tên hoặc chủ shop và giảm nhiễu từ các phần vận hành khác.</p>
           </div>
-          <div class="admin-hero-tag">Duyệt hồ sơ shop theo hàng đợi</div>
         </header>
 
         <div id="status" class="status" style="display: none"></div>
@@ -52,9 +50,7 @@
         <section class="admin-card hero-card">
           <div class="admin-section-head">
             <div>
-              <div class="kicker">Shop đăng ký</div>
-              <h2 style="margin-top: 8px;">Hàng đợi duyệt shop</h2>
-              <p>Dữ liệu trên trang này tập trung vào các shop đang chờ admin ra quyết định.</p>
+              <div class="kicker shop-kicker">Shop đăng ký</div>
             </div>
             <button class="btn" id="reloadShops" type="button">Tải lại</button>
           </div>
@@ -77,11 +73,33 @@
           <div class="divider"></div>
           <div id="shopsTable"></div>
         </section>
+
+        <section class="admin-card">
+          <div class="toolbar-row">
+            <div>
+              <h2>Quản lý doanh thu shop</h2>
+              <p class="muted">Theo dõi tiền đã ghi nhận cho seller và duyệt yêu cầu rút tiền về ngân hàng.</p>
+            </div>
+            <div class="stack-actions">
+              <span class="chip gray" id="revenueRequestCountLabel">0 yêu cầu</span>
+              <button class="btn" id="reloadRevenueRequests" type="button">Tải lại</button>
+            </div>
+          </div>
+          <div id="shopRevenueStats" class="stats-grid" style="grid-template-columns: repeat(5, minmax(0, 1fr));"></div>
+          <div class="divider"></div>
+          <div class="toolbar-form">
+            <input id="shopRevenueQuery" class="input" placeholder="Tìm theo tên shop, chủ shop, email hoặc ngân hàng" />
+            <button class="btn" id="applyRevenueFilter" type="button">Lọc</button>
+            <button class="btn ghost" id="clearRevenueFilter" type="button">Xoá lọc</button>
+          </div>
+          <div class="divider"></div>
+          <div id="shopRevenueTable"></div>
+        </section>
       </main>
     </div>
 
     <script src="/ui/admin/admin.js"></script>
-    <script src="/ui/admin/shops.js"></script>
+    <script src="/ui/admin/shops.js?v=20260317-1"></script>
     <script src="/ui/custom-select.js"></script>
   </body>
 </html>

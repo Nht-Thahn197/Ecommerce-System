@@ -160,14 +160,6 @@
   color: #667085;
 }
 
-.seller-sidebar-foot {
-  margin-top: auto;
-}
-
-.seller-sidebar-foot .btn {
-  width: 100%;
-}
-
 .seller-main {
   padding: 24px;
   display: grid;
@@ -442,6 +434,181 @@
   color: #667085;
   font-size: 15px;
   max-width: 460px;
+}
+
+.seller-finance-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.seller-finance-grid {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.seller-finance-list {
+  display: grid;
+  gap: 12px;
+}
+
+.seller-finance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.seller-finance-row-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.seller-finance-row-main strong {
+  font-size: 16px;
+}
+
+.seller-finance-row-main span {
+  color: #667085;
+  font-size: 13px;
+}
+
+.seller-finance-amount {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  text-align: right;
+  flex: 0 0 auto;
+}
+
+.seller-finance-amount strong {
+  font-size: 22px;
+  line-height: 1;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.seller-finance-amount.is-in strong {
+  color: #15803d;
+}
+
+.seller-finance-amount.is-out strong {
+  color: #c2410c;
+}
+
+.seller-finance-balance-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 18px;
+  padding: 22px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 173, 119, 0.22), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 245, 237, 0.94));
+  border: 1px solid rgba(242, 92, 43, 0.12);
+}
+
+.seller-finance-balance-main,
+.seller-finance-balance-side {
+  display: grid;
+  gap: 14px;
+}
+
+.seller-finance-balance-main {
+  align-content: start;
+}
+
+.seller-finance-balance-main > span {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #98a2b3;
+  font-weight: 700;
+}
+
+.seller-finance-balance-main strong {
+  font-size: 46px;
+  line-height: 1;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.seller-finance-balance-main p {
+  margin: 0;
+}
+
+.seller-finance-balance-main .stack-actions {
+  margin-top: 4px;
+}
+
+.seller-finance-bank-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.seller-finance-bank-card {
+  min-height: 280px;
+  padding: 24px;
+  border-radius: 26px;
+  display: grid;
+  gap: 24px;
+  align-content: space-between;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.14), transparent 26%),
+    linear-gradient(145deg, rgba(31, 41, 55, 0.98), rgba(71, 84, 103, 0.92));
+  color: #fff;
+  box-shadow: 0 24px 36px rgba(15, 23, 42, 0.14);
+}
+
+.seller-finance-bank-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.seller-finance-bank-card-head small,
+.seller-finance-bank-foot span {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.seller-finance-bank-card h3 {
+  margin: 8px 0 0;
+  font-size: 28px;
+  line-height: 1.05;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.seller-finance-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.seller-finance-bank-number {
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.seller-finance-bank-foot {
+  display: grid;
+  gap: 8px;
+}
+
+.seller-finance-bank-foot strong {
+  font-size: 20px;
 }
 
 .seller-shop-profile-shell {
@@ -911,6 +1078,358 @@
 .seller-empty-block {
   padding: 28px 0;
   color: #667085;
+}
+
+.seller-promotion-layout {
+  grid-template-columns: minmax(0, 1fr) 420px;
+}
+
+.seller-promotion-toolbar {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr) auto;
+}
+
+.seller-promotion-form-panel {
+  position: sticky;
+  top: 24px;
+}
+
+.seller-promotion-form {
+  display: grid;
+  gap: 16px;
+}
+
+.seller-promotion-datetime-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.seller-promotion-form .field {
+  margin: 0;
+}
+
+.seller-promotion-product-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.seller-promotion-product-list {
+  display: grid;
+  gap: 10px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.seller-promotion-product-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.98);
+  cursor: pointer;
+}
+
+.seller-promotion-product-item input {
+  margin-top: 4px;
+  flex: 0 0 auto;
+}
+
+.seller-promotion-product-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.seller-promotion-product-copy strong {
+  font-size: 14px;
+}
+
+.seller-promotion-product-copy small {
+  color: #667085;
+}
+
+.seller-promotion-switch {
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.seller-promotion-switch strong {
+  font-size: 14px;
+}
+
+.seller-promotion-preview {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(242, 92, 43, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(255, 173, 119, 0.16), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 245, 237, 0.92));
+}
+
+.seller-promotion-preview strong {
+  font-size: 22px;
+  line-height: 1.2;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.datetime-picker {
+  position: relative;
+  z-index: 0;
+}
+
+.datetime-picker.is-open {
+  z-index: 90;
+}
+
+.seller-datetime-trigger {
+  position: relative;
+  z-index: 45;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  color: #1f2937;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.seller-datetime-trigger:hover {
+  border-color: rgba(242, 92, 43, 0.24);
+}
+
+.datetime-picker.is-open .seller-datetime-trigger,
+.seller-datetime-trigger:focus-visible {
+  outline: none;
+  border-color: rgba(242, 92, 43, 0.28);
+  box-shadow: 0 0 0 4px rgba(242, 92, 43, 0.1);
+}
+
+.datetime-trigger-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.datetime-trigger-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #98a2b3;
+}
+
+.datetime-trigger-value {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.datetime-trigger-arrow {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid #f25c2b;
+  border-bottom: 2px solid #f25c2b;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.datetime-picker.is-open .datetime-trigger-arrow {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.datetime-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.datetime-picker.is-open .datetime-backdrop {
+  display: block;
+}
+
+.seller-datetime-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: none;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.datetime-picker.is-open .seller-datetime-panel {
+  display: grid;
+}
+
+.seller-datetime-panel[hidden] {
+  display: none !important;
+}
+
+.seller-datetime-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.seller-datetime-grid .field {
+  margin-bottom: 0;
+}
+
+.datetime-calendar-field {
+  grid-column: 1 / -1;
+}
+
+.seller-datetime-calendar {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.datetime-calendar-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.datetime-calendar-title {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 18px;
+  text-align: center;
+}
+
+.datetime-calendar-nav {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  color: #f25c2b;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.datetime-calendar-weekdays,
+.datetime-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.datetime-calendar-weekdays span {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: #98a2b3;
+  text-transform: uppercase;
+}
+
+.datetime-calendar-day {
+  appearance: none;
+  min-height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  color: #1f2937;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.datetime-calendar-day:hover {
+  transform: translateY(-1px);
+  border-color: rgba(242, 92, 43, 0.22);
+}
+
+.datetime-calendar-day.is-muted {
+  color: #98a2b3;
+  opacity: 0.65;
+}
+
+.datetime-calendar-day.is-today {
+  border-color: rgba(242, 92, 43, 0.28);
+  color: #f25c2b;
+}
+
+.datetime-calendar-day.is-selected {
+  border-color: rgba(242, 92, 43, 0.3);
+  background: linear-gradient(180deg, rgba(255, 245, 237, 0.98), rgba(255, 232, 208, 0.96));
+  color: #f25c2b;
+  box-shadow: 0 12px 20px rgba(242, 92, 43, 0.14);
+}
+
+.datetime-calendar-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.seller-datetime-presets,
+.datetime-presets {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.datetime-preset {
+  appearance: none;
+  border: 1px solid rgba(242, 92, 43, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 245, 237, 0.96);
+  color: #f25c2b;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.seller-voucher-table td {
+  vertical-align: middle;
+}
+
+.seller-voucher-action-cell,
+.seller-voucher-table td:last-child {
+  white-space: nowrap;
 }
 
 .seller-add-layout {
@@ -2161,10 +2680,13 @@
   .seller-topbar,
   .seller-toolbar,
   .seller-dashboard-grid,
+  .seller-finance-grid,
   .seller-stat-grid,
   .seller-metric-grid,
   .seller-shop-profile-hero,
   .seller-shop-info-grid,
+  .seller-finance-bank-grid,
+  .seller-finance-balance-card,
   .seller-doc-grid,
   .seller-two-column,
   .seller-three-column,
@@ -2210,11 +2732,25 @@
     grid-template-columns: 1fr;
   }
 
+  .seller-finance-row {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .seller-finance-amount {
+    justify-items: start;
+    text-align: left;
+  }
+
   .seller-add-layout {
     grid-template-columns: 1fr;
   }
 
   .seller-checklist-panel {
+    position: static;
+  }
+
+  .seller-promotion-form-panel {
     position: static;
   }
 

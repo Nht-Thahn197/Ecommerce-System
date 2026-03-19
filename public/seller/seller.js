@@ -20,6 +20,8 @@
     currency: "VND",
     maximumFractionDigits: 0,
   });
+  const datetimePickers = new Map();
+  let activeDatetimePicker = null;
 
   const VIEW_META = {
     dashboard: {
@@ -29,6 +31,22 @@
     products: {
       breadcrumb: "Trang chủ / Sản phẩm",
       title: "Sản phẩm",
+    },
+    "shop-promotions": {
+      breadcrumb: "Trang ch\u1ee7 / Marketing / Khuy\u1ebfn m\u00e3i c\u1ee7a shop",
+      title: "Khuy\u1ebfn m\u00e3i c\u1ee7a shop",
+    },
+    "finance-revenue": {
+      breadcrumb: "Trang chủ / Tài chính / Doanh thu",
+      title: "Doanh thu",
+    },
+    "finance-wallet": {
+      breadcrumb: "Trang chủ / Tài chính / Số dư tk Bambi",
+      title: "Số dư tk Bambi",
+    },
+    "finance-bank": {
+      breadcrumb: "Trang chủ / Tài chính / Tài khoản ngân hàng",
+      title: "Tài khoản ngân hàng",
     },
     "new-product": {
       breadcrumb: "Trang chủ / Sản phẩm / Thêm 1 sản phẩm mới",
@@ -113,13 +131,24 @@
     sellerStatus: document.querySelector("#sellerStatus"),
     sellerEmptyState: document.querySelector("#sellerEmptyState"),
     sellerViews: Array.from(document.querySelectorAll(".seller-view")),
+    shopPromotionsView: document.querySelector(
+      '.seller-view[data-view="shop-promotions"]'
+    ),
+    financeRevenueView: document.querySelector(
+      '.seller-view[data-view="finance-revenue"]'
+    ),
+    financeWalletView: document.querySelector(
+      '.seller-view[data-view="finance-wallet"]'
+    ),
+    financeBankView: document.querySelector(
+      '.seller-view[data-view="finance-bank"]'
+    ),
     sellerNavLinks: Array.from(
       document.querySelectorAll(".seller-nav-link[data-view-target]")
     ),
     reloadProductsView: document.querySelector("#reloadProductsView"),
     sellerUserAvatar: document.querySelector("#sellerUserAvatar"),
     sellerUserName: document.querySelector("#sellerUserName"),
-    logoutSeller: document.querySelector("#logoutSeller"),
     dashboardHeroStats: document.querySelector("#dashboardHeroStats"),
     dashboardSummaryCards: document.querySelector("#dashboardSummaryCards"),
     dashboardPerformance: document.querySelector("#dashboardPerformance"),
@@ -208,6 +237,33 @@
     closeCategoryPicker: document.querySelector("#closeCategoryPicker"),
     cancelCategoryPicker: document.querySelector("#cancelCategoryPicker"),
     confirmCategoryPicker: document.querySelector("#confirmCategoryPicker"),
+    shopVoucherStats: null,
+    shopVoucherQuery: null,
+    shopVoucherStatusFilter: null,
+    reloadShopVouchers: null,
+    shopVoucherCountLabel: null,
+    shopVoucherTable: null,
+    shopVoucherForm: null,
+    shopVoucherFormTitle: null,
+    shopVoucherFormDescription: null,
+    shopVoucherModeTag: null,
+    shopVoucherId: null,
+    shopVoucherCode: null,
+    shopVoucherDiscountType: null,
+    shopVoucherDiscountValue: null,
+    shopVoucherMinOrderAmount: null,
+    shopVoucherMaxDiscountAmount: null,
+    shopVoucherQuantity: null,
+    shopVoucherStartsAt: null,
+    shopVoucherEndsAt: null,
+    shopVoucherIsActive: null,
+    shopVoucherProductSummary: null,
+    shopVoucherProductList: null,
+    shopVoucherPreviewHeadline: null,
+    shopVoucherPreviewSummary: null,
+    submitShopVoucherForm: null,
+    resetShopVoucherForm: null,
+    deleteShopVoucherBtn: null,
     shopProfileSummary: null,
     shopProfileTabs: null,
     shopProfileContent: null,
@@ -215,14 +271,125 @@
 
   if (!els.shell) return;
 
+  const ensureFinanceUi = () => {
+    const marketingNav = document.querySelector(
+      '.seller-nav-link[data-view-target="shop-promotions"]'
+    );
+    const newProductNav = document.querySelector(
+      '.seller-nav-link[data-view-target="new-product"]'
+    );
+    const marketingNavSection = marketingNav?.closest(".seller-nav-section");
+    const productNavSection = newProductNav?.closest(".seller-nav-section");
+
+    if (
+      (marketingNavSection || productNavSection) &&
+      !document.querySelector('.seller-nav-link[data-view-target="finance-revenue"]')
+    ) {
+      const financeNavSection = document.createElement("section");
+      financeNavSection.className = "seller-nav-section";
+      financeNavSection.innerHTML = `
+        <p class="seller-nav-heading">Tài chính</p>
+        <button class="seller-nav-link" type="button" data-view-target="finance-revenue">
+          <span class="seller-nav-icon">DT</span>
+          <span class="seller-nav-copy">
+            <strong>Doanh thu</strong>
+            <span>Theo dõi đơn đã giao và doanh số đã ghi nhận</span>
+          </span>
+        </button>
+        <button class="seller-nav-link" type="button" data-view-target="finance-wallet">
+          <span class="seller-nav-icon">SD</span>
+          <span class="seller-nav-copy">
+            <strong>Số dư tk Bambi</strong>
+            <span>Xem số dư khả dụng và khoản chờ đối soát</span>
+          </span>
+        </button>
+        <button class="seller-nav-link" type="button" data-view-target="finance-bank">
+          <span class="seller-nav-icon">NH</span>
+          <span class="seller-nav-copy">
+            <strong>Tài khoản ngân hàng</strong>
+            <span>Kiểm tra tài khoản nhận tiền của shop</span>
+          </span>
+        </button>
+      `;
+      (marketingNavSection || productNavSection).insertAdjacentElement(
+        "afterend",
+        financeNavSection
+      );
+    }
+
+    const financeAnchorView =
+      document.querySelector('.seller-view[data-view="shop-profile"]') ||
+      document.querySelector('.seller-view[data-view="products"]');
+
+    if (
+      financeAnchorView &&
+      !document.querySelector('.seller-view[data-view="finance-revenue"]')
+    ) {
+      [
+        {
+          view: "finance-revenue",
+          title: "Doanh thu",
+          copy: "Theo dõi doanh thu của shop theo đơn đã giao và đã hoàn thành.",
+        },
+        {
+          view: "finance-wallet",
+          title: "Số dư tk Bambi",
+          copy: "Kiểm tra số dư khả dụng và các khoản đang chờ đối soát.",
+        },
+        {
+          view: "finance-bank",
+          title: "Tài khoản ngân hàng",
+          copy: "Theo dõi tài khoản ngân hàng nhận tiền đang dùng cho shop.",
+        },
+      ].forEach((item) => {
+        const financeView = document.createElement("section");
+        financeView.className = "seller-view hidden";
+        financeView.dataset.view = item.view;
+        financeView.innerHTML = `
+          <article class="seller-panel">
+            <div class="seller-panel-head">
+              <div>
+                <h2>${item.title}</h2>
+                <p class="muted">${item.copy}</p>
+              </div>
+            </div>
+          </article>
+        `;
+        financeAnchorView.insertAdjacentElement("beforebegin", financeView);
+      });
+    }
+
+    els.financeRevenueView = document.querySelector(
+      '.seller-view[data-view="finance-revenue"]'
+    );
+    els.financeWalletView = document.querySelector(
+      '.seller-view[data-view="finance-wallet"]'
+    );
+    els.financeBankView = document.querySelector(
+      '.seller-view[data-view="finance-bank"]'
+    );
+    els.sellerViews = Array.from(document.querySelectorAll(".seller-view"));
+    els.sellerNavLinks = Array.from(
+      document.querySelectorAll(".seller-nav-link[data-view-target]")
+    );
+  };
+
   const ensureShopProfileUi = () => {
     const newProductNav = document.querySelector(
       '.seller-nav-link[data-view-target="new-product"]'
     );
+    const marketingNav = document.querySelector(
+      '.seller-nav-link[data-view-target="shop-promotions"]'
+    );
+    const financeNav = document.querySelector(
+      '.seller-nav-link[data-view-target="finance-revenue"]'
+    );
     const productNavSection = newProductNav?.closest(".seller-nav-section");
+    const marketingNavSection = marketingNav?.closest(".seller-nav-section");
+    const financeNavSection = financeNav?.closest(".seller-nav-section");
 
     if (
-      productNavSection &&
+      (financeNavSection || marketingNavSection || productNavSection) &&
       !document.querySelector('.seller-nav-link[data-view-target="shop-profile"]')
     ) {
       const shopNavSection = document.createElement("section");
@@ -237,7 +404,10 @@
           </span>
         </button>
       `;
-      productNavSection.insertAdjacentElement("afterend", shopNavSection);
+      (financeNavSection || marketingNavSection || productNavSection).insertAdjacentElement(
+        "afterend",
+        shopNavSection
+      );
     }
 
     if (els.dashboardSummaryCards && !document.querySelector(".seller-management-panel")) {
@@ -288,7 +458,410 @@
     );
   };
 
+  ensureFinanceUi();
   ensureShopProfileUi();
+
+  const ensureShopPromotionsUi = () => {
+    if (!els.shopPromotionsView || els.shopVoucherTable) return;
+
+    els.shopPromotionsView.innerHTML = `
+      <section id="shopVoucherStats" class="seller-stat-grid"></section>
+
+      <section class="seller-dashboard-grid seller-promotion-layout">
+        <article class="seller-panel">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <h2>Voucher của shop</h2>
+              <p class="muted">Tạo, sửa và xóa mã giảm giá riêng cho shop theo sản phẩm, điều kiện đơn và thời gian chạy.</p>
+            </div>
+            <div class="stack-actions">
+              <button class="seller-btn ghost" id="reloadShopVouchers" type="button">Tải lại</button>
+            </div>
+          </div>
+
+          <div class="seller-toolbar seller-promotion-toolbar">
+            <input
+              id="shopVoucherQuery"
+              class="input"
+              placeholder="Tìm theo mã voucher"
+            />
+            <select id="shopVoucherStatusFilter" class="select">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="running">Đang diễn ra</option>
+              <option value="upcoming">Sắp bắt đầu</option>
+              <option value="expired">Đã hết hạn</option>
+              <option value="inactive">Đang tắt</option>
+            </select>
+            <button class="seller-btn subtle" id="clearShopVoucherFilters" type="button">Đặt lại</button>
+          </div>
+
+          <div class="seller-toolbar-meta">
+            <span id="shopVoucherCountLabel">0 voucher</span>
+            <span class="chip gray">Để trống sản phẩm áp dụng nếu muốn chạy cho toàn shop</span>
+          </div>
+
+          <div id="shopVoucherTable"></div>
+        </article>
+
+        <aside class="seller-panel seller-promotion-form-panel">
+          <div class="seller-panel-head">
+            <div>
+              <h2 id="shopVoucherFormTitle">Tạo voucher mới</h2>
+              <p class="muted" id="shopVoucherFormDescription">Thiết lập giá trị giảm, điều kiện đơn và khoảng thời gian hiệu lực.</p>
+            </div>
+            <span class="chip orange" id="shopVoucherModeTag">Tạo mới</span>
+          </div>
+
+          <form id="shopVoucherForm" class="seller-promotion-form">
+            <input id="shopVoucherId" type="hidden" />
+
+            <div class="field">
+              <label for="shopVoucherCode">Mã giảm giá</label>
+              <input
+                id="shopVoucherCode"
+                class="input"
+                type="text"
+                maxlength="50"
+                placeholder="Ví dụ: SHOP10K"
+                required
+              />
+            </div>
+
+            <div class="seller-two-column">
+              <div class="field">
+                <label for="shopVoucherDiscountType">Kiểu giảm giá</label>
+                <select id="shopVoucherDiscountType" class="select">
+                  <option value="amount">Giảm số tiền</option>
+                  <option value="percent">Giảm phần trăm</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="shopVoucherDiscountValue">Giá trị giảm</label>
+                <input
+                  id="shopVoucherDiscountValue"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder="Ví dụ: 10000 hoặc 10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="seller-two-column">
+              <div class="field">
+                <label for="shopVoucherMinOrderAmount">Điều kiện đơn tối thiểu</label>
+                <input
+                  id="shopVoucherMinOrderAmount"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder="Ví dụ: 500000"
+                />
+              </div>
+
+              <div class="field">
+                <label for="shopVoucherQuantity">Số lượng voucher</label>
+                <input
+                  id="shopVoucherQuantity"
+                  class="input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="Ví dụ: 10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="shopVoucherMaxDiscountAmount">Giảm tối đa</label>
+              <input
+                id="shopVoucherMaxDiscountAmount"
+                class="input"
+                type="number"
+                min="0"
+                step="1000"
+                placeholder="Chỉ dùng cho voucher %"
+              />
+            </div>
+
+            <div class="seller-promotion-datetime-stack">
+              <div class="field">
+                <label for="shopVoucherStartsAtTrigger">Bắt đầu</label>
+                <div class="datetime-picker seller-datetime-picker" data-input-id="shopVoucherStartsAt">
+                  <input id="shopVoucherStartsAt" type="datetime-local" hidden />
+                  <button
+                    id="shopVoucherStartsAtTrigger"
+                    class="datetime-trigger seller-datetime-trigger"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded="false"
+                    aria-controls="shopVoucherStartsAtPanel"
+                  >
+                    <span class="datetime-trigger-copy">
+                      <span class="datetime-trigger-kicker">Thời gian bắt đầu</span>
+                      <strong class="datetime-trigger-value" data-role="display">Chọn ngày và giờ</strong>
+                    </span>
+                    <span class="datetime-trigger-arrow" aria-hidden="true"></span>
+                  </button>
+                  <button class="datetime-backdrop" type="button" tabindex="-1" aria-hidden="true"></button>
+                  <div id="shopVoucherStartsAtPanel" class="datetime-panel seller-datetime-panel" hidden>
+                    <div class="datetime-panel-grid seller-datetime-grid">
+                      <div class="field datetime-calendar-field">
+                        <label>Ngày</label>
+                        <div class="datetime-calendar seller-datetime-calendar">
+                          <input id="shopVoucherStartsAtDate" type="hidden" data-role="date" />
+                          <div class="datetime-calendar-head">
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-prev"
+                              aria-label="Tháng trước"
+                            >
+                              &lsaquo;
+                            </button>
+                            <strong class="datetime-calendar-title" data-role="month-label"></strong>
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-next"
+                              aria-label="Tháng sau"
+                            >
+                              &rsaquo;
+                            </button>
+                          </div>
+                          <div class="datetime-calendar-weekdays">
+                            <span>T2</span>
+                            <span>T3</span>
+                            <span>T4</span>
+                            <span>T5</span>
+                            <span>T6</span>
+                            <span>T7</span>
+                            <span>CN</span>
+                          </div>
+                          <div class="datetime-calendar-grid" data-role="calendar-grid"></div>
+                          <div class="datetime-calendar-footer">
+                            <button class="datetime-preset" type="button" data-role="calendar-today">
+                              Hôm nay
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="shopVoucherStartsAtHour">Giờ</label>
+                        <select
+                          id="shopVoucherStartsAtHour"
+                          class="select datetime-select"
+                          data-role="hour"
+                        ></select>
+                      </div>
+                      <div class="field">
+                        <label for="shopVoucherStartsAtMinute">Phút</label>
+                        <select
+                          id="shopVoucherStartsAtMinute"
+                          class="select datetime-select"
+                          data-role="minute"
+                        ></select>
+                      </div>
+                    </div>
+                    <div class="datetime-presets seller-datetime-presets">
+                      <button class="datetime-preset" type="button" data-role="preset" data-preset="now">
+                        Bây giờ
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="plus-1-day"
+                      >
+                        +1 ngày
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="end-of-day"
+                      >
+                        Cuối ngày
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="shopVoucherEndsAtTrigger">Kết thúc</label>
+                <div class="datetime-picker seller-datetime-picker" data-input-id="shopVoucherEndsAt">
+                  <input id="shopVoucherEndsAt" type="datetime-local" hidden />
+                  <button
+                    id="shopVoucherEndsAtTrigger"
+                    class="datetime-trigger seller-datetime-trigger"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded="false"
+                    aria-controls="shopVoucherEndsAtPanel"
+                  >
+                    <span class="datetime-trigger-copy">
+                      <span class="datetime-trigger-kicker">Thời gian kết thúc</span>
+                      <strong class="datetime-trigger-value" data-role="display">Chọn ngày và giờ</strong>
+                    </span>
+                    <span class="datetime-trigger-arrow" aria-hidden="true"></span>
+                  </button>
+                  <button class="datetime-backdrop" type="button" tabindex="-1" aria-hidden="true"></button>
+                  <div id="shopVoucherEndsAtPanel" class="datetime-panel seller-datetime-panel" hidden>
+                    <div class="datetime-panel-grid seller-datetime-grid">
+                      <div class="field datetime-calendar-field">
+                        <label>Ngày</label>
+                        <div class="datetime-calendar seller-datetime-calendar">
+                          <input id="shopVoucherEndsAtDate" type="hidden" data-role="date" />
+                          <div class="datetime-calendar-head">
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-prev"
+                              aria-label="Tháng trước"
+                            >
+                              &lsaquo;
+                            </button>
+                            <strong class="datetime-calendar-title" data-role="month-label"></strong>
+                            <button
+                              class="datetime-calendar-nav"
+                              type="button"
+                              data-role="month-next"
+                              aria-label="Tháng sau"
+                            >
+                              &rsaquo;
+                            </button>
+                          </div>
+                          <div class="datetime-calendar-weekdays">
+                            <span>T2</span>
+                            <span>T3</span>
+                            <span>T4</span>
+                            <span>T5</span>
+                            <span>T6</span>
+                            <span>T7</span>
+                            <span>CN</span>
+                          </div>
+                          <div class="datetime-calendar-grid" data-role="calendar-grid"></div>
+                          <div class="datetime-calendar-footer">
+                            <button class="datetime-preset" type="button" data-role="calendar-today">
+                              Hôm nay
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="shopVoucherEndsAtHour">Giờ</label>
+                        <select
+                          id="shopVoucherEndsAtHour"
+                          class="select datetime-select"
+                          data-role="hour"
+                        ></select>
+                      </div>
+                      <div class="field">
+                        <label for="shopVoucherEndsAtMinute">Phút</label>
+                        <select
+                          id="shopVoucherEndsAtMinute"
+                          class="select datetime-select"
+                          data-role="minute"
+                        ></select>
+                      </div>
+                    </div>
+                    <div class="datetime-presets seller-datetime-presets">
+                      <button class="datetime-preset" type="button" data-role="preset" data-preset="now">
+                        Bây giờ
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="plus-1-day"
+                      >
+                        +1 ngày
+                      </button>
+                      <button
+                        class="datetime-preset"
+                        type="button"
+                        data-role="preset"
+                        data-preset="end-of-day"
+                      >
+                        Cuối ngày
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="seller-promotion-product-head">
+                <label>Sản phẩm áp dụng</label>
+                <button class="seller-mini-btn ghost" id="clearShopVoucherProducts" type="button">
+                  Áp dụng toàn shop
+                </button>
+              </div>
+              <div id="shopVoucherProductSummary" class="seller-inline-meta"></div>
+              <div id="shopVoucherProductList" class="seller-promotion-product-list"></div>
+            </div>
+
+            <label class="seller-switch-row seller-promotion-switch">
+              <span>
+                <strong>Bật voucher ngay</strong>
+                <small>Voucher chỉ chạy khi trong thời gian hiệu lực và công tắc đang bật.</small>
+              </span>
+              <input id="shopVoucherIsActive" type="checkbox" checked />
+              <span class="seller-switch"></span>
+            </label>
+
+            <div class="seller-promotion-preview">
+              <strong id="shopVoucherPreviewHeadline">Giảm 10.000đ cho đơn từ 0đ</strong>
+              <p id="shopVoucherPreviewSummary" class="muted">Áp dụng toàn bộ sản phẩm của shop trong khoảng thời gian đã chọn.</p>
+            </div>
+
+            <div class="stack-actions">
+              <button class="seller-btn primary" id="submitShopVoucherForm" type="submit">Tạo voucher</button>
+              <button class="seller-btn ghost" id="resetShopVoucherForm" type="button">Làm mới form</button>
+              <button class="seller-btn subtle" id="deleteShopVoucherBtn" type="button" hidden>Xóa voucher</button>
+            </div>
+          </form>
+        </aside>
+      </section>
+    `;
+
+    els.shopVoucherStats = document.querySelector("#shopVoucherStats");
+    els.shopVoucherQuery = document.querySelector("#shopVoucherQuery");
+    els.shopVoucherStatusFilter = document.querySelector("#shopVoucherStatusFilter");
+    els.reloadShopVouchers = document.querySelector("#reloadShopVouchers");
+    els.shopVoucherCountLabel = document.querySelector("#shopVoucherCountLabel");
+    els.shopVoucherTable = document.querySelector("#shopVoucherTable");
+    els.shopVoucherForm = document.querySelector("#shopVoucherForm");
+    els.shopVoucherFormTitle = document.querySelector("#shopVoucherFormTitle");
+    els.shopVoucherFormDescription = document.querySelector("#shopVoucherFormDescription");
+    els.shopVoucherModeTag = document.querySelector("#shopVoucherModeTag");
+    els.shopVoucherId = document.querySelector("#shopVoucherId");
+    els.shopVoucherCode = document.querySelector("#shopVoucherCode");
+    els.shopVoucherDiscountType = document.querySelector("#shopVoucherDiscountType");
+    els.shopVoucherDiscountValue = document.querySelector("#shopVoucherDiscountValue");
+    els.shopVoucherMinOrderAmount = document.querySelector("#shopVoucherMinOrderAmount");
+    els.shopVoucherMaxDiscountAmount = document.querySelector("#shopVoucherMaxDiscountAmount");
+    els.shopVoucherQuantity = document.querySelector("#shopVoucherQuantity");
+    els.shopVoucherStartsAt = document.querySelector("#shopVoucherStartsAt");
+    els.shopVoucherEndsAt = document.querySelector("#shopVoucherEndsAt");
+    els.shopVoucherIsActive = document.querySelector("#shopVoucherIsActive");
+    els.shopVoucherProductSummary = document.querySelector("#shopVoucherProductSummary");
+    els.shopVoucherProductList = document.querySelector("#shopVoucherProductList");
+    els.shopVoucherPreviewHeadline = document.querySelector("#shopVoucherPreviewHeadline");
+    els.shopVoucherPreviewSummary = document.querySelector("#shopVoucherPreviewSummary");
+    els.submitShopVoucherForm = document.querySelector("#submitShopVoucherForm");
+    els.resetShopVoucherForm = document.querySelector("#resetShopVoucherForm");
+    els.deleteShopVoucherBtn = document.querySelector("#deleteShopVoucherBtn");
+  };
+
+  ensureShopPromotionsUi();
 
   const createEmptyDraft = () => ({
     name: "",
@@ -334,6 +907,55 @@
     pendingCategoryId: "",
   });
 
+  const createShopVoucherSummary = () => ({
+    total: 0,
+    running: 0,
+    upcoming: 0,
+    expired: 0,
+    inactive: 0,
+  });
+
+  const createEmptyWalletSummary = () => ({
+    wallet: {
+      id: "",
+      balance: 0,
+      available_balance: 0,
+      created_at: "",
+    },
+    stats: {
+      total_credited: 0,
+      total_requested: 0,
+      pending_withdrawals: 0,
+    },
+    selected_shop: null,
+    transactions: [],
+  });
+
+  const createEmptyShopVoucherDraft = () => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    end.setHours(23, 59, 0, 0);
+
+    return {
+      id: "",
+      code: "",
+      discount_type: "amount",
+      discount_value: "",
+      min_order_amount: "0",
+      product_ids: [],
+      max_discount_amount: "",
+      starts_at: new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16),
+      ends_at: new Date(end.getTime() - end.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16),
+      quantity: "10",
+      is_active: true,
+    };
+  };
+
   const state = {
     currentView: "dashboard",
     user: null,
@@ -352,6 +974,15 @@
       categoryId: "",
       sort: "recent",
     },
+    shopVouchers: [],
+    shopVoucherSummary: createShopVoucherSummary(),
+    shopVoucherFilters: {
+      query: "",
+      status: "all",
+    },
+    shopVoucherEditor: createEmptyShopVoucherDraft(),
+    walletSummary: createEmptyWalletSummary(),
+    isRequestingWithdrawal: false,
     shopProfileTab: "basic",
     shopProfileEditor: createEmptyShopProfileEditor(),
     categoryPicker: createEmptyCategoryPicker(),
@@ -798,10 +1429,734 @@
     return getShopOnboardingData(shop)?.payment_account || null;
   };
 
+  const maskAccountNumber = (value) => {
+    const text = String(value || "")
+      .replace(/\s+/g, "")
+      .trim();
+    if (!text) return "Chưa cập nhật";
+    return `**** ${text.slice(-4)}`;
+  };
+
   const getShopDocumentsByType = (shop, docType) =>
     Array.isArray(shop?.shop_documents)
       ? shop.shop_documents.filter((item) => item?.doc_type === docType)
       : [];
+
+  const toDatetimeLocalValue = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+  };
+
+  const refreshSelect = (target) => {
+    target?.dispatchEvent(new Event("bambi:custom-select-sync"));
+    window.BambiCustomSelect?.refreshSelect(target);
+  };
+
+  const padNumber = (value) => String(value).padStart(2, "0");
+
+  const parseDatetimeLocalValue = (value) => {
+    if (!value || typeof value !== "string" || !value.includes("T")) return null;
+
+    const [datePart, timePart = "00:00"] = value.split("T");
+    if (!datePart) return null;
+
+    const [hourPart = "00", minutePart = "00"] = timePart.split(":");
+
+    return {
+      date: datePart,
+      hour: padNumber(Number(hourPart) || 0),
+      minute: padNumber(Number(minutePart) || 0),
+    };
+  };
+
+  const buildDatetimeLocalValue = (dateValue, hourValue, minuteValue) => {
+    if (!dateValue) return "";
+    return `${dateValue}T${padNumber(Number(hourValue) || 0)}:${padNumber(
+      Number(minuteValue) || 0
+    )}`;
+  };
+
+  const parseDateValue = (value) => {
+    if (!value || typeof value !== "string") return null;
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  };
+
+  const toDateValue = (date) =>
+    `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+
+  const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+  const shiftMonth = (date, offset) =>
+    new Date(date.getFullYear(), date.getMonth() + offset, 1);
+
+  const formatCalendarMonth = (date) => {
+    const label = new Intl.DateTimeFormat("vi-VN", {
+      month: "long",
+      year: "numeric",
+    }).format(date);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  const renderCalendar = (picker) => {
+    if (!picker.calendarGrid || !picker.monthLabel) return;
+
+    const selectedDate = parseDateValue(picker.date.value) || new Date();
+    const cursor = picker.monthCursor || startOfMonth(selectedDate);
+    const monthStart = startOfMonth(cursor);
+    const leadingDays = (monthStart.getDay() + 6) % 7;
+    const gridStart = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth(),
+      monthStart.getDate() - leadingDays
+    );
+    const todayValue = toDateValue(new Date());
+    const selectedValue = picker.date.value;
+
+    picker.monthCursor = monthStart;
+    picker.monthLabel.textContent = formatCalendarMonth(monthStart);
+    picker.calendarGrid.innerHTML = Array.from({ length: 42 }, (_, index) => {
+      const cellDate = new Date(
+        gridStart.getFullYear(),
+        gridStart.getMonth(),
+        gridStart.getDate() + index
+      );
+      const cellValue = toDateValue(cellDate);
+      const className = [
+        "datetime-calendar-day",
+        cellDate.getMonth() !== monthStart.getMonth() ? "is-muted" : "",
+        cellValue === todayValue ? "is-today" : "",
+        cellValue === selectedValue ? "is-selected" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return `
+        <button class="${className}" type="button" data-role="calendar-day" data-value="${cellValue}">
+          ${cellDate.getDate()}
+        </button>
+      `;
+    }).join("");
+  };
+
+  const focusCalendarSelection = (picker) => {
+    picker.calendarGrid
+      ?.querySelector(".datetime-calendar-day.is-selected, .datetime-calendar-day.is-today, .datetime-calendar-day")
+      ?.focus();
+  };
+
+  const closeDatetimePicker = (picker) => {
+    if (!picker) return;
+    picker.root.classList.remove("is-open");
+    picker.trigger.setAttribute("aria-expanded", "false");
+    picker.panel.hidden = true;
+    if (activeDatetimePicker === picker) {
+      activeDatetimePicker = null;
+    }
+  };
+
+  const syncDatetimePickerTrigger = (picker) => {
+    picker.display.textContent = picker.input.value
+      ? formatDate(picker.input.value)
+      : "Chọn ngày và giờ";
+  };
+
+  const syncDatetimePickerControls = (picker) => {
+    const fallbackValue = toDatetimeLocalValue(new Date());
+    const parsed =
+      parseDatetimeLocalValue(picker.input.value) || parseDatetimeLocalValue(fallbackValue);
+    if (!parsed) return;
+
+    picker.date.value = parsed.date;
+    picker.monthCursor = startOfMonth(parseDateValue(parsed.date) || new Date());
+    picker.hour.value = parsed.hour;
+    picker.minute.value = parsed.minute;
+    renderCalendar(picker);
+    refreshSelect(picker.hour);
+    refreshSelect(picker.minute);
+    syncDatetimePickerTrigger(picker);
+  };
+
+  const commitDatetimePickerValue = (picker, emitEvents = true) => {
+    const nextValue = buildDatetimeLocalValue(
+      picker.date.value,
+      picker.hour.value,
+      picker.minute.value
+    );
+
+    picker.input.value = nextValue;
+    syncDatetimePickerTrigger(picker);
+
+    if (emitEvents) {
+      picker.input.dispatchEvent(new Event("input", { bubbles: true }));
+      picker.input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  };
+
+  const openDatetimePicker = (picker) => {
+    if (!picker) return;
+    if (activeDatetimePicker && activeDatetimePicker !== picker) {
+      closeDatetimePicker(activeDatetimePicker);
+    }
+
+    syncDatetimePickerControls(picker);
+    picker.root.classList.add("is-open");
+    picker.trigger.setAttribute("aria-expanded", "true");
+    picker.panel.hidden = false;
+    activeDatetimePicker = picker;
+    window.requestAnimationFrame(() => focusCalendarSelection(picker));
+  };
+
+  const applyDatetimePreset = (picker, preset) => {
+    const parsedCurrent = parseDatetimeLocalValue(picker.input.value);
+    const baseDate = parsedCurrent
+      ? new Date(`${parsedCurrent.date}T${parsedCurrent.hour}:${parsedCurrent.minute}`)
+      : new Date();
+
+    if (preset === "now") {
+      baseDate.setSeconds(0, 0);
+    } else if (preset === "plus-1-day") {
+      baseDate.setDate(baseDate.getDate() + 1);
+    } else if (preset === "end-of-day") {
+      baseDate.setHours(23, 59, 0, 0);
+    }
+
+    const parsedNext = parseDatetimeLocalValue(toDatetimeLocalValue(baseDate));
+    if (!parsedNext) return;
+
+    picker.date.value = parsedNext.date;
+    picker.hour.value = parsedNext.hour;
+    picker.minute.value = parsedNext.minute;
+    refreshSelect(picker.hour);
+    refreshSelect(picker.minute);
+    commitDatetimePickerValue(picker);
+  };
+
+  const populateDatetimeSelect = (select, total) => {
+    if (!select || select.options.length) return;
+
+    select.innerHTML = Array.from({ length: total }, (_, index) => {
+      const value = padNumber(index);
+      return `<option value="${value}">${value}</option>`;
+    }).join("");
+  };
+
+  const initDatetimePickers = () => {
+    document.querySelectorAll(".datetime-picker").forEach((root) => {
+      const inputId = root.dataset.inputId;
+      const input = inputId
+        ? document.querySelector(`#${inputId}`)
+        : root.querySelector('input[type="datetime-local"]');
+      if (!input || datetimePickers.has(input.id)) return;
+
+      const picker = {
+        root,
+        input,
+        trigger: root.querySelector(".datetime-trigger"),
+        backdrop: root.querySelector(".datetime-backdrop"),
+        panel: root.querySelector(".datetime-panel"),
+        display: root.querySelector('[data-role="display"]'),
+        date: root.querySelector('[data-role="date"]'),
+        monthLabel: root.querySelector('[data-role="month-label"]'),
+        calendarGrid: root.querySelector('[data-role="calendar-grid"]'),
+        prevMonthButton: root.querySelector('[data-role="month-prev"]'),
+        nextMonthButton: root.querySelector('[data-role="month-next"]'),
+        todayButton: root.querySelector('[data-role="calendar-today"]'),
+        hour: root.querySelector('[data-role="hour"]'),
+        minute: root.querySelector('[data-role="minute"]'),
+        monthCursor: null,
+      };
+
+      populateDatetimeSelect(picker.hour, 24);
+      populateDatetimeSelect(picker.minute, 60);
+
+      picker.trigger?.addEventListener("click", () => {
+        if (picker.root.classList.contains("is-open")) {
+          closeDatetimePicker(picker);
+          return;
+        }
+        openDatetimePicker(picker);
+      });
+
+      picker.backdrop?.addEventListener("click", () => {
+        closeDatetimePicker(picker);
+        picker.trigger?.focus();
+      });
+
+      picker.hour?.addEventListener("change", () => commitDatetimePickerValue(picker));
+      picker.minute?.addEventListener("change", () => commitDatetimePickerValue(picker));
+
+      picker.prevMonthButton?.addEventListener("click", () => {
+        picker.monthCursor = shiftMonth(picker.monthCursor || new Date(), -1);
+        renderCalendar(picker);
+      });
+
+      picker.nextMonthButton?.addEventListener("click", () => {
+        picker.monthCursor = shiftMonth(picker.monthCursor || new Date(), 1);
+        renderCalendar(picker);
+      });
+
+      picker.todayButton?.addEventListener("click", () => {
+        const today = new Date();
+        picker.date.value = toDateValue(today);
+        picker.monthCursor = startOfMonth(today);
+        renderCalendar(picker);
+        commitDatetimePickerValue(picker);
+      });
+
+      picker.calendarGrid?.addEventListener("click", (event) => {
+        const button = event.target.closest('[data-role="calendar-day"]');
+        if (!button) return;
+
+        picker.date.value = button.dataset.value;
+        picker.monthCursor = startOfMonth(parseDateValue(button.dataset.value) || new Date());
+        renderCalendar(picker);
+        commitDatetimePickerValue(picker);
+      });
+
+      root.querySelectorAll('[data-role="preset"]').forEach((button) => {
+        button.addEventListener("click", () => {
+          applyDatetimePreset(picker, button.dataset.preset);
+        });
+      });
+
+      picker.input.addEventListener("input", () => syncDatetimePickerControls(picker));
+      picker.input.addEventListener("change", () => syncDatetimePickerControls(picker));
+
+      datetimePickers.set(picker.input.id, picker);
+      syncDatetimePickerControls(picker);
+      closeDatetimePicker(picker);
+    });
+  };
+
+  const syncAllDatetimePickers = () => {
+    datetimePickers.forEach((picker) => syncDatetimePickerControls(picker));
+  };
+
+  const getShopVoucherStateMeta = (status) => {
+    switch (status) {
+      case "running":
+        return { label: "Đang diễn ra", className: "green" };
+      case "upcoming":
+        return { label: "Sắp bắt đầu", className: "orange" };
+      case "expired":
+        return { label: "Đã hết hạn", className: "gray" };
+      case "inactive":
+        return { label: "Đang tắt", className: "gray" };
+      default:
+        return { label: "Không rõ", className: "gray" };
+    }
+  };
+
+  const getShopVoucherProductOptions = () =>
+    [...state.products].sort((left, right) =>
+      String(left?.name || "").localeCompare(String(right?.name || ""), "vi")
+    );
+
+  const getShopVoucherProductLabel = (productIds = []) => {
+    const ids = Array.isArray(productIds) ? productIds : [];
+    if (!ids.length) return "Toàn bộ sản phẩm của shop";
+
+    const productMap = new Map(
+      state.products.map((product) => [product.id, product.name || shortId(product.id)])
+    );
+    const names = ids.map((id) => productMap.get(id) || `#${shortId(id)}`);
+
+    if (names.length <= 3) return names.join(", ");
+    return `${names.slice(0, 3).join(", ")} +${names.length - 3} sản phẩm`;
+  };
+
+  const formatShopVoucherDiscount = (discountType, discountValue) => {
+    const numericValue = Number(discountValue || 0);
+    if (discountType === "percent") {
+      return `${formatCompactNumber(numericValue)}%`;
+    }
+    return formatPrice(numericValue);
+  };
+
+  const buildShopVoucherHeadline = (voucher) =>
+    `Giảm ${formatShopVoucherDiscount(
+      voucher.discount_type,
+      voucher.discount_value
+    )} cho đơn từ ${formatPrice(voucher.min_order_amount || 0)}`;
+
+  const buildShopVoucherSummary = (voucher) => {
+    const parts = [
+      `${voucher.quantity || 0} lượt`,
+      `${formatDate(voucher.starts_at)} - ${formatDate(voucher.ends_at)}`,
+    ];
+
+    if (voucher.discount_type === "percent" && Number(voucher.max_discount_amount) > 0) {
+      parts.unshift(`Tối đa ${formatPrice(voucher.max_discount_amount)}`);
+    }
+
+    parts.push(getShopVoucherProductLabel(voucher.product_ids));
+    return parts.join(" • ");
+  };
+
+  const setShopVoucherFormMode = (mode, voucher = null) => {
+    const isEdit = mode === "edit" && voucher;
+
+    if (els.shopVoucherFormTitle) {
+      els.shopVoucherFormTitle.textContent = isEdit
+        ? `Sửa voucher ${voucher.code}`
+        : "Tạo voucher mới";
+    }
+
+    if (els.shopVoucherFormDescription) {
+      els.shopVoucherFormDescription.textContent = isEdit
+        ? "Cập nhật giá trị giảm, sản phẩm áp dụng và khung thời gian cho voucher đã có."
+        : "Thiết lập giá trị giảm, điều kiện đơn và khoảng thời gian hiệu lực.";
+    }
+
+    if (els.shopVoucherModeTag) {
+      els.shopVoucherModeTag.textContent = isEdit ? "Đang sửa" : "Tạo mới";
+    }
+
+    if (els.submitShopVoucherForm) {
+      els.submitShopVoucherForm.textContent = isEdit ? "Lưu thay đổi" : "Tạo voucher";
+    }
+
+    if (els.deleteShopVoucherBtn) {
+      els.deleteShopVoucherBtn.hidden = !isEdit;
+    }
+  };
+
+  const syncShopVoucherMaxField = () => {
+    if (!els.shopVoucherMaxDiscountAmount) return;
+    const isPercent = state.shopVoucherEditor.discount_type === "percent";
+    els.shopVoucherMaxDiscountAmount.disabled = !isPercent;
+    if (!isPercent) {
+      els.shopVoucherMaxDiscountAmount.value = "";
+    }
+  };
+
+  const syncShopVoucherPreview = () => {
+    if (!els.shopVoucherPreviewHeadline || !els.shopVoucherPreviewSummary) return;
+
+    const draft = state.shopVoucherEditor;
+    const summaryDraft = {
+      ...draft,
+      quantity: Number(draft.quantity || 0),
+      min_order_amount: Number(draft.min_order_amount || 0),
+      discount_value: Number(draft.discount_value || 0),
+      max_discount_amount: Number(draft.max_discount_amount || 0),
+    };
+
+    els.shopVoucherPreviewHeadline.textContent = buildShopVoucherHeadline(summaryDraft);
+    els.shopVoucherPreviewSummary.textContent = buildShopVoucherSummary(summaryDraft);
+  };
+
+  const renderShopVoucherProductList = () => {
+    if (!els.shopVoucherProductList || !els.shopVoucherProductSummary) return;
+
+    const products = getShopVoucherProductOptions();
+    const selectedIds = new Set(state.shopVoucherEditor.product_ids || []);
+
+    els.shopVoucherProductSummary.innerHTML = products.length
+      ? `<span>${selectedIds.size ? `Đã chọn ${selectedIds.size} sản phẩm` : "Đang áp dụng toàn shop"}</span>`
+      : "<span>Shop chưa có sản phẩm để gắn voucher.</span>";
+
+    if (!products.length) {
+      els.shopVoucherProductList.innerHTML =
+        '<div class="seller-empty-compact">Chưa có sản phẩm nào để áp dụng voucher.</div>';
+      return;
+    }
+
+    els.shopVoucherProductList.innerHTML = products
+      .map((product) => {
+        const checked = selectedIds.has(product.id) ? "checked" : "";
+        const statusMeta = getProductStatusMeta(product.status);
+
+        return `
+          <label class="seller-promotion-product-item">
+            <input
+              type="checkbox"
+              data-role="shop-voucher-product"
+              value="${escapeHtml(product.id)}"
+              ${checked}
+            />
+            <span class="seller-promotion-product-copy">
+              <strong>${escapeHtml(product.name || "Sản phẩm chưa đặt tên")}</strong>
+              <small>${escapeHtml(formatPrice(product.product_variants?.[0]?.price || 0))}</small>
+            </span>
+            <span class="chip ${escapeHtml(statusMeta.className)}">${escapeHtml(
+              statusMeta.label
+            )}</span>
+          </label>
+        `;
+      })
+      .join("");
+  };
+
+  const syncShopVoucherForm = () => {
+    if (!els.shopVoucherForm) return;
+
+    const draft = state.shopVoucherEditor;
+    if (els.shopVoucherId) els.shopVoucherId.value = draft.id || "";
+    if (els.shopVoucherCode) els.shopVoucherCode.value = draft.code || "";
+    if (els.shopVoucherDiscountType) setSelectValue(els.shopVoucherDiscountType, draft.discount_type);
+    if (els.shopVoucherDiscountValue) els.shopVoucherDiscountValue.value = draft.discount_value || "";
+    if (els.shopVoucherMinOrderAmount) {
+      els.shopVoucherMinOrderAmount.value = draft.min_order_amount || "0";
+    }
+    if (els.shopVoucherMaxDiscountAmount) {
+      els.shopVoucherMaxDiscountAmount.value = draft.max_discount_amount || "";
+    }
+    if (els.shopVoucherQuantity) els.shopVoucherQuantity.value = draft.quantity || "10";
+    if (els.shopVoucherStartsAt) els.shopVoucherStartsAt.value = draft.starts_at || "";
+    if (els.shopVoucherEndsAt) els.shopVoucherEndsAt.value = draft.ends_at || "";
+    if (els.shopVoucherIsActive) els.shopVoucherIsActive.checked = Boolean(draft.is_active);
+
+    syncShopVoucherMaxField();
+    syncAllDatetimePickers();
+    renderShopVoucherProductList();
+    syncShopVoucherPreview();
+  };
+
+  const resetShopVoucherForm = () => {
+    state.shopVoucherEditor = createEmptyShopVoucherDraft();
+    setShopVoucherFormMode("create");
+    syncShopVoucherForm();
+  };
+
+  const fillShopVoucherForm = (voucher) => {
+    state.shopVoucherEditor = {
+      id: voucher.id,
+      code: voucher.code || "",
+      discount_type: voucher.discount_type || "amount",
+      discount_value: String(voucher.discount_value || ""),
+      min_order_amount: String(voucher.min_order_amount || 0),
+      product_ids: Array.isArray(voucher.product_ids) ? [...voucher.product_ids] : [],
+      max_discount_amount:
+        voucher.max_discount_amount === null || voucher.max_discount_amount === undefined
+          ? ""
+          : String(voucher.max_discount_amount),
+      starts_at: toDatetimeLocalValue(voucher.starts_at),
+      ends_at: toDatetimeLocalValue(voucher.ends_at),
+      quantity: String(voucher.quantity || 1),
+      is_active: Boolean(voucher.is_active),
+    };
+    setShopVoucherFormMode("edit", voucher);
+    syncShopVoucherForm();
+  };
+
+  const renderShopVoucherStats = () => {
+    if (!els.shopVoucherStats) return;
+
+    const stats = [
+      ["Tổng voucher", state.shopVoucherSummary.total, "Tổng số mã giảm giá của shop"],
+      ["Đang chạy", state.shopVoucherSummary.running, "Đang trong thời gian hiệu lực"],
+      ["Sắp chạy", state.shopVoucherSummary.upcoming, "Đã lên lịch nhưng chưa bắt đầu"],
+      ["Đã hết hạn", state.shopVoucherSummary.expired, "Đã qua thời gian áp dụng"],
+    ];
+
+    els.shopVoucherStats.innerHTML = stats
+      .map(
+        ([label, value, note]) => `
+          <article class="seller-summary-card">
+            <h3>${escapeHtml(label)}</h3>
+            <span class="seller-summary-value">${escapeHtml(value)}</span>
+            <div class="seller-summary-note">${escapeHtml(note)}</div>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderShopVoucherTable = () => {
+    if (!els.shopVoucherTable || !els.shopVoucherCountLabel) return;
+
+    els.shopVoucherCountLabel.textContent = `${state.shopVouchers.length} voucher`;
+
+    if (!state.shopVouchers.length) {
+      els.shopVoucherTable.innerHTML =
+        '<div class="seller-empty-block">Chưa có voucher phù hợp với bộ lọc hiện tại.</div>';
+      return;
+    }
+
+    els.shopVoucherTable.innerHTML = `
+      <table class="seller-products-table seller-voucher-table">
+        <thead>
+          <tr>
+            <th>Mã voucher</th>
+            <th>Ưu đãi</th>
+            <th>Sản phẩm áp dụng</th>
+            <th>Thời gian</th>
+            <th>Trạng thái</th>
+            <th>Còn lại</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.shopVouchers
+            .map((voucher) => {
+              const stateMeta = getShopVoucherStateMeta(voucher.state);
+              return `
+                <tr>
+                  <td>
+                    <div class="seller-product-name">
+                      <strong>${escapeHtml(voucher.code)}</strong>
+                      <span class="muted">${escapeHtml(buildShopVoucherHeadline(voucher))}</span>
+                    </div>
+                  </td>
+                  <td>${escapeHtml(buildShopVoucherSummary(voucher))}</td>
+                  <td>${escapeHtml(getShopVoucherProductLabel(voucher.product_ids))}</td>
+                  <td>
+                    <div class="seller-product-name">
+                      <strong>${escapeHtml(formatDate(voucher.starts_at))}</strong>
+                      <span class="muted">đến ${escapeHtml(formatDate(voucher.ends_at))}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="chip ${escapeHtml(stateMeta.className)}">${escapeHtml(
+                      stateMeta.label
+                    )}</span>
+                  </td>
+                  <td>
+                    <div class="seller-product-name">
+                      <strong>${escapeHtml(voucher.remaining_quantity)}</strong>
+                      <span class="muted">/${escapeHtml(voucher.quantity)} lượt</span>
+                    </div>
+                  </td>
+                  <td class="seller-voucher-action-cell">
+                    <div class="seller-actions">
+                      <button
+                        class="seller-mini-btn"
+                        type="button"
+                        data-action="edit-shop-voucher"
+                        data-voucher-id="${escapeHtml(voucher.id)}"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        class="seller-mini-btn ghost"
+                        type="button"
+                        data-action="delete-shop-voucher"
+                        data-voucher-id="${escapeHtml(voucher.id)}"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    `;
+  };
+
+  const renderShopPromotions = () => {
+    ensureShopPromotionsUi();
+    initDatetimePickers();
+    if (els.shopVoucherQuery) {
+      els.shopVoucherQuery.value = state.shopVoucherFilters.query || "";
+    }
+    if (els.shopVoucherStatusFilter) {
+      setSelectValue(els.shopVoucherStatusFilter, state.shopVoucherFilters.status || "all");
+    }
+    renderShopVoucherStats();
+    renderShopVoucherTable();
+    syncShopVoucherForm();
+  };
+
+  const buildShopVoucherQuery = () => {
+    const params = new URLSearchParams({
+      limit: "100",
+      status: state.shopVoucherFilters.status || "all",
+    });
+
+    const query = state.shopVoucherFilters.query.trim();
+    if (query) params.set("q", query);
+    return params.toString();
+  };
+
+  const loadShopVouchers = async () => {
+    if (!state.currentShopId) {
+      state.shopVouchers = [];
+      state.shopVoucherSummary = createShopVoucherSummary();
+      resetShopVoucherForm();
+      return;
+    }
+
+    const payload = await apiFetch(
+      `/shops/${encodeURIComponent(state.currentShopId)}/vouchers?${buildShopVoucherQuery()}`,
+      {},
+      { redirectOn401: true }
+    );
+
+    state.shopVouchers = payload?.vouchers?.data || [];
+    state.shopVoucherSummary = payload?.vouchers?.summary || createShopVoucherSummary();
+  };
+
+  const getShopVoucherPayload = () => ({
+    code: state.shopVoucherEditor.code.trim(),
+    discount_type: state.shopVoucherEditor.discount_type,
+    discount_value: state.shopVoucherEditor.discount_value,
+    min_order_amount: state.shopVoucherEditor.min_order_amount || "0",
+    product_ids: [...(state.shopVoucherEditor.product_ids || [])],
+    max_discount_amount:
+      state.shopVoucherEditor.discount_type === "percent"
+        ? state.shopVoucherEditor.max_discount_amount || null
+        : null,
+    starts_at: state.shopVoucherEditor.starts_at,
+    ends_at: state.shopVoucherEditor.ends_at,
+    quantity: state.shopVoucherEditor.quantity,
+    is_active: Boolean(state.shopVoucherEditor.is_active),
+  });
+
+  const saveShopVoucher = async () => {
+    if (!state.currentShopId) return;
+
+    const isEditMode = Boolean(state.shopVoucherEditor.id);
+    const voucherId = state.shopVoucherEditor.id;
+    const path = isEditMode
+      ? `/shops/${encodeURIComponent(state.currentShopId)}/vouchers/${encodeURIComponent(voucherId)}`
+      : `/shops/${encodeURIComponent(state.currentShopId)}/vouchers`;
+
+    const response = await apiFetch(
+      path,
+      {
+        method: isEditMode ? "PATCH" : "POST",
+        body: getShopVoucherPayload(),
+      },
+      { redirectOn401: true }
+    );
+
+    await loadShopVouchers();
+    fillShopVoucherForm(response.voucher);
+    renderShopPromotions();
+    showStatus(isEditMode ? "Đã cập nhật voucher của shop." : "Đã tạo voucher của shop.");
+  };
+
+  const deleteShopVoucherById = async (voucherId) => {
+    if (!state.currentShopId || !voucherId) return;
+
+    const voucher =
+      state.shopVouchers.find((item) => item.id === voucherId) || state.shopVoucherEditor;
+    const code = voucher?.code || "voucher này";
+    const shouldDelete = window.confirm(`Xóa ${code}?`);
+    if (!shouldDelete) return;
+
+    await apiFetch(
+      `/shops/${encodeURIComponent(state.currentShopId)}/vouchers/${encodeURIComponent(voucherId)}`,
+      {
+        method: "DELETE",
+      },
+      { redirectOn401: true }
+    );
+
+    await loadShopVouchers();
+    resetShopVoucherForm();
+    renderShopPromotions();
+    showStatus("Đã xóa voucher của shop.");
+  };
 
   const formatBusinessType = (value) => {
     const map = {
@@ -1347,6 +2702,9 @@
   const getCurrentShopOrders = () => {
     const productIds = new Set(state.products.map((product) => product.id));
     const items = Array.isArray(state.orderItems) ? state.orderItems : [];
+    if (state.currentShopId && items.some((item) => item?.shop_id)) {
+      return items.filter((item) => item?.shop_id === state.currentShopId);
+    }
     if (!productIds.size) return items;
     return items.filter((item) => {
       const productId = item?.product_variants?.products?.id;
@@ -1489,6 +2847,10 @@
     if (nextView === "orders-all") renderOrdersAllView();
     if (nextView === "orders-returns") renderOrdersReturnsView();
     if (nextView === "shipping-settings") renderShippingSettings();
+    if (nextView === "shop-promotions") renderShopPromotions();
+    if (nextView === "finance-revenue") renderFinanceRevenue();
+    if (nextView === "finance-wallet") renderFinanceWalletView();
+    if (nextView === "finance-bank") renderFinanceBankView();
     if (nextView === "new-product") renderDraft();
     if (nextView === "shop-profile") renderShopProfile();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1605,6 +2967,37 @@
       grossRevenue,
       realizedRevenue,
       averagePrice,
+    };
+  };
+
+  const getFinanceMetrics = () => {
+    const orders = getCurrentShopOrders();
+    const deliveredItems = orders.filter((item) => item?.status === "delivered");
+    const receivedItems = orders.filter((item) => item?.status === "received");
+    const completedItems = orders.filter((item) =>
+      ["delivered", "received"].includes(item?.status)
+    );
+    const deliveredRevenue = deliveredItems.reduce(
+      (total, item) => total + getOrderItemAmount(item),
+      0
+    );
+    const receivedRevenue = receivedItems.reduce(
+      (total, item) => total + getOrderItemAmount(item),
+      0
+    );
+
+    return {
+      orders,
+      deliveredItems,
+      receivedItems,
+      completedItems,
+      deliveredRevenue,
+      receivedRevenue,
+      totalCompletedRevenue: deliveredRevenue + receivedRevenue,
+      averageCompletedValue:
+        completedItems.length > 0
+          ? (deliveredRevenue + receivedRevenue) / completedItems.length
+          : 0,
     };
   };
 
@@ -1728,6 +3121,94 @@
       const rightTime = new Date(right?.orders?.created_at || right?.created_at || 0).getTime();
       return rightTime - leftTime;
     });
+
+  const buildFinanceTransactionList = (items, options = {}) => {
+    const {
+      emptyMessage = "Chưa có giao dịch nào cho shop này.",
+      statusLabel = "",
+    } = options;
+
+    if (!items.length) {
+      return `<div class="seller-empty-block">${escapeHtml(emptyMessage)}</div>`;
+    }
+
+    return `
+      <div class="seller-finance-list">
+        ${items
+          .map((item) => {
+            const productName =
+              item?.product_variants?.products?.name || "Sản phẩm chưa đặt tên";
+            const orderId = shortId(item?.orders?.id || item?.id);
+            const statusMeta = getOrderStatusMeta(item?.status);
+            const displayStatus = statusLabel || statusMeta.label;
+
+            return `
+              <article class="seller-finance-row">
+                <div class="seller-finance-row-main">
+                  <strong>${escapeHtml(productName)}</strong>
+                  <span>#${escapeHtml(orderId)} · ${escapeHtml(
+              formatDate(item?.orders?.created_at || item?.created_at)
+            )}</span>
+                </div>
+                <div class="seller-finance-amount">
+                  <span class="chip ${escapeHtml(statusMeta.className)}">${escapeHtml(
+              displayStatus
+            )}</span>
+                  <strong>${escapeHtml(formatPrice(getOrderItemAmount(item)))}</strong>
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+  };
+
+  const buildWalletTransactionList = (items, emptyMessage) => {
+    if (!items.length) {
+      return `<div class="seller-empty-block">${escapeHtml(
+        emptyMessage || "Chưa có giao dịch ví nào."
+      )}</div>`;
+    }
+
+    return `
+      <div class="seller-finance-list">
+        ${items
+          .map((item) => {
+            const directionClass = item?.direction === "out" ? "is-out" : "is-in";
+            const amount = Number(item?.amount || 0);
+            const signedAmount = `${item?.direction === "out" ? "-" : "+"}${formatPrice(
+              Math.abs(amount)
+            )}`;
+            const statusChip = item?.status_label
+              ? `<span class="chip ${escapeHtml(
+                  item?.status_tone || "gray"
+                )}">${escapeHtml(item.status_label)}</span>`
+              : "";
+
+            return `
+              <article class="seller-finance-row">
+                <div class="seller-finance-row-main">
+                  <strong>${escapeHtml(item?.title || "Biến động số dư Bambi")}</strong>
+                  <span>${escapeHtml(item?.subtitle || "Giao dịch ví của seller")}</span>
+                  <span>${escapeHtml(formatDate(item?.created_at))}</span>
+                </div>
+                <div class="seller-finance-amount ${directionClass}">
+                  <span class="chip ${escapeHtml(
+                    item?.direction === "out" ? "orange" : ""
+                  )}">${escapeHtml(
+              item?.direction === "out" ? "Tiền ra" : "Tiền vào"
+            )}</span>
+                  ${statusChip}
+                  <strong>${escapeHtml(signedAmount)}</strong>
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+  };
 
   const renderOrderTabs = (group, container) => {
     if (!container) return;
@@ -1951,7 +3432,7 @@
         {
           label: "Sắp hết hàng",
           value: formatCompactNumber(metrics.lowStockProducts),
-          note: "Những sản phẩm còn từ 1 đến 5 đơn vị trong kho.",
+          note: "Những sản phẩm còn từ 10 đơn vị trong kho.",
         },
         {
           label: "Tồn kho hiện có",
@@ -2127,6 +3608,681 @@
     }
 
     renderRecentOrders();
+  };
+
+  const renderFinanceEmptyView = (view, title, copy) => {
+    if (!view) return;
+
+    view.innerHTML = `
+      <article class="seller-panel">
+        <div class="seller-panel-head">
+          <div>
+            <span class="seller-eyebrow">Tài chính</span>
+            <h2>${escapeHtml(title)}</h2>
+            <p class="muted">${escapeHtml(copy)}</p>
+          </div>
+        </div>
+        <div class="seller-empty-block">Chưa có shop đã duyệt để hiển thị dữ liệu tài chính.</div>
+      </article>
+    `;
+  };
+
+  const renderFinanceRevenue = () => {
+    if (!els.financeRevenueView) return;
+
+    const currentShop = getCurrentShop();
+    if (!currentShop) {
+      renderFinanceEmptyView(
+        els.financeRevenueView,
+        "Doanh thu",
+        "Theo dõi doanh thu của shop theo đơn đã giao và đơn đã hoàn thành."
+      );
+      return;
+    }
+
+    const dashboardMetrics = getDashboardMetrics();
+    const financeMetrics = getFinanceMetrics();
+    const paymentAccount = getShopPaymentAccount(currentShop);
+    const recentTransactions = sortOrderItems(financeMetrics.completedItems).slice(0, 8);
+
+    els.financeRevenueView.innerHTML = `
+      <section class="seller-finance-shell">
+        <article class="seller-panel">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <span class="seller-eyebrow">Tài chính</span>
+              <h2>Doanh thu của ${escapeHtml(currentShop.name || "shop")}</h2>
+              <p class="muted">Tổng hợp các item đã giao hoặc đã hoàn thành thuộc shop đang chọn.</p>
+            </div>
+            <div class="stack-actions">
+              <button class="seller-btn subtle" type="button" data-view-target="finance-wallet">
+                Số dư tk Bambi
+              </button>
+              <button class="seller-btn ghost" type="button" data-view-target="finance-bank">
+                Tài khoản ngân hàng
+              </button>
+            </div>
+          </div>
+          <div class="seller-stat-grid seller-finance-stat-grid">
+            <article class="seller-summary-card">
+              <h3>Doanh thu đã ghi nhận</h3>
+              <span class="seller-summary-value">${escapeHtml(
+                formatPrice(financeMetrics.totalCompletedRevenue)
+              )}</span>
+              <div class="seller-summary-note">Bao gồm các item ở trạng thái đã giao và hoàn thành.</div>
+            </article>
+            <article class="seller-summary-card">
+              <h3>Đơn đã giao/hoàn thành</h3>
+              <span class="seller-summary-value">${escapeHtml(
+                formatCompactNumber(financeMetrics.completedItems.length)
+              )}</span>
+              <div class="seller-summary-note">Đếm theo item seller đã đi qua bước giao xong.</div>
+            </article>
+            <article class="seller-summary-card">
+              <h3>Chờ người mua xác nhận</h3>
+              <span class="seller-summary-value">${escapeHtml(
+                formatPrice(financeMetrics.deliveredRevenue)
+              )}</span>
+              <div class="seller-summary-note">${escapeHtml(
+                `${formatCompactNumber(financeMetrics.deliveredItems.length)} item đang ở trạng thái Đã giao.`
+              )}</div>
+            </article>
+            <article class="seller-summary-card">
+              <h3>Giá trị trung bình/item</h3>
+              <span class="seller-summary-value">${escapeHtml(
+                formatPrice(financeMetrics.averageCompletedValue)
+              )}</span>
+              <div class="seller-summary-note">Tính trên các item đã giao hoặc hoàn thành của shop.</div>
+            </article>
+          </div>
+        </article>
+
+        <section class="seller-dashboard-grid seller-finance-grid">
+          <article class="seller-panel">
+            <div class="seller-panel-head">
+              <div>
+                <h2>Giao dịch gần đây</h2>
+                <p class="muted">Danh sách item mới nhất đang đóng góp vào doanh thu của shop.</p>
+              </div>
+            </div>
+            ${buildFinanceTransactionList(recentTransactions, {
+              emptyMessage: "Chưa có giao dịch doanh thu nào cho shop này.",
+            })}
+          </article>
+
+          <aside class="seller-panel">
+            <div class="seller-panel-head">
+              <div>
+                <h2>Tóm tắt đối soát</h2>
+                <p class="muted">Kiểm tra nhanh nơi nhận tiền và chỉ số bán hàng chính.</p>
+              </div>
+            </div>
+            <div class="seller-suggestion-stack">
+              <article class="seller-suggestion-card">
+                <strong>Doanh số mở rộng</strong>
+                <span class="muted">${escapeHtml(
+                  formatPrice(dashboardMetrics.grossRevenue)
+                )}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>Đã hoàn thành</strong>
+                <span class="muted">${escapeHtml(
+                  formatPrice(financeMetrics.receivedRevenue)
+                )}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>Tài khoản nhận tiền</strong>
+                <span class="muted">${escapeHtml(
+                  paymentAccount
+                    ? `${paymentAccount.bank_name || "Ngân hàng"} · ${maskAccountNumber(
+                        paymentAccount.account_number
+                      )}`
+                    : "Chưa cập nhật tài khoản ngân hàng"
+                )}</span>
+              </article>
+            </div>
+          </aside>
+        </section>
+      </section>
+    `;
+  };
+
+  const renderFinanceWalletLegacy = () => {
+    if (!els.financeWalletView) return;
+
+    {
+      const activeShop = getCurrentShop();
+      if (!activeShop) {
+        renderFinanceEmptyView(
+          els.financeWalletView,
+          "Sá»‘ dÆ° tk Bambi",
+          "Theo dÃµi sá»‘ dÆ° kháº£ dá»¥ng vÃ  cÃ¡c khoáº£n Ä‘ang chá» Ä‘á»‘i soÃ¡t."
+        );
+        return;
+      }
+
+      const metrics = getFinanceMetrics();
+      const bankAccount = getShopPaymentAccount(activeShop);
+      const walletBalance = Number(state.walletSummary?.wallet?.balance || 0);
+      const totalCredited = Number(state.walletSummary?.stats?.total_credited || 0);
+      const totalRequested = Number(state.walletSummary?.stats?.total_requested || 0);
+      const walletTransactions = Array.isArray(state.walletSummary?.transactions)
+        ? state.walletSummary.transactions
+        : [];
+      const canRequestWithdrawal =
+        walletBalance > 0 &&
+        Boolean(bankAccount?.bank_name) &&
+        Boolean(bankAccount?.account_number) &&
+        !state.isRequestingWithdrawal;
+
+      els.financeWalletView.innerHTML = `
+        <section class="seller-finance-shell">
+          <article class="seller-panel">
+            <div class="seller-panel-head seller-panel-head-wrap">
+              <div>
+                <span class="seller-eyebrow">TÃ i chÃ­nh</span>
+                <h2>Sá»‘ dÆ° tk Bambi</h2>
+                <p class="muted">Khi item Ä‘Æ¡n hÃ ng hoÃ n táº¥t vÃ  admin Ä‘á»‘i soÃ¡t, tiá»n sáº½ Ä‘Æ°á»£c cá»™ng vÃ o ví Ä‘á»ƒ shop rÃºt vá» ngÃ¢n hÃ ng.</p>
+              </div>
+              <div class="stack-actions">
+                <button class="seller-btn subtle" type="button" data-view-target="finance-revenue">
+                  Doanh thu
+                </button>
+                <button class="seller-btn ghost" type="button" data-view-target="finance-bank">
+                  TÃ i khoáº£n ngÃ¢n hÃ ng
+                </button>
+              </div>
+            </div>
+
+            <div class="seller-finance-balance-card">
+              <div class="seller-finance-balance-main">
+                <span>Sá»‘ dÆ° kháº£ dá»¥ng</span>
+                <strong>${escapeHtml(formatPrice(walletBalance))}</strong>
+                <p class="muted">Sá»‘ dÆ° nÃ y Ä‘Æ°á»£c cá»™ng tá»« cÃ¡c Ä‘Æ¡n Ä‘Ã£ hoÃ n thÃ nh vÃ  báº¡n cÃ³ thá»ƒ yÃªu cáº§u thanh toÃ¡n vá» tÃ i khoáº£n ngÃ¢n hÃ ng cá»§a shop.</p>
+                <div class="stack-actions">
+                  <button
+                    class="seller-btn primary"
+                    type="button"
+                    data-action="request-wallet-withdrawal"
+                    ${canRequestWithdrawal ? "" : "disabled"}
+                  >
+                    ${escapeHtml(
+                      state.isRequestingWithdrawal ? "Äang gá»­i yÃªu cáº§u..." : "YÃªu cáº§u thanh toÃ¡n"
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div class="seller-finance-balance-side">
+                <article class="seller-suggestion-card">
+                  <strong>Tá»•ng Ä‘Ã£ cá»™ng vÃ o ví</strong>
+                  <span class="muted">${escapeHtml(formatPrice(totalCredited))}</span>
+                </article>
+                <article class="seller-suggestion-card">
+                  <strong>Tá»•ng Ä‘Ã£ yÃªu cáº§u thanh toÃ¡n</strong>
+                  <span class="muted">${escapeHtml(formatPrice(totalRequested))}</span>
+                </article>
+                <article class="seller-suggestion-card">
+                  <strong>TÃ i khoáº£n nháº­n tiá»n</strong>
+                  <span class="muted">${escapeHtml(
+                    bankAccount
+                      ? `${bankAccount.bank_name || "NgÃ¢n hÃ ng"} Â· ${maskAccountNumber(
+                          bankAccount.account_number
+                        )}`
+                      : "ChÆ°a liÃªn káº¿t tÃ i khoáº£n ngÃ¢n hÃ ng"
+                  )}</span>
+                </article>
+                <article class="seller-suggestion-card">
+                  <strong>Doanh thu hoÃ n táº¥t cá»§a shop</strong>
+                  <span class="muted">${escapeHtml(
+                    formatPrice(metrics.receivedRevenue)
+                  )}</span>
+                </article>
+              </div>
+            </div>
+          </article>
+
+          <article class="seller-panel">
+            <div class="seller-panel-head">
+              <div>
+                <h2>Lá»‹ch sá»­ ví Bambi</h2>
+                <p class="muted">Bao gá»“m cÃ¡c khoáº£n admin Ä‘á»‘i soÃ¡t vÃ  cÃ¡c yÃªu cáº§u thanh toÃ¡n vá» ngÃ¢n hÃ ng.</p>
+              </div>
+            </div>
+            ${buildWalletTransactionList(
+              walletTransactions,
+              "ChÆ°a cÃ³ giao dá»‹ch ví nÃ o Ä‘Æ°á»£c ghi nháº­n."
+            )}
+          </article>
+        </section>
+      `;
+      return;
+    }
+
+    const currentShop = getCurrentShop();
+    if (!currentShop) {
+      renderFinanceEmptyView(
+        els.financeWalletView,
+        "Số dư tk Bambi",
+        "Theo dõi số dư khả dụng và các khoản đang chờ đối soát."
+      );
+      return;
+    }
+
+    const financeMetrics = getFinanceMetrics();
+    const paymentAccount = getShopPaymentAccount(currentShop);
+    const walletBalance = Number(state.walletSummary?.wallet?.available_balance || 0);
+    const pendingWithdrawals = Number(
+      state.walletSummary?.stats?.pending_withdrawals || 0
+    );
+    const totalCredited = Number(state.walletSummary?.stats?.total_credited || 0);
+    const totalRequested = Number(state.walletSummary?.stats?.total_requested || 0);
+    const walletTransactions = Array.isArray(state.walletSummary?.transactions)
+      ? state.walletSummary.transactions
+      : [];
+    const canRequestWithdrawal =
+      walletBalance > 0 &&
+      Boolean(paymentAccount?.bank_name) &&
+      Boolean(paymentAccount?.account_number) &&
+      !state.isRequestingWithdrawal;
+
+    els.financeWalletView.innerHTML = `
+      <section class="seller-finance-shell">
+        <article class="seller-panel">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <span class="seller-eyebrow">Tài chính</span>
+              <h2>Số dư tk Bambi</h2>
+              <p class="muted">Tập trung vào số dư khả dụng, khoản đã hoàn tất và tài khoản nhận tiền hiện tại.</p>
+            </div>
+            <div class="stack-actions">
+              <button class="seller-btn subtle" type="button" data-view-target="finance-revenue">
+                Doanh thu
+              </button>
+              <button class="seller-btn ghost" type="button" data-view-target="finance-bank">
+                Tài khoản ngân hàng
+              </button>
+            </div>
+          </div>
+
+          <div class="seller-finance-balance-card">
+            <div class="seller-finance-balance-main">
+              <span>Số dư khả dụng</span>
+              <strong>${escapeHtml(formatPrice(estimatedAvailableBalance))}</strong>
+              <p class="muted">Số dư khả dụng sẽ tiếp tục được đồng bộ khi luồng đối soát payout cập nhật vào seller console.</p>
+            </div>
+            <div class="seller-finance-balance-side">
+              <article class="seller-suggestion-card">
+                <strong>Đã hoàn thành</strong>
+                <span class="muted">${escapeHtml(
+                  formatPrice(financeMetrics.receivedRevenue)
+                )}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>Đã giao chờ xác nhận</strong>
+                <span class="muted">${escapeHtml(
+                  formatPrice(financeMetrics.deliveredRevenue)
+                )}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>Tài khoản nhận tiền</strong>
+                <span class="muted">${escapeHtml(
+                  paymentAccount
+                    ? `${paymentAccount.bank_name || "Ngân hàng"} · ${maskAccountNumber(
+                        paymentAccount.account_number
+                      )}`
+                    : "Chưa liên kết tài khoản ngân hàng"
+                )}</span>
+              </article>
+            </div>
+          </div>
+        </article>
+
+        <article class="seller-panel">
+          <div class="seller-panel-head">
+            <div>
+              <h2>Khoản cộng gần đây</h2>
+              <p class="muted">Các item đã hoàn thành gần nhất đang tham gia vào luồng thanh toán của shop.</p>
+            </div>
+          </div>
+          ${buildFinanceTransactionList(recentCredits, {
+            emptyMessage: "Chưa có item hoàn thành nào để ghi nhận vào số dư.",
+            statusLabel: "Đã hoàn thành",
+          })}
+        </article>
+      </section>
+    `;
+  };
+
+  const renderFinanceBankLegacy = () => {
+    if (!els.financeBankView) return;
+
+    const currentShop = getCurrentShop();
+    if (!currentShop) {
+      renderFinanceEmptyView(
+        els.financeBankView,
+        "Tài khoản ngân hàng",
+        "Kiểm tra tài khoản ngân hàng nhận tiền đang liên kết với shop."
+      );
+      return;
+    }
+
+    const paymentAccount = getShopPaymentAccount(currentShop);
+
+    els.financeBankView.innerHTML = `
+      <section class="seller-finance-shell">
+        <article class="seller-panel">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <span class="seller-eyebrow">Tài chính</span>
+              <h2>Tài khoản ngân hàng</h2>
+              <p class="muted">Thông tin tài khoản nhận tiền đang lấy từ hồ sơ shop đã duyệt.</p>
+            </div>
+            <div class="stack-actions">
+              <button class="seller-btn subtle" type="button" data-view-target="finance-wallet">
+                Số dư tk Bambi
+              </button>
+              <button class="seller-btn ghost" type="button" data-view-target="shop-profile">
+                Hồ sơ shop
+              </button>
+            </div>
+          </div>
+
+          ${
+            paymentAccount
+              ? `
+                <div class="seller-finance-bank-grid">
+                  <article class="seller-finance-bank-card">
+                    <div class="seller-finance-bank-card-head">
+                      <div>
+                        <small>Ngân hàng nhận tiền</small>
+                        <h3>${escapeHtml(paymentAccount.bank_name || "Ngân hàng")}</h3>
+                      </div>
+                      <span class="seller-finance-pill">Đang sử dụng</span>
+                    </div>
+                    <div class="seller-finance-bank-number">${escapeHtml(
+                      maskAccountNumber(paymentAccount.account_number)
+                    )}</div>
+                    <div class="seller-finance-bank-foot">
+                      <strong>${escapeHtml(
+                        paymentAccount.account_holder || "Chưa cập nhật chủ tài khoản"
+                      )}</strong>
+                      <span>${escapeHtml(
+                        currentShop.status === "approved"
+                          ? "Đã đối chiếu với hồ sơ shop"
+                          : "Đang chờ xác minh"
+                      )}</span>
+                    </div>
+                  </article>
+
+                  <div class="seller-shop-info-grid">
+                    ${renderProfileInfoItems([
+                      {
+                        label: "Ngân hàng",
+                        value: paymentAccount.bank_name || "Chưa cập nhật",
+                      },
+                      {
+                        label: "Số tài khoản",
+                        value: paymentAccount.account_number || "Chưa cập nhật",
+                      },
+                      {
+                        label: "Chủ tài khoản",
+                        value: paymentAccount.account_holder || "Chưa cập nhật",
+                      },
+                      {
+                        label: "Trạng thái hồ sơ",
+                        value:
+                          currentShop.status === "approved" ? "Đã duyệt" : currentShop.status || "N/A",
+                      },
+                      {
+                        label: "Email liên hệ shop",
+                        value: currentShop.contact_email || "Chưa cập nhật",
+                        wide: true,
+                      },
+                      {
+                        label: "Gợi ý cập nhật",
+                        value: "Chỉnh sửa ở Hồ sơ shop khi cần thay đổi tài khoản nhận tiền.",
+                        wide: true,
+                      },
+                    ])}
+                  </div>
+                </div>
+              `
+              : `
+                <div class="seller-empty-block">
+                  Shop chưa có tài khoản ngân hàng nhận tiền. Hãy cập nhật ở Hồ sơ shop để seller có thể đối soát.
+                </div>
+              `
+          }
+        </article>
+      </section>
+    `;
+  };
+
+  const renderFinanceWalletView = () => {
+    if (!els.financeWalletView) return;
+
+    const currentShop = getCurrentShop();
+    if (!currentShop) {
+      renderFinanceEmptyView(
+        els.financeWalletView,
+        "S\u1ed1 d\u01b0 tk Bambi",
+        "Theo d\u00f5i s\u1ed1 d\u01b0 kh\u1ea3 d\u1ee5ng v\u00e0 c\u00e1c kho\u1ea3n \u0111ang ch\u1edd \u0111\u1ed1i so\u00e1t."
+      );
+      return;
+    }
+
+    const financeMetrics = getFinanceMetrics();
+    const paymentAccount = getShopPaymentAccount(currentShop);
+    const walletBalance = Number(state.walletSummary?.wallet?.available_balance || 0);
+    const pendingWithdrawals = Number(
+      state.walletSummary?.stats?.pending_withdrawals || 0
+    );
+    const totalCredited = Number(state.walletSummary?.stats?.total_credited || 0);
+    const totalRequested = Number(state.walletSummary?.stats?.total_requested || 0);
+    const walletTransactions = Array.isArray(state.walletSummary?.transactions)
+      ? state.walletSummary.transactions
+      : [];
+    const canRequestWithdrawal =
+      walletBalance > 0 &&
+      Boolean(paymentAccount?.bank_name) &&
+      Boolean(paymentAccount?.account_number) &&
+      !state.isRequestingWithdrawal;
+
+    els.financeWalletView.innerHTML = `
+      <section class="seller-finance-shell">
+        <article class="seller-panel">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <span class="seller-eyebrow">T\u00e0i ch\u00ednh</span>
+              <h2>S\u1ed1 d\u01b0 tk Bambi</h2>
+              <p class="muted">Sau khi kh\u00e1ch x\u00e1c nh\u1eadn \u0111\u00e3 nh\u1eadn h\u00e0ng, Bambi \u0111\u1ed1i so\u00e1t trong 5 ng\u00e0y r\u1ed3i c\u1ed9ng 70% gi\u00e1 tr\u1ecb \u0111\u01a1n v\u00e0o v\u00ed c\u1ee7a shop. Y\u00eau c\u1ea7u r\u00fat ti\u1ec1n s\u1ebd ch\u1edd admin duy\u1ec7t.</p>
+            </div>
+            <div class="stack-actions">
+              <button class="seller-btn subtle" type="button" data-view-target="finance-revenue">
+                Doanh thu
+              </button>
+              <button class="seller-btn ghost" type="button" data-view-target="finance-bank">
+                T\u00e0i kho\u1ea3n ng\u00e2n h\u00e0ng
+              </button>
+            </div>
+          </div>
+
+          <div class="seller-finance-balance-card">
+            <div class="seller-finance-balance-main">
+              <span>S\u1ed1 d\u01b0 kh\u1ea3 d\u1ee5ng</span>
+              <strong>${escapeHtml(formatPrice(walletBalance))}</strong>
+              <p class="muted">S\u1ed1 d\u01b0 n\u00e0y \u0111\u00e3 tr\u1eeb c\u00e1c y\u00eau c\u1ea7u r\u00fat ti\u1ec1n \u0111ang ch\u1edd duy\u1ec7t v\u00e0 s\u1eb5n s\u00e0ng chuy\u1ec3n v\u1ec1 t\u00e0i kho\u1ea3n ng\u00e2n h\u00e0ng c\u1ee7a shop.</p>
+              <div class="stack-actions">
+                <button
+                  class="seller-btn primary"
+                  type="button"
+                  data-action="request-wallet-withdrawal"
+                  ${canRequestWithdrawal ? "" : "disabled"}
+                >
+                  ${escapeHtml(
+                    state.isRequestingWithdrawal
+                      ? "\u0110ang g\u1eedi y\u00eau c\u1ea7u..."
+                      : "Y\u00eau c\u1ea7u thanh to\u00e1n"
+                  )}
+                </button>
+              </div>
+            </div>
+            <div class="seller-finance-balance-side">
+              <article class="seller-suggestion-card">
+                <strong>T\u1ed5ng \u0111\u00e3 c\u1ed9ng v\u00e0o v\u00ed</strong>
+                <span class="muted">${escapeHtml(formatPrice(totalCredited))}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>\u0110ang ch\u1edd admin duy\u1ec7t</strong>
+                <span class="muted">${escapeHtml(formatPrice(pendingWithdrawals))}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>\u0110ang ch\u1edd admin duy\u1ec7t</strong>
+                <span class="muted">${escapeHtml(formatPrice(pendingWithdrawals))}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>T\u1ed5ng \u0111\u00e3 y\u00eau c\u1ea7u thanh to\u00e1n</strong>
+                <span class="muted">${escapeHtml(formatPrice(totalRequested))}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>T\u00e0i kho\u1ea3n nh\u1eadn ti\u1ec1n</strong>
+                <span class="muted">${escapeHtml(
+                  paymentAccount
+                    ? `${paymentAccount.bank_name || "Ng\u00e2n h\u00e0ng"} \u00b7 ${maskAccountNumber(
+                        paymentAccount.account_number
+                      )}`
+                    : "Ch\u01b0a li\u00ean k\u1ebft t\u00e0i kho\u1ea3n ng\u00e2n h\u00e0ng"
+                )}</span>
+              </article>
+              <article class="seller-suggestion-card">
+                <strong>Doanh thu ho\u00e0n t\u1ea5t c\u1ee7a shop</strong>
+                <span class="muted">${escapeHtml(
+                  formatPrice(financeMetrics.receivedRevenue)
+                )}</span>
+              </article>
+            </div>
+          </div>
+        </article>
+
+        <article class="seller-panel">
+          <div class="seller-panel-head">
+            <div>
+              <h2>L\u1ecbch s\u1eed v\u00ed Bambi</h2>
+              <p class="muted">Bao g\u1ed3m kho\u1ea3n \u0111\u01b0\u1ee3c c\u1ed9ng v\u00e0o v\u00ed, kho\u1ea3n ho\u00e0n t\u00e1c khi tr\u1ea3 h\u00e0ng v\u00e0 c\u00e1c y\u00eau c\u1ea7u r\u00fat ti\u1ec1n.</p>
+            </div>
+          </div>
+          ${buildWalletTransactionList(
+            walletTransactions,
+            "Ch\u01b0a c\u00f3 giao d\u1ecbch v\u00ed n\u00e0o \u0111\u01b0\u1ee3c ghi nh\u1eadn."
+          )}
+        </article>
+      </section>
+    `;
+  };
+
+  const renderFinanceBankView = () => {
+    if (!els.financeBankView) return;
+
+    const currentShop = getCurrentShop();
+    if (!currentShop) {
+      renderFinanceEmptyView(
+        els.financeBankView,
+        "T\u00e0i kho\u1ea3n ng\u00e2n h\u00e0ng",
+        "Ki\u1ec3m tra t\u00e0i kho\u1ea3n ng\u00e2n h\u00e0ng nh\u1eadn ti\u1ec1n \u0111ang li\u00ean k\u1ebft v\u1edbi shop."
+      );
+      return;
+    }
+
+    const paymentAccount = getShopPaymentAccount(currentShop);
+
+    els.financeBankView.innerHTML = `
+      <section class="seller-finance-shell">
+        <article class="seller-panel">
+          <div class="seller-panel-head seller-panel-head-wrap">
+            <div>
+              <span class="seller-eyebrow">T\u00e0i ch\u00ednh</span>
+              <h2>T\u00e0i kho\u1ea3n ng\u00e2n h\u00e0ng</h2>
+              <p class="muted">Th\u00f4ng tin t\u00e0i kho\u1ea3n nh\u1eadn ti\u1ec1n \u0111ang l\u1ea5y t\u1eeb h\u1ed3 s\u01a1 shop \u0111\u00e3 duy\u1ec7t.</p>
+            </div>
+            <div class="stack-actions">
+              <button class="seller-btn subtle" type="button" data-view-target="finance-wallet">
+                S\u1ed1 d\u01b0 tk Bambi
+              </button>
+              <button class="seller-btn ghost" type="button" data-view-target="shop-profile">
+                H\u1ed3 s\u01a1 shop
+              </button>
+            </div>
+          </div>
+
+          ${
+            paymentAccount
+              ? `
+                <div class="seller-finance-bank-grid">
+                  <article class="seller-finance-bank-card">
+                    <div class="seller-finance-bank-card-head">
+                      <div>
+                        <small>Ng\u00e2n h\u00e0ng nh\u1eadn ti\u1ec1n</small>
+                        <h3>${escapeHtml(paymentAccount.bank_name || "Ng\u00e2n h\u00e0ng")}</h3>
+                      </div>
+                      <span class="seller-finance-pill">\u0110ang s\u1eed d\u1ee5ng</span>
+                    </div>
+                    <div class="seller-finance-bank-number">${escapeHtml(
+                      maskAccountNumber(paymentAccount.account_number)
+                    )}</div>
+                    <div class="seller-finance-bank-foot">
+                      <strong>${escapeHtml(
+                        paymentAccount.account_holder || "Ch\u01b0a c\u1eadp nh\u1eadt ch\u1ee7 t\u00e0i kho\u1ea3n"
+                      )}</strong>
+                      <span>${escapeHtml(
+                        currentShop.status === "approved"
+                          ? "\u0110\u00e3 \u0111\u1ed1i chi\u1ebfu v\u1edbi h\u1ed3 s\u01a1 shop"
+                          : "\u0110ang ch\u1edd x\u00e1c minh"
+                      )}</span>
+                    </div>
+                  </article>
+
+                  <div class="seller-shop-info-grid">
+                    ${renderProfileInfoItems([
+                      {
+                        label: "Ng\u00e2n h\u00e0ng",
+                        value: paymentAccount.bank_name || "Ch\u01b0a c\u1eadp nh\u1eadt",
+                      },
+                      {
+                        label: "S\u1ed1 t\u00e0i kho\u1ea3n",
+                        value: paymentAccount.account_number || "Ch\u01b0a c\u1eadp nh\u1eadt",
+                      },
+                      {
+                        label: "Ch\u1ee7 t\u00e0i kho\u1ea3n",
+                        value: paymentAccount.account_holder || "Ch\u01b0a c\u1eadp nh\u1eadt",
+                      },
+                      {
+                        label: "Tr\u1ea1ng th\u00e1i h\u1ed3 s\u01a1",
+                        value:
+                          currentShop.status === "approved" ? "\u0110\u00e3 duy\u1ec7t" : currentShop.status || "N/A",
+                      },
+                      {
+                        label: "Email li\u00ean h\u1ec7 shop",
+                        value: currentShop.contact_email || "Ch\u01b0a c\u1eadp nh\u1eadt",
+                        wide: true,
+                      },
+                      {
+                        label: "G\u1ee3i \u00fd c\u1eadp nh\u1eadt",
+                        value: "Ch\u1ec9nh s\u1eeda \u1edf H\u1ed3 s\u01a1 shop khi c\u1ea7n thay \u0111\u1ed5i t\u00e0i kho\u1ea3n nh\u1eadn ti\u1ec1n.",
+                        wide: true,
+                      },
+                    ])}
+                  </div>
+                </div>
+              `
+              : `
+                <div class="seller-empty-block">
+                  Shop ch\u01b0a c\u00f3 t\u00e0i kho\u1ea3n ng\u00e2n h\u00e0ng nh\u1eadn ti\u1ec1n. H\u00e3y c\u1eadp nh\u1eadt \u1edf H\u1ed3 s\u01a1 shop \u0111\u1ec3 seller c\u00f3 th\u1ec3 \u0111\u1ed1i so\u00e1t.
+                </div>
+              `
+          }
+        </article>
+      </section>
+    `;
   };
 
   const renderProfileInfoItems = (items) =>
@@ -3996,6 +6152,7 @@
       "";
 
     resetShopProfileEditor();
+    resetShopVoucherForm();
     updateUserInfo();
     toggleApprovedContent(Boolean(state.approvedShops.length));
   };
@@ -4045,11 +6202,95 @@
     state.orderItems = payload?.items?.data || [];
   };
 
+  const loadWalletSummary = async () => {
+    const params = new URLSearchParams();
+    params.set("limit", "12");
+    if (state.currentShopId) {
+      params.set("shop_id", state.currentShopId);
+    }
+
+    const payload = await apiFetch(
+      `/orders/seller/wallet?${params.toString()}`,
+      {},
+      { redirectOn401: true }
+    );
+    state.walletSummary =
+      payload?.wallet_summary || createEmptyWalletSummary();
+  };
+
+  const requestWalletWithdrawal = async (button) => {
+    if (state.isRequestingWithdrawal) return;
+
+    const currentShop = getCurrentShop();
+    if (!currentShop) {
+      showStatus("Chưa có shop để gửi yêu cầu thanh toán.", { error: true });
+      return;
+    }
+
+    const paymentAccount = getShopPaymentAccount(currentShop);
+    if (!paymentAccount?.bank_name || !paymentAccount?.account_number) {
+      showStatus("Shop chưa có tài khoản ngân hàng nhận tiền.", { error: true });
+      return;
+    }
+
+    const balance = Number(state.walletSummary?.wallet?.available_balance || 0);
+    if (!Number.isFinite(balance) || balance <= 0) {
+      showStatus("Ví Bambi chưa có số dư khả dụng để thanh toán.", {
+        error: true,
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Gửi yêu cầu thanh toán ${formatPrice(balance)} về ${paymentAccount.bank_name} ${maskAccountNumber(
+        paymentAccount.account_number
+      )}? Yêu cầu này sẽ chờ admin duyệt.`
+    );
+    if (!confirmed) return;
+
+    const originalText = button?.textContent || "Yêu cầu thanh toán";
+
+    try {
+      state.isRequestingWithdrawal = true;
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Đang gửi yêu cầu...";
+      }
+
+      showStatus("Đang gửi yêu cầu thanh toán...", { persist: true });
+      const payload = await apiFetch(
+        "/orders/seller/wallet/withdraw",
+        {
+          method: "POST",
+          body: { shop_id: state.currentShopId || undefined },
+        },
+        { redirectOn401: true }
+      );
+
+      await loadWalletSummary();
+      showStatus(payload?.message || "Đã gửi yêu cầu thanh toán.");
+    } catch (error) {
+      showStatus(
+        error instanceof Error ? error.message : "Không thể gửi yêu cầu thanh toán.",
+        { error: true }
+      );
+    } finally {
+      state.isRequestingWithdrawal = false;
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+      renderFinanceWalletView();
+    }
+  };
+
   const reloadOrders = async () => {
-    await loadOrders();
+    await Promise.all([loadOrders(), loadWalletSummary()]);
     renderDashboard();
     renderOrdersAllView();
     renderOrdersReturnsView();
+    renderFinanceRevenue();
+    renderFinanceWalletView();
     showStatus("Đã tải lại dữ liệu đơn hàng.");
   };
 
@@ -4059,6 +6300,10 @@
     renderOrdersAllView();
     renderOrdersReturnsView();
     renderShippingSettings();
+    renderShopPromotions();
+    renderFinanceRevenue();
+    renderFinanceWalletView();
+    renderFinanceBankView();
     renderShopProfile();
     renderProductsView();
     renderDraft();
@@ -4069,7 +6314,10 @@
 
     if (!state.currentShopId) {
       state.products = [];
+      state.shopVouchers = [];
+      state.shopVoucherSummary = createShopVoucherSummary();
       state.orderItems = [];
+      state.walletSummary = createEmptyWalletSummary();
       renderAll();
       return;
     }
@@ -4079,7 +6327,13 @@
     }
 
     try {
-      await Promise.all([loadCategories(), loadProducts(), loadOrders()]);
+      await Promise.all([
+        loadCategories(),
+        loadProducts(),
+        loadOrders(),
+        loadShopVouchers(),
+        loadWalletSummary(),
+      ]);
       renderAll();
       if (!silent) {
         showStatus("Đã đồng bộ dữ liệu seller.");
@@ -4126,6 +6380,148 @@
   };
 
   const bindInputEvents = () => {
+    const clearShopVoucherFilters = document.querySelector("#clearShopVoucherFilters");
+    const clearShopVoucherProducts = document.querySelector("#clearShopVoucherProducts");
+
+    els.shopVoucherQuery?.addEventListener("input", (event) => {
+      state.shopVoucherFilters.query = event.target.value || "";
+    });
+
+    els.shopVoucherQuery?.addEventListener("keydown", async (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      await loadShopVouchers();
+      renderShopPromotions();
+    });
+
+    els.shopVoucherStatusFilter?.addEventListener("change", async (event) => {
+      state.shopVoucherFilters.status = event.target.value || "all";
+      await loadShopVouchers();
+      renderShopPromotions();
+    });
+
+    els.reloadShopVouchers?.addEventListener("click", async () => {
+      await loadShopVouchers();
+      renderShopPromotions();
+      showStatus("Đã tải lại danh sách voucher của shop.");
+    });
+
+    clearShopVoucherFilters?.addEventListener("click", async () => {
+      state.shopVoucherFilters = {
+        query: "",
+        status: "all",
+      };
+      await loadShopVouchers();
+      renderShopPromotions();
+    });
+
+    els.shopVoucherForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await saveShopVoucher();
+    });
+
+    els.shopVoucherCode?.addEventListener("input", (event) => {
+      state.shopVoucherEditor.code = (event.target.value || "")
+        .toUpperCase()
+        .replace(/\s+/g, "");
+      event.target.value = state.shopVoucherEditor.code;
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherDiscountType?.addEventListener("change", (event) => {
+      state.shopVoucherEditor.discount_type = event.target.value || "amount";
+      if (state.shopVoucherEditor.discount_type !== "percent") {
+        state.shopVoucherEditor.max_discount_amount = "";
+      }
+      syncShopVoucherMaxField();
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherDiscountValue?.addEventListener("input", (event) => {
+      state.shopVoucherEditor.discount_value = event.target.value || "";
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherMinOrderAmount?.addEventListener("input", (event) => {
+      state.shopVoucherEditor.min_order_amount = event.target.value || "0";
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherMaxDiscountAmount?.addEventListener("input", (event) => {
+      state.shopVoucherEditor.max_discount_amount = event.target.value || "";
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherQuantity?.addEventListener("input", (event) => {
+      state.shopVoucherEditor.quantity = event.target.value || "1";
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherStartsAt?.addEventListener("change", (event) => {
+      state.shopVoucherEditor.starts_at = event.target.value || "";
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherEndsAt?.addEventListener("change", (event) => {
+      state.shopVoucherEditor.ends_at = event.target.value || "";
+      syncShopVoucherPreview();
+    });
+
+    els.shopVoucherIsActive?.addEventListener("change", (event) => {
+      state.shopVoucherEditor.is_active = Boolean(event.target.checked);
+    });
+
+    els.shopVoucherProductList?.addEventListener("change", (event) => {
+      const target = event.target.closest('[data-role="shop-voucher-product"]');
+      if (!target) return;
+
+      const selected = new Set(state.shopVoucherEditor.product_ids || []);
+      if (target.checked) {
+        selected.add(target.value);
+      } else {
+        selected.delete(target.value);
+      }
+
+      state.shopVoucherEditor.product_ids = Array.from(selected);
+      renderShopVoucherProductList();
+      syncShopVoucherPreview();
+    });
+
+    clearShopVoucherProducts?.addEventListener("click", () => {
+      state.shopVoucherEditor.product_ids = [];
+      renderShopVoucherProductList();
+      syncShopVoucherPreview();
+    });
+
+    els.resetShopVoucherForm?.addEventListener("click", () => {
+      resetShopVoucherForm();
+      showStatus("Đã làm mới form voucher.");
+    });
+
+    els.deleteShopVoucherBtn?.addEventListener("click", async () => {
+      await deleteShopVoucherById(state.shopVoucherEditor.id);
+    });
+
+    els.shopVoucherTable?.addEventListener("click", async (event) => {
+      const actionButton = event.target.closest("[data-action]");
+      if (!actionButton) return;
+
+      const voucherId = actionButton.dataset.voucherId || "";
+      if (!voucherId) return;
+
+      if (actionButton.dataset.action === "edit-shop-voucher") {
+        const voucher = state.shopVouchers.find((item) => item.id === voucherId);
+        if (!voucher) return;
+        fillShopVoucherForm(voucher);
+        showStatus("Đã nạp thông tin voucher để chỉnh sửa.");
+        return;
+      }
+
+      if (actionButton.dataset.action === "delete-shop-voucher") {
+        await deleteShopVoucherById(voucherId);
+      }
+    });
+
     els.productSearch?.addEventListener("input", (event) => {
       state.productFilters.search = event.target.value || "";
       renderProductsView();
@@ -4348,6 +6744,11 @@
     });
 
     document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && activeDatetimePicker) {
+        closeDatetimePicker(activeDatetimePicker);
+        return;
+      }
+
       if (event.key === "Escape" && state.categoryPicker.isOpen) {
         closeCategoryPicker();
       }
@@ -4518,6 +6919,11 @@
         return;
       }
 
+      if (action === "request-wallet-withdrawal") {
+        await requestWalletWithdrawal(actionButton);
+        return;
+      }
+
       if (action === "edit-product") {
         openProductEditor(actionButton.dataset.productId);
         return;
@@ -4641,11 +7047,6 @@
 
     els.saveProductVisible?.addEventListener("click", async () => {
       await saveDraft(resolveDraftStatus("active"));
-    });
-
-    els.logoutSeller?.addEventListener("click", () => {
-      clearAuth();
-      redirectToLogin();
     });
 
     document.addEventListener("scroll", syncActiveFormTab, { passive: true });

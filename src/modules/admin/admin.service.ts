@@ -2,10 +2,12 @@ import { Prisma } from "@prisma/client";
 import prisma from "../../libs/prisma";
 import { getShopDetailById, listPendingShops } from "../shops/shop.service";
 import {
+  AdminShopRevenueQuery,
   AdminProductsQuery,
   AdminVoucherInput,
   AdminVouchersQuery,
   RecentOrdersQuery,
+  UpdateWithdrawRequestInput,
 } from "./admin.types";
 
 const MAX_LIMIT = 100;
@@ -28,6 +30,37 @@ const getPagination = (query?: { page?: string; limit?: string }) => {
   const limit = Math.min(MAX_LIMIT, Math.max(1, toNumber(query?.limit) || 20));
   const skip = (page - 1) * limit;
   return { page, limit, skip };
+};
+
+const WITHDRAW_PENDING_TYPE = "withdraw_pending";
+const WITHDRAW_APPROVED_TYPE = "withdraw_approved";
+const WITHDRAW_REJECTED_TYPE = "withdraw_rejected";
+
+const getShopPaymentAccountSnapshot = (shop: {
+  onboarding_data?: Prisma.JsonValue | null;
+  shop_payment_accounts?: Array<{
+    bank_name?: string | null;
+    account_number?: string | null;
+    account_holder?: string | null;
+  }>;
+}) => {
+  const directAccount = shop.shop_payment_accounts?.[0];
+  if (directAccount?.account_number || directAccount?.bank_name) {
+    return directAccount;
+  }
+
+  const onboarding =
+    shop.onboarding_data && typeof shop.onboarding_data === "object"
+      ? (shop.onboarding_data as Record<string, any>)
+      : null;
+  const fallback = onboarding?.payment_account;
+  if (!fallback || typeof fallback !== "object") return null;
+
+  return {
+    bank_name: fallback.bank_name || null,
+    account_number: fallback.account_number || null,
+    account_holder: fallback.account_holder || null,
+  };
 };
 
 const VOUCHER_TYPES = new Set(["amount", "percent"]);
@@ -365,6 +398,229 @@ export const getPendingShops = async (query?: { page?: string; limit?: string })
 
 export const getShopDetail = async (shopId: string) => {
   return getShopDetailById(shopId);
+};
+
+export const getShopRevenueManagement = async (
+  query: AdminShopRevenueQuery
+) => {
+  const { page, limit, skip } = getPagination(query);
+
+  const [
+    total,
+    requests,
+    pendingAmountAgg,
+    payoutAgg,
+    feesAgg,
+    netAgg,
+  ] = await Promise.all([
+    prisma.wallet_transactions.count({
+      where: { type: WITHDRAW_PENDING_TYPE },
+    }),
+    prisma.wallet_transactions.findMany({
+      where: { type: WITHDRAW_PENDING_TYPE },
+      orderBy: { created_at: "desc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        amount: true,
+        type: true,
+        reference_id: true,
+        created_at: true,
+        wallets: {
+          select: {
+            id: true,
+            balance: true,
+            user_id: true,
+            users: {
+              select: {
+                id: true,
+                full_name: true,
+                email: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.wallet_transactions.aggregate({
+      where: { type: WITHDRAW_PENDING_TYPE },
+      _sum: { amount: true },
+    }),
+    prisma.shop_payouts.aggregate({
+      where: { status: "paid" },
+      _sum: { gross_amount: true },
+    }),
+    prisma.shop_payouts.aggregate({
+      where: { status: "paid" },
+      _sum: { fee_amount: true },
+    }),
+    prisma.shop_payouts.aggregate({
+      where: { status: "paid" },
+      _sum: { net_amount: true },
+    }),
+  ]);
+
+  const shopIds = Array.from(
+    new Set(
+      requests
+        .map((item) => item.reference_id)
+        .filter((value): value is string => Boolean(value))
+    )
+  );
+
+  const shops = shopIds.length
+    ? await prisma.shops.findMany({
+        where: { id: { in: shopIds } },
+        select: {
+          id: true,
+          name: true,
+          owner_id: true,
+          onboarding_data: true,
+          shop_payment_accounts: {
+            take: 1,
+            select: {
+              bank_name: true,
+              account_number: true,
+              account_holder: true,
+            },
+          },
+        },
+      })
+    : [];
+
+  const shopMap = new Map(shops.map((shop) => [shop.id, shop]));
+
+  return {
+    summary: {
+      payout_gross: payoutAgg._sum.gross_amount || 0,
+      platform_fees: feesAgg._sum.fee_amount || 0,
+      payout_net: netAgg._sum.net_amount || 0,
+      pending_requests: total,
+      pending_amount: pendingAmountAgg._sum.amount
+        ? new Prisma.Decimal(pendingAmountAgg._sum.amount).abs()
+        : 0,
+    },
+    requests: {
+      data: requests.map((request) => {
+        const shop = request.reference_id
+          ? shopMap.get(request.reference_id)
+          : null;
+        const bankAccount = shop ? getShopPaymentAccountSnapshot(shop) : null;
+
+        return {
+          id: request.id,
+          amount: request.amount ? new Prisma.Decimal(request.amount).abs() : 0,
+          created_at: request.created_at,
+          shop: shop
+            ? {
+                id: shop.id,
+                name: shop.name,
+              }
+            : null,
+          seller: request.wallets?.users
+            ? {
+                id: request.wallets.users.id,
+                full_name: request.wallets.users.full_name,
+                email: request.wallets.users.email,
+                phone: request.wallets.users.phone,
+              }
+            : null,
+          wallet: request.wallets
+            ? {
+                id: request.wallets.id,
+                balance: request.wallets.balance || 0,
+              }
+            : null,
+          bank_account: bankAccount,
+        };
+      }),
+      pagination: {
+        page,
+        limit,
+        total,
+        total_pages: Math.ceil(total / limit),
+      },
+    },
+  };
+};
+
+export const updateWithdrawRequestStatus = async (
+  requestId: string,
+  input: UpdateWithdrawRequestInput
+) => {
+  const action = String(input.action || "").trim().toLowerCase();
+  if (!["approve", "reject"].includes(action)) {
+    throw new Error("Hành động duyệt yêu cầu rút tiền không hợp lệ");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const request = await tx.wallet_transactions.findUnique({
+      where: { id: requestId },
+      select: {
+        id: true,
+        amount: true,
+        type: true,
+        wallet_id: true,
+        reference_id: true,
+        wallets: {
+          select: {
+            id: true,
+            balance: true,
+          },
+        },
+      },
+    });
+
+    if (!request || request.type !== WITHDRAW_PENDING_TYPE) {
+      throw new Error("Không tìm thấy yêu cầu rút tiền đang chờ duyệt");
+    }
+
+    const amount = request.amount
+      ? new Prisma.Decimal(request.amount).abs()
+      : new Prisma.Decimal(0);
+
+    if (action === "approve") {
+      if (!request.wallets?.id || request.wallets.balance === null) {
+        throw new Error("Không tìm thấy ví seller để trừ tiền");
+      }
+
+      const balance = new Prisma.Decimal(request.wallets.balance || 0);
+      if (balance.lt(amount)) {
+        throw new Error("Ví seller không đủ số dư để duyệt yêu cầu này");
+      }
+
+      await tx.wallets.update({
+        where: { id: request.wallets.id },
+        data: {
+          balance: { decrement: amount },
+        },
+      });
+
+      await tx.wallet_transactions.update({
+        where: { id: request.id },
+        data: {
+          type: WITHDRAW_APPROVED_TYPE,
+        },
+      });
+
+      return {
+        message: "Đã duyệt yêu cầu rút tiền của shop.",
+      };
+    }
+
+    await tx.wallet_transactions.update({
+      where: { id: request.id },
+      data: {
+        type: WITHDRAW_REJECTED_TYPE,
+      },
+    });
+
+    return {
+      message: "Đã từ chối yêu cầu rút tiền của shop.",
+    };
+  });
 };
 
 const buildProductWhere = (query: AdminProductsQuery) => {

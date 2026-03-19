@@ -3,6 +3,7 @@ import { AuthRequest } from "../../middleware/auth.middleware";
 import {
   createAdminVoucher,
   deleteAdminVoucher,
+  getShopRevenueManagement,
   getOverview,
   getAdminProducts,
   getAdminVoucherById,
@@ -10,14 +11,17 @@ import {
   getPendingShops,
   getRecentOrders,
   getShopDetail,
+  updateWithdrawRequestStatus,
   updateAdminVoucher,
   updateProductStatusByAdmin,
 } from "./admin.service";
 import {
+  AdminShopRevenueQuery,
   AdminProductsQuery,
   AdminVoucherInput,
   AdminVouchersQuery,
   RecentOrdersQuery,
+  UpdateWithdrawRequestInput,
   UpdateProductStatusInput,
 } from "./admin.types";
 
@@ -61,6 +65,30 @@ export const shopDetail = async (
   try {
     const shop = await getShopDetail(req.params.id);
     res.json({ shop });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const shopRevenueManagement = async (
+  req: AuthRequest<{}, {}, {}, AdminShopRevenueQuery>,
+  res: Response
+) => {
+  try {
+    const revenue = await getShopRevenueManagement(req.query);
+    res.json({ revenue });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateWithdrawRequest = async (
+  req: AuthRequest<{ id: string }, {}, UpdateWithdrawRequestInput>,
+  res: Response
+) => {
+  try {
+    const result = await updateWithdrawRequestStatus(req.params.id, req.body || {});
+    res.json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

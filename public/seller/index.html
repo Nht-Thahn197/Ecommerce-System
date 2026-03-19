@@ -6,7 +6,7 @@
     <title>Bambi Seller Studio</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
     <link rel="stylesheet" href="../shared.css" />
-    <link rel="stylesheet" href="./seller.css?v=20260311-9" />
+    <link rel="stylesheet" href="./seller.css?v=20260317-4" />
   </head>
   <body class="seller-body">
     <div class="seller-shell">
@@ -73,9 +73,16 @@
           </button>
         </section>
 
-        <div class="seller-sidebar-foot">
-          <button class="btn ghost" id="logoutSeller" type="button">Đăng xuất</button>
-        </div>
+        <section class="seller-nav-section">
+          <p class="seller-nav-heading">Marketing</p>
+          <button class="seller-nav-link" type="button" data-view-target="shop-promotions">
+            <span class="seller-nav-icon">KM</span>
+            <span class="seller-nav-copy">
+              <strong>Khuy&#7871;n m&#227;i c&#7911;a shop</strong>
+              <span>T&#7841;o v&#224; theo d&#245;i &#432;u &#273;&#227;i ri&#234;ng cho shop</span>
+            </span>
+          </button>
+        </section>
       </aside>
 
       <main class="seller-main">
@@ -255,6 +262,22 @@
             </div>
 
             <div id="productsTable"></div>
+          </article>
+        </section>
+
+        <section class="seller-view hidden" data-view="shop-promotions">
+          <article class="seller-panel">
+            <div class="seller-panel-head">
+              <div>
+                <h2>Khuy&#7871;n m&#227;i c&#7911;a shop</h2>
+                <p class="muted">
+                  Khu v&#7921;c n&#224;y d&#224;nh cho c&#225;c ch&#432;&#417;ng tr&#236;nh khuy&#7871;n m&#227;i ri&#234;ng c&#7911;a shop.
+                </p>
+              </div>
+            </div>
+            <div class="seller-empty-block">
+              T&#237;nh n&#259;ng marketing &#273;ang &#273;&#432;&#7907;c chu&#7849;n b&#7883; giao di&#7879;n chi ti&#7871;t.
+            </div>
           </article>
         </section>
 
@@ -630,6 +653,6 @@
     </div>
 
     <script src="/ui/custom-select.js"></script>
-    <script src="/ui/seller/seller.js?v=20260316-1"></script>
+    <script src="/ui/seller/seller.js?v=20260317-6"></script>
   </body>
 </html>

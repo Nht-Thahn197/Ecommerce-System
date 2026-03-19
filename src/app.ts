@@ -14,6 +14,7 @@ import searchRoutes from "./modules/search/search.route";
 import paymentRoutes from "./modules/payments/payment.route";
 import returnRoutes from "./modules/returns/return.route";
 import categoryRoutes from "./modules/categories/category.route";
+import notificationRoutes from "./modules/notifications/notification.route";
 
 const app = express();
 
@@ -47,4 +48,5 @@ app.use("/search", searchRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/returns", returnRoutes);
 app.use("/categories", categoryRoutes);
+app.use("/notifications", notificationRoutes);
 export default app;

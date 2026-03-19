@@ -1,5 +1,6 @@
 (function () {
   const auth = window.BambiStoreAuth || {};
+  const CHECKOUT_SELECTION_QUERY_PARAM = "selected";
 
   const els = {
     status: document.querySelector("#checkoutStatus"),
@@ -14,6 +15,8 @@
     shipping: document.querySelector("#checkoutShipping"),
     productDiscount: document.querySelector("#checkoutProductDiscount"),
     productDiscountRow: document.querySelector("#checkoutProductDiscountRow"),
+    shopDiscount: document.querySelector("#checkoutShopDiscount"),
+    shopDiscountRow: document.querySelector("#checkoutShopDiscountRow"),
     shippingDiscount: document.querySelector("#checkoutShippingDiscount"),
     shippingDiscountRow: document.querySelector("#checkoutShippingDiscountRow"),
     total: document.querySelector("#checkoutTotal"),
@@ -35,6 +38,11 @@
     closePlatformVoucherModalBtn: document.querySelector(
       "#closePlatformVoucherModalBtn"
     ),
+    shopVoucherModal: document.querySelector("#shopVoucherModal"),
+    shopVoucherTitle: document.querySelector("#shopVoucherTitle"),
+    shopVoucherSubtitle: document.querySelector("#shopVoucherSubtitle"),
+    shopVoucherList: document.querySelector("#shopVoucherList"),
+    closeShopVoucherModalBtn: document.querySelector("#closeShopVoucherModalBtn"),
   };
 
   if (!els.shopList) return;
@@ -44,18 +52,19 @@
     fast: {
       label: "Nhanh",
       fee: 15000,
-      note: "Giao trong 2-3 ngay (tuy theo shop)",
+      note: "Giao trong 2-3 ngày",
     },
     express: {
-      label: "Hoa toc",
+      label: "Hỏa tốc",
       fee: 35000,
-      note: "Uu tien giao som trong ngay",
+      note: "Ưu tiên giao sớm trong ngày",
     },
   };
 
   const state = {
     items: [],
     productMap: new Map(),
+    requestedCartItemIds: [],
     addresses: [],
     selectedAddressId: "",
     shipping: {},
@@ -78,7 +87,12 @@
       discount: null,
       shipping: null,
     },
+    shopVouchers: {},
+    selectedShopVouchers: {},
+    selectedShopVoucherCodes: {},
+    shopSelectionErrors: {},
     activeVoucherKind: "discount",
+    activeShopVoucherShopId: "",
     pricing: null,
     previewRequestId: 0,
   };
@@ -127,6 +141,24 @@
     els.status.classList.remove("error");
   };
 
+  const parseRequestedCartItemIds = () => {
+    const params = new URLSearchParams(window.location.search);
+    const rawValue = String(params.get(CHECKOUT_SELECTION_QUERY_PARAM) || "").trim();
+
+    if (!rawValue) return [];
+
+    return Array.from(
+      new Set(
+        rawValue
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      )
+    );
+  };
+
+  state.requestedCartItemIds = parseRequestedCartItemIds();
+
   const ensureAuth = () => {
     if (typeof auth.getToken !== "function" || !auth.getToken()) {
       auth.redirectToLogin?.();
@@ -154,9 +186,8 @@
   };
 
   const getProductId = (item) => String(item?.product_variants?.products?.id || "");
-
+  const getShopId = (item) => String(item?.product_variants?.products?.shop_id || "default");
   const getItemPrice = (item) => Number(item?.product_variants?.price || 0);
-
   const getItemProduct = (item) => state.productMap.get(getProductId(item)) || null;
 
   const getItemTitle = (item) => {
@@ -164,7 +195,7 @@
     return (
       product?.name ||
       item?.product_variants?.products?.name ||
-      `Sản phẩm #${getProductId(item) || item?.id || ""}`
+      `San pham #${getProductId(item) || item?.id || ""}`
     );
   };
 
@@ -193,16 +224,11 @@
 
     state.items.forEach((item) => {
       const product = getItemProduct(item);
-      const fallbackShopId = String(item?.product_variants?.products?.shop_id || "default");
-      const shopId = String(product?.shops?.id || fallbackShopId);
+      const shopId = String(product?.shops?.id || getShopId(item));
       const shopName = product?.shops?.name || "Shop Bambi";
 
       if (!groups.has(shopId)) {
-        groups.set(shopId, {
-          id: shopId,
-          name: shopName,
-          items: [],
-        });
+        groups.set(shopId, { id: shopId, name: shopName, items: [] });
       }
 
       groups.get(shopId).items.push(item);
@@ -210,6 +236,8 @@
 
     return Array.from(groups.values());
   };
+
+  const getGroupByShopId = (shopId) => getGroups().find((group) => group.id === shopId) || null;
 
   const loadProductDetails = async (items) => {
     const productIds = Array.from(new Set(items.map(getProductId).filter(Boolean)));
@@ -313,6 +341,8 @@
     return {
       subtotal,
       shipping_total: shippingTotal,
+      platform_discount_total: 0,
+      shop_discount_total: 0,
       product_discount_total: 0,
       shipping_discount_total: 0,
       discount_total: 0,
@@ -322,6 +352,17 @@
   };
 
   const getCurrentPricing = () => state.pricing || getFallbackPricing();
+
+  const buildCheckoutRequestBody = (paymentMethod) => ({
+    ...(state.requestedCartItemIds.length
+      ? { cart_item_ids: state.requestedCartItemIds }
+      : {}),
+    ...(paymentMethod ? { payment_method: paymentMethod } : {}),
+    shipping_methods: state.shipping,
+    platform_discount_voucher_code: state.selectedVoucherCodes.discount || null,
+    platform_shipping_voucher_code: state.selectedVoucherCodes.shipping || null,
+    shop_voucher_codes: state.selectedShopVoucherCodes,
+  });
 
   const buildVoucherHeadline = (voucher) => {
     const discountText =
@@ -333,9 +374,7 @@
       ? `Giảm ${discountText} phí vận chuyển cho đơn từ ${formatCurrency(
           voucher.min_order_amount || 0
         )}`
-      : `Giảm ${discountText} cho đơn từ ${formatCurrency(
-          voucher.min_order_amount || 0
-        )}`;
+      : `Giảm ${discountText} cho đơn từ ${formatCurrency(voucher.min_order_amount || 0)}`;
   };
 
   const buildVoucherSummary = (voucher) => {
@@ -348,21 +387,21 @@
       parts.push(`Tối đa ${formatCurrency(voucher.max_discount_amount)}`);
     }
 
-    return parts.join(" • ");
+    return parts.join(" | ");
   };
 
   const getVoucherKindMeta = (kind) =>
     kind === "shipping"
       ? {
-          title: "Voucher giảm phí vận chuyển",
-          subtitle: "Các voucher dưới đây giảm trực tiếp vào phí vận chuyển của đơn hàng.",
+          title: "Voucher Giảm phí vận chuyển",
+          subtitle: "Các voucher dưới đây sẽ trừ trực tiếp vào phí vận chuyển của đơn hàng.",
           empty: "Chưa có voucher giảm phí vận chuyển phù hợp với giỏ hàng hiện tại.",
           available: "voucher giảm phí vận chuyển",
           selected: "Đã áp dụng voucher giảm phí vận chuyển",
         }
       : {
           title: "Voucher giảm giá",
-          subtitle: "Các voucher dưới đây giảm trực tiếp vào giá trị đơn hàng của bạn.",
+          subtitle: "ác voucher dưới đây sẽ trừ trực tiếp vào giá trị đơn hàng của bạn.",
           empty: "Chưa có voucher giảm giá phù hợp với giỏ hàng hiện tại.",
           available: "voucher giảm giá",
           selected: "Đã áp dụng voucher giảm giá",
@@ -381,6 +420,54 @@
           button: els.chooseDiscountVoucherBtn,
         };
 
+  const getKnownProductName = (productId) => {
+    const product = state.productMap.get(String(productId));
+    if (product?.name) return product.name;
+
+    const matchedItem = state.items.find((item) => getProductId(item) === String(productId));
+    return matchedItem ? getItemTitle(matchedItem) : "";
+  };
+
+  const getShopVoucherProductLabel = (voucher) => {
+    const productIds = Array.isArray(voucher?.product_ids) ? voucher.product_ids : [];
+    if (!productIds.length) {
+      return "Áp dụng cho mọi sản phẩm của shop";
+    }
+
+    const names = productIds.map(getKnownProductName).filter(Boolean);
+    if (names.length && names.length === productIds.length && names.length <= 3) {
+      return names.join(", ");
+    }
+
+    return `Áp dụng cho ${productIds.length} sản phẩm trong shop`;
+  };
+
+  const buildShopVoucherHeadline = (voucher) => {
+    const discountText =
+      voucher.discount_type === "percent"
+        ? `${Number(voucher.discount_value || 0)}%`
+        : formatCurrency(voucher.discount_value || 0);
+
+    return `Giảm ${discountText} cho đơn từ ${formatCurrency(voucher.min_order_amount || 0)}`;
+  };
+
+  const buildShopVoucherSummary = (voucher) => {
+    const parts = [
+      `Hiệu lực ${formatDateTime(voucher.starts_at)} - ${formatDateTime(voucher.ends_at)}`,
+      getShopVoucherProductLabel(voucher),
+    ];
+
+    if (voucher.discount_type === "percent" && voucher.max_discount_amount) {
+      parts.push(`Tối đa ${formatCurrency(voucher.max_discount_amount)}`);
+    }
+
+    if (Number.isFinite(Number(voucher.remaining_quantity))) {
+      parts.push(`Còn ${Number(voucher.remaining_quantity || 0)} lượt`);
+    }
+
+    return parts.join(" | ");
+  };
+
   const renderPlatformVoucher = (kind) => {
     const { button, text, meta } = getVoucherElements(kind);
     const vouchers = state.platformVouchers[kind] || [];
@@ -390,10 +477,8 @@
 
     if (!button || !text || !meta) return;
 
-    button.disabled =
-      state.previewLoading || state.submitting || !state.items.length || !!state.previewError;
-
     if (state.previewLoading) {
+      button.disabled = true;
       text.textContent = "Đang cập nhật voucher và tổng tiền...";
       button.textContent = "Đang tải...";
       meta.hidden = true;
@@ -402,12 +487,15 @@
     }
 
     if (state.previewError) {
+      button.disabled = state.submitting || !state.items.length;
       text.textContent = state.previewError;
       button.textContent = "Thử lại";
       meta.hidden = true;
       meta.innerHTML = "";
       return;
     }
+
+    button.disabled = state.submitting || !state.items.length || vouchers.length === 0;
 
     if (selectedVoucher) {
       text.textContent = `${copy.selected} ${selectedVoucher.code}.`;
@@ -424,15 +512,12 @@
       return;
     }
 
-    const fallbackText = selectionError
+    text.textContent = selectionError
       ? selectionError
       : vouchers.length
       ? `Có ${vouchers.length} ${copy.available} phù hợp với giỏ hàng của bạn.`
       : copy.empty;
-
-    text.textContent = fallbackText;
     button.textContent = vouchers.length ? "Chọn voucher" : "Không có voucher";
-    button.disabled = button.disabled || vouchers.length === 0;
     meta.hidden = true;
     meta.innerHTML = "";
   };
@@ -503,8 +588,90 @@
     ].join("");
   };
 
+  const renderShopVoucherList = () => {
+    if (!els.shopVoucherList || !els.shopVoucherTitle || !els.shopVoucherSubtitle) return;
+
+    const shopId = state.activeShopVoucherShopId;
+    const group = shopId ? getGroupByShopId(shopId) : null;
+    const shopName = group?.name || "shop này";
+    const vouchers = (shopId && state.shopVouchers[shopId]) || [];
+    const selectedCode = (shopId && state.selectedShopVoucherCodes[shopId]) || "";
+
+    els.shopVoucherTitle.textContent = `Chọn voucher của ${shopName}`;
+    els.shopVoucherSubtitle.textContent =
+      "Các voucher dưới đây đã được lọc theo sản phẩm của shop trong giỏ hàng hiện tại.";
+
+    if (!shopId || !group) {
+      els.shopVoucherList.innerHTML = `
+        <div class="address-empty-card">
+          <strong>Khong tim thay shop</strong>
+          <p>Hãy tải lại giỏ hàng và thử lại.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const clearCard = `
+      <button
+        class="checkout-voucher-card ${selectedCode ? "" : "is-active"}"
+        type="button"
+        data-shop-voucher-code=""
+      >
+        <div class="checkout-voucher-card-main">
+          <strong>Không dùng voucher</strong>
+          <span>Giữ nguyên tổng tiền của shop này.</span>
+        </div>
+      </button>
+    `;
+
+    if (!vouchers.length) {
+      const emptyMessage =
+        state.shopSelectionErrors[shopId] ||
+        "Shop này hiện chưa có voucher phù hợp với các sản phẩm trong giỏ.";
+
+      els.shopVoucherList.innerHTML = `
+        ${clearCard}
+        <div class="address-empty-card">
+          <strong>Chưa có voucher phù hợp</strong>
+          <p>${escapeHtml(emptyMessage)}</p>
+        </div>
+      `;
+      return;
+    }
+
+    els.shopVoucherList.innerHTML = [
+      clearCard,
+      ...vouchers.map((voucher) => {
+        const isActive = selectedCode === voucher.code;
+        return `
+          <button
+            class="checkout-voucher-card ${isActive ? "is-active" : ""}"
+            type="button"
+            data-shop-voucher-code="${escapeHtml(voucher.code)}"
+          >
+            <div class="checkout-voucher-card-head">
+              <span class="checkout-voucher-card-code">${escapeHtml(voucher.code)}</span>
+              <span class="checkout-voucher-card-save">Tiết kiệm ${escapeHtml(
+                formatCurrency(voucher.estimated_discount || 0)
+              )}</span>
+            </div>
+            <div class="checkout-voucher-card-main">
+              <strong>${escapeHtml(buildShopVoucherHeadline(voucher))}</strong>
+              <span>${escapeHtml(buildShopVoucherSummary(voucher))}</span>
+            </div>
+          </button>
+        `;
+      }),
+    ].join("");
+  };
+
   const renderSummary = () => {
     const pricing = getCurrentPricing();
+    const platformDiscount = Number(
+      pricing.platform_discount_total || pricing.product_discount_total || 0
+    );
+    const shopDiscount = Number(pricing.shop_discount_total || 0);
+    const shippingDiscount = Number(pricing.shipping_discount_total || 0);
 
     if (els.subtotal) {
       els.subtotal.textContent = formatCurrency(pricing.subtotal);
@@ -515,19 +682,18 @@
     }
 
     if (els.productDiscount && els.productDiscountRow) {
-      const hasProductDiscount = Number(pricing.product_discount_total || 0) > 0;
-      els.productDiscountRow.hidden = !hasProductDiscount;
-      els.productDiscount.textContent = `-${formatCurrency(
-        pricing.product_discount_total || 0
-      )}`;
+      els.productDiscountRow.hidden = platformDiscount <= 0;
+      els.productDiscount.textContent = `-${formatCurrency(platformDiscount)}`;
+    }
+
+    if (els.shopDiscount && els.shopDiscountRow) {
+      els.shopDiscountRow.hidden = shopDiscount <= 0;
+      els.shopDiscount.textContent = `-${formatCurrency(shopDiscount)}`;
     }
 
     if (els.shippingDiscount && els.shippingDiscountRow) {
-      const hasShippingDiscount = Number(pricing.shipping_discount_total || 0) > 0;
-      els.shippingDiscountRow.hidden = !hasShippingDiscount;
-      els.shippingDiscount.textContent = `-${formatCurrency(
-        pricing.shipping_discount_total || 0
-      )}`;
+      els.shippingDiscountRow.hidden = shippingDiscount <= 0;
+      els.shippingDiscount.textContent = `-${formatCurrency(shippingDiscount)}`;
     }
 
     if (els.total) {
@@ -557,8 +723,7 @@
         els.note.textContent = state.previewError;
         els.note.hidden = false;
       } else if (!hasAddress && state.items.length > 0) {
-        els.note.textContent =
-          "Vui lòng thêm địa chỉ nhận hàng trước khi đặt hàng.";
+        els.note.textContent = "Vui lòng thêm địa chỉ nhận hàng trước khi đặt hàng.";
         els.note.hidden = false;
       } else {
         els.note.textContent = "";
@@ -587,7 +752,9 @@
     if (selected.is_default) {
       tags.push('<span class="address-tag is-default">Mặc định</span>');
     }
-    tags.push(`<span class="address-tag">${escapeHtml(getAddressTypeLabel(selected.address_type))}</span>`);
+    tags.push(
+      `<span class="address-tag">${escapeHtml(getAddressTypeLabel(selected.address_type))}</span>`
+    );
 
     els.addressInfo.innerHTML = `
       <div class="checkout-address-contact">
@@ -600,7 +767,9 @@
             : ""
         }
       </div>
-      <div class="checkout-address-text">${escapeHtml(buildAddressText(selected) || "Chưa có địa chỉ cụ thể")}</div>
+      <div class="checkout-address-text">${escapeHtml(
+        buildAddressText(selected) || "Chưa có địa chỉ cụ thể"
+      )}</div>
       <div class="checkout-address-tags">${tags.join("")}</div>
     `;
     els.addressInfo.hidden = false;
@@ -652,7 +821,9 @@
                   }
                 </div>
               </div>
-              <p class="address-card-text">${escapeHtml(buildAddressText(address) || "Chưa có địa chỉ cụ thể")}</p>
+              <p class="address-card-text">${escapeHtml(
+                buildAddressText(address) || "Chưa có địa chỉ cụ thể"
+              )}</p>
               <div class="address-card-tags">${tags.join("")}</div>
             </div>
             <div class="address-card-actions">
@@ -681,6 +852,9 @@
           (sum, item) => sum + Number(item?.quantity || 0),
           0
         );
+        const vouchers = state.shopVouchers[shopId] || [];
+        const selectedVoucher = state.selectedShopVouchers[shopId] || null;
+        const selectionError = state.shopSelectionErrors[shopId] || "";
 
         if (!state.shipping[shopId]) {
           state.shipping[shopId] = "fast";
@@ -709,6 +883,48 @@
           })
           .join("");
 
+        let voucherText = "";
+        let voucherButtonText = "Chọn voucher";
+        let voucherButtonDisabled = false;
+        let voucherMeta = "";
+
+        if (state.previewLoading) {
+          voucherText = "Đang cập nhật voucher của shop...";
+          voucherButtonText = "Đang tải...";
+          voucherButtonDisabled = true;
+        } else if (state.previewError) {
+          voucherText = state.previewError;
+          voucherButtonText = "Thử lại";
+          voucherButtonDisabled = state.submitting || !state.items.length;
+        } else if (selectedVoucher) {
+          voucherText = `Đã áp dụng voucher ${selectedVoucher.code} cho shop này.`;
+          voucherButtonText = "Đổi voucher";
+          voucherButtonDisabled = state.submitting || !state.items.length;
+          voucherMeta = `
+            <div class="checkout-voucher-meta">
+              <span class="checkout-voucher-chip is-code">${escapeHtml(
+                selectedVoucher.code
+              )}</span>
+              <span class="checkout-voucher-chip">Tiết kiệm ${escapeHtml(
+                formatCurrency(selectedVoucher.estimated_discount || 0)
+              )}</span>
+            </div>
+          `;
+        } else if (selectionError) {
+          voucherText = selectionError;
+          voucherButtonText = vouchers.length ? "Chọn voucher" : "Không có voucher";
+          voucherButtonDisabled =
+            state.submitting || !state.items.length || vouchers.length === 0;
+        } else if (vouchers.length) {
+          voucherText = `Có ${vouchers.length} voucher phù hợp cho shop này.`;
+          voucherButtonText = "Chọn voucher";
+          voucherButtonDisabled = state.submitting || !state.items.length;
+        } else {
+          voucherText = "Shop này hiện chưa có voucher phù hợp với giỏ hàng.";
+          voucherButtonText = "Không có voucher";
+          voucherButtonDisabled = true;
+        }
+
         return `
           <section class="cart-shop-card checkout-shop-card" data-shop-id="${escapeHtml(shopId)}">
             <div class="cart-shop-head">
@@ -735,14 +951,18 @@
                         <div class="cart-item-thumb">
                           ${
                             imageUrl
-                              ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" loading="lazy" />`
+                              ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(
+                                  title
+                                )}" loading="lazy" />`
                               : `<span>${escapeHtml(title.slice(0, 2).toUpperCase())}</span>`
                           }
                         </div>
                         <div class="checkout-item-info">
                           <h3 class="cart-item-title">${escapeHtml(title)}</h3>
                           <div class="cart-item-meta">
-                            <span class="cart-meta-chip">Phân loại: ${escapeHtml(variantLabel)}</span>
+                            <span class="cart-meta-chip">Phân loại: ${escapeHtml(
+                              variantLabel
+                            )}</span>
                             ${
                               sku
                                 ? `<span class="cart-meta-chip">SKU: ${escapeHtml(sku)}</span>`
@@ -753,7 +973,9 @@
                       </div>
                       <div class="checkout-item-price">
                         <span class="checkout-col-label">Đơn giá</span>
-                        <span class="cart-unit-price">${escapeHtml(formatCurrency(unitPrice))}</span>
+                        <span class="cart-unit-price">${escapeHtml(
+                          formatCurrency(unitPrice)
+                        )}</span>
                       </div>
                       <div class="checkout-item-qty">
                         <span class="checkout-col-label">Số lượng</span>
@@ -761,7 +983,9 @@
                       </div>
                       <div class="checkout-item-total">
                         <span class="checkout-col-label">Thành tiền</span>
-                        <strong class="cart-line-total">${escapeHtml(formatCurrency(lineTotal))}</strong>
+                        <strong class="cart-line-total">${escapeHtml(
+                          formatCurrency(lineTotal)
+                        )}</strong>
                       </div>
                     </article>
                   `;
@@ -772,9 +996,18 @@
               <div class="checkout-shop-voucher">
                 <div>
                   <h4>Voucher của shop</h4>
-                  <p>Chức năng này sẽ được cập nhật sau.</p>
+                  <p>${escapeHtml(voucherText)}</p>
+                  ${voucherMeta}
                 </div>
-                <button class="ghost-btn" type="button" disabled>Chọn voucher</button>
+                <button
+                  class="ghost-btn"
+                  type="button"
+                  data-action="choose-shop-voucher"
+                  data-shop-id="${escapeHtml(shopId)}"
+                  ${voucherButtonDisabled ? "disabled" : ""}
+                >
+                  ${escapeHtml(voucherButtonText)}
+                </button>
               </div>
               <div class="checkout-shop-shipping">
                 <div>
@@ -827,8 +1060,12 @@
     state.previewLoading = true;
     state.previewError = "";
     state.selectionErrors = { discount: "", shipping: "" };
+    state.shopSelectionErrors = {};
+    renderShopList();
     renderPlatformVoucher("discount");
     renderPlatformVoucher("shipping");
+    renderPlatformVoucherList();
+    renderShopVoucherList();
     renderSummary();
 
     try {
@@ -836,13 +1073,7 @@
         "/checkout/preview",
         {
           method: "POST",
-          body: {
-            shipping_methods: state.shipping,
-            platform_discount_voucher_code:
-              state.selectedVoucherCodes.discount || null,
-            platform_shipping_voucher_code:
-              state.selectedVoucherCodes.shipping || null,
-          },
+          body: buildCheckoutRequestBody(),
         },
         { redirectOn401: true }
       );
@@ -857,41 +1088,73 @@
           ? payload.vouchers.shipping
           : [],
       };
+      state.shopVouchers =
+        payload?.shop_vouchers && typeof payload.shop_vouchers === "object"
+          ? payload.shop_vouchers
+          : {};
       state.selectedPlatformVouchers = {
         discount: payload?.selected_vouchers?.discount || null,
         shipping: payload?.selected_vouchers?.shipping || null,
       };
+      state.selectedShopVouchers =
+        payload?.selected_shop_vouchers && typeof payload.selected_shop_vouchers === "object"
+          ? payload.selected_shop_vouchers
+          : {};
       state.selectedVoucherCodes = {
         discount: payload?.selected_voucher_codes?.discount || "",
         shipping: payload?.selected_voucher_codes?.shipping || "",
       };
+      state.selectedShopVoucherCodes =
+        payload?.selected_shop_voucher_codes &&
+        typeof payload.selected_shop_voucher_codes === "object"
+          ? payload.selected_shop_voucher_codes
+          : {};
       state.selectionErrors = {
         discount: payload?.selection_errors?.discount || "",
         shipping: payload?.selection_errors?.shipping || "",
       };
+      state.shopSelectionErrors =
+        payload?.shop_selection_errors && typeof payload.shop_selection_errors === "object"
+          ? payload.shop_selection_errors
+          : {};
       state.pricing = payload?.pricing || null;
       state.shipping = payload?.shipping_methods || state.shipping;
       state.previewError = "";
+
+      if (
+        state.activeShopVoucherShopId &&
+        !getGroupByShopId(state.activeShopVoucherShopId)
+      ) {
+        state.activeShopVoucherShopId = "";
+        closeModal(els.shopVoucherModal);
+      }
 
       renderShopList();
       renderPlatformVoucher("discount");
       renderPlatformVoucher("shipping");
       renderPlatformVoucherList();
+      renderShopVoucherList();
       renderSummary();
     } catch (error) {
       if (requestId !== state.previewRequestId) return;
 
       state.platformVouchers = { discount: [], shipping: [] };
+      state.shopVouchers = {};
       state.selectedPlatformVouchers = { discount: null, shipping: null };
+      state.selectedShopVouchers = {};
       state.selectedVoucherCodes = { discount: "", shipping: "" };
+      state.selectedShopVoucherCodes = {};
       state.selectionErrors = { discount: "", shipping: "" };
+      state.shopSelectionErrors = {};
       state.pricing = null;
       state.previewError =
         error instanceof Error ? error.message : "Không thể tính được tổng đơn hàng.";
 
+      renderShopList();
       renderPlatformVoucher("discount");
       renderPlatformVoucher("shipping");
       renderPlatformVoucherList();
+      renderShopVoucherList();
       renderSummary();
 
       if (!silent) {
@@ -900,8 +1163,10 @@
     } finally {
       if (requestId !== state.previewRequestId) return;
       state.previewLoading = false;
+      renderShopList();
       renderPlatformVoucher("discount");
       renderPlatformVoucher("shipping");
+      renderShopVoucherList();
       renderSummary();
     }
   };
@@ -912,22 +1177,40 @@
     try {
       showStatus("Đang tải giỏ hàng...");
       const payload = await auth.apiFetch("/cart", {}, { redirectOn401: true });
-      const items = Array.isArray(payload?.items) ? payload.items : [];
+      const allItems = Array.isArray(payload?.items) ? payload.items : [];
+      const requestedItemIdSet = new Set(state.requestedCartItemIds);
+      const items = requestedItemIdSet.size
+        ? allItems.filter((item) => requestedItemIdSet.has(String(item?.id || "")))
+        : allItems;
 
       if (!items.length) {
         els.content.hidden = true;
         els.empty.hidden = false;
-        hideStatus();
+        if (requestedItemIdSet.size) {
+          showStatus("KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m Ä‘Ã£ chá»n trong giá» hÃ ng.", true);
+        } else {
+          hideStatus();
+        }
         state.items = [];
         state.productMap = new Map();
         state.platformVouchers = { discount: [], shipping: [] };
+        state.shopVouchers = {};
         state.selectedPlatformVouchers = { discount: null, shipping: null };
+        state.selectedShopVouchers = {};
         state.selectedVoucherCodes = { discount: "", shipping: "" };
+        state.selectedShopVoucherCodes = {};
         state.selectionErrors = { discount: "", shipping: "" };
+        state.shopSelectionErrors = {};
         state.pricing = null;
         state.previewError = "";
+        state.activeShopVoucherShopId = "";
+        closeModal(els.platformVoucherModal);
+        closeModal(els.shopVoucherModal);
+        renderShopList();
         renderPlatformVoucher("discount");
         renderPlatformVoucher("shipping");
+        renderPlatformVoucherList();
+        renderShopVoucherList();
         renderSummary();
         return;
       }
@@ -936,10 +1219,23 @@
       state.items = items;
       state.productMap = productMap;
       state.shipping = {};
+      state.platformVouchers = { discount: [], shipping: [] };
+      state.shopVouchers = {};
+      state.selectedPlatformVouchers = { discount: null, shipping: null };
+      state.selectedShopVouchers = {};
+      state.selectedVoucherCodes = { discount: "", shipping: "" };
+      state.selectedShopVoucherCodes = {};
+      state.selectionErrors = { discount: "", shipping: "" };
+      state.shopSelectionErrors = {};
+      state.pricing = null;
+      state.previewError = "";
+      state.previewLoading = true;
       renderShopList();
       renderSummary();
       renderPlatformVoucher("discount");
       renderPlatformVoucher("shipping");
+      renderPlatformVoucherList();
+      renderShopVoucherList();
       await refreshCheckoutPreview({ silent: true });
       hideStatus();
       els.content.hidden = false;
@@ -956,7 +1252,7 @@
 
     const selectedAddress = getSelectedAddress();
     if (!selectedAddress) {
-      showStatus("Bạn cần thêm địa chỉ nhận hàng trước khi đặt.", true);
+      showStatus("Bạn cần thêm địa chỉ nhận hàng trước khi đặt hàng.", true);
       renderSummary();
       return;
     }
@@ -968,22 +1264,17 @@
 
     try {
       state.submitting = true;
+      renderShopList();
       renderPlatformVoucher("discount");
       renderPlatformVoucher("shipping");
+      renderShopVoucherList();
       renderSummary();
       showStatus("Đang đặt hàng...");
       await auth.apiFetch(
         "/checkout",
         {
           method: "POST",
-          body: {
-            payment_method: paymentMethod,
-            shipping_methods: state.shipping,
-            platform_discount_voucher_code:
-              state.selectedVoucherCodes.discount || null,
-            platform_shipping_voucher_code:
-              state.selectedVoucherCodes.shipping || null,
-          },
+          body: buildCheckoutRequestBody(paymentMethod),
         },
         { redirectOn401: true }
       );
@@ -996,8 +1287,10 @@
       showStatus(error instanceof Error ? error.message : "Không thể đặt hàng.", true);
     } finally {
       state.submitting = false;
+      renderShopList();
       renderPlatformVoucher("discount");
       renderPlatformVoucher("shipping");
+      renderShopVoucherList();
       renderSummary();
     }
   };
@@ -1017,14 +1310,15 @@
       closeModal(els.platformVoucherModal);
     });
 
-    const handleVoucherButtonClick = async (kind) => {
-      const { button } = getVoucherElements(kind);
-      if (!button) return;
+    els.closeShopVoucherModalBtn?.addEventListener("click", () => {
+      closeModal(els.shopVoucherModal);
+    });
 
-      if (button.disabled) {
-        if (state.previewError) {
-          await refreshCheckoutPreview();
-        }
+    const handlePlatformVoucherButtonClick = async (kind) => {
+      if (state.previewLoading || state.submitting || !state.items.length) return;
+
+      if (state.previewError) {
+        await refreshCheckoutPreview();
         return;
       }
 
@@ -1034,14 +1328,14 @@
     };
 
     els.chooseDiscountVoucherBtn?.addEventListener("click", async () => {
-      await handleVoucherButtonClick("discount");
+      await handlePlatformVoucherButtonClick("discount");
     });
 
     els.chooseShippingVoucherBtn?.addEventListener("click", async () => {
-      await handleVoucherButtonClick("shipping");
+      await handlePlatformVoucherButtonClick("shipping");
     });
 
-    [els.addressModal, els.platformVoucherModal].forEach((modal) => {
+    [els.addressModal, els.platformVoucherModal, els.shopVoucherModal].forEach((modal) => {
       modal?.addEventListener("click", (event) => {
         if (event.target === modal) {
           closeModal(modal);
@@ -1076,6 +1370,40 @@
       );
       closeModal(els.platformVoucherModal);
       await refreshCheckoutPreview({ silent: true });
+    });
+
+    els.shopVoucherList?.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("[data-shop-voucher-code]");
+      if (!button || !state.activeShopVoucherShopId) return;
+
+      state.selectedShopVoucherCodes[state.activeShopVoucherShopId] = String(
+        button.dataset.shopVoucherCode || ""
+      );
+      closeModal(els.shopVoucherModal);
+      await refreshCheckoutPreview({ silent: true });
+    });
+
+    els.shopList.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest('[data-action="choose-shop-voucher"]');
+      if (!button) return;
+
+      const shopId = String(button.dataset.shopId || "");
+      if (!shopId || state.previewLoading || state.submitting || !state.items.length) return;
+
+      if (state.previewError) {
+        await refreshCheckoutPreview();
+        return;
+      }
+
+      state.activeShopVoucherShopId = shopId;
+      renderShopVoucherList();
+      openModal(els.shopVoucherModal);
     });
 
     els.shopList.addEventListener("change", async (event) => {
@@ -1113,10 +1441,12 @@
 
   bindEvents();
   updatePaymentStyles();
+  renderShopList();
   renderPlatformVoucher("discount");
   renderPlatformVoucher("shipping");
+  renderPlatformVoucherList();
+  renderShopVoucherList();
   renderSummary();
   loadCart();
   loadAddresses();
-
 })();

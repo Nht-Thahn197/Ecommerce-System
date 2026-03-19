@@ -1,5 +1,6 @@
 (function () {
   const auth = window.BambiStoreAuth || {};
+  const CART_SELECTION_QUERY_PARAM = "selected";
 
   const els = {
     status: document.querySelector("#cartStatus"),
@@ -20,6 +21,8 @@
     items: [],
     productMap: new Map(),
     selectedIds: new Set(),
+    requestedSelectedIds: new Set(),
+    requestedFocusItemId: "",
     initialised: false,
   };
 
@@ -53,6 +56,30 @@
     els.status.textContent = "";
     els.status.classList.remove("error");
   };
+
+  const parseRequestedSelectedIds = () => {
+    const params = new URLSearchParams(window.location.search);
+    const rawValue = String(params.get(CART_SELECTION_QUERY_PARAM) || "").trim();
+
+    if (!rawValue) return new Set();
+
+    return new Set(
+      rawValue
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    );
+  };
+
+  const clearRequestedSelectionFromUrl = () => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(CART_SELECTION_QUERY_PARAM)) return;
+
+    url.searchParams.delete(CART_SELECTION_QUERY_PARAM);
+    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+  };
+
+  state.requestedSelectedIds = parseRequestedSelectedIds();
 
   const fetchJson = async (path) => {
     const response = await fetch(path);
@@ -144,6 +171,16 @@
 
   const getSelectedItems = () =>
     state.items.filter((item) => state.selectedIds.has(String(item.id)));
+
+  const scrollToCartItem = (itemId) => {
+    if (!itemId) return;
+    const row = document.querySelector(`[data-cart-item-id="${itemId}"]`);
+    if (!row) return;
+
+    window.requestAnimationFrame(() => {
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
 
   const syncSelectAllControls = () => {
     const total = state.items.length;
@@ -377,6 +414,26 @@
     return map;
   };
 
+  const applyInitialSelection = (items) => {
+    const availableIds = new Set(items.map((item) => String(item.id)));
+    const requestedIds = Array.from(state.requestedSelectedIds).filter((itemId) =>
+      availableIds.has(itemId)
+    );
+
+    if (requestedIds.length) {
+      state.selectedIds = new Set(requestedIds);
+      state.requestedFocusItemId = requestedIds[0];
+      state.requestedSelectedIds.clear();
+      clearRequestedSelectionFromUrl();
+      return;
+    }
+
+    state.selectedIds = new Set();
+    state.requestedFocusItemId = "";
+    state.requestedSelectedIds.clear();
+    clearRequestedSelectionFromUrl();
+  };
+
   const loadCart = async ({
     preserveSelection = false,
     quiet = false,
@@ -410,12 +467,16 @@
             .filter((itemId) => previousSelection.has(itemId))
         );
       } else {
-        state.selectedIds = new Set(items.map((item) => String(item.id)));
+        applyInitialSelection(items);
       }
 
       state.initialised = true;
       hideStatus();
       render();
+      if (state.requestedFocusItemId) {
+        scrollToCartItem(state.requestedFocusItemId);
+        state.requestedFocusItemId = "";
+      }
       if (scrollTop !== null) {
         window.scrollTo({ top: scrollTop });
       }
@@ -523,6 +584,15 @@
     const selectedItems = getSelectedItems();
 
     if (!selectedItems.length) return;
+
+    const checkoutUrl = new URL("/ui/checkout.html", window.location.origin);
+    checkoutUrl.searchParams.set(
+      CART_SELECTION_QUERY_PARAM,
+      selectedItems.map((item) => String(item.id)).join(",")
+    );
+
+    window.location.href = `${checkoutUrl.pathname}${checkoutUrl.search}`;
+    return;
 
     if (selectedItems.length !== state.items.length) {
       showStatus(

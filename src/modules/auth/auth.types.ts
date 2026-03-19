@@ -21,6 +21,12 @@ export interface UpdateProfileInput {
   avatar_url?: string | null;
 }
 
+export interface ChangePasswordInput {
+  current_password: string;
+  new_password: string;
+  confirm_password?: string;
+}
+
 export interface RefreshTokenInput {
   refresh_token: string;
 }

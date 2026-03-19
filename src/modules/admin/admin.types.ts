@@ -3,6 +3,15 @@ export interface RecentOrdersQuery {
   page?: string;
 }
 
+export interface AdminShopRevenueQuery {
+  limit?: string;
+  page?: string;
+}
+
+export interface UpdateWithdrawRequestInput {
+  action?: string;
+}
+
 export interface AdminProductsQuery {
   limit?: string;
   page?: string;

@@ -113,7 +113,7 @@ const AdminCategoriesPage = (() => {
 
     $("#categoriesTable").innerHTML = `
       <div class="table-wrap">
-        <table class="table">
+        <table class="table category-table">
           <thead>
             <tr>
               <th>Danh mục</th>
@@ -142,9 +142,11 @@ const AdminCategoriesPage = (() => {
                     <td>${escapeHtml(category.product_count)}</td>
                     <td>${escapeHtml(category.children_count)}</td>
                     <td>${escapeHtml(formatDateTime(category.created_at))}</td>
-                    <td class="actions">
+                    <td class="category-action-cell">
+                      <div class="actions">
                       <a class="btn secondary" href="${getCreateChildHref(category.id)}">Thêm con</a>
                       <a class="btn ghost" href="/ui/admin/category-form.html?id=${category.id}">Sửa</a>
+                      </div>
                     </td>
                   </tr>
                 `

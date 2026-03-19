@@ -12,7 +12,9 @@ import {
   deleteVoucher,
   pendingShops,
   recentOrders,
+  shopRevenueManagement,
   shopDetail,
+  updateWithdrawRequest,
   updateVoucher,
   updateProductStatus,
 } from "./admin.controller";
@@ -24,6 +26,8 @@ router.use(authMiddleware, requireAdmin);
 router.get("/overview", overview);
 router.get("/orders/recent", recentOrders);
 router.get("/shops/pending", pendingShops);
+router.get("/shops/revenue/withdraw-requests", shopRevenueManagement);
+router.patch("/shops/revenue/withdraw-requests/:id", updateWithdrawRequest);
 router.get("/shops/:id", shopDetail);
 router.get("/products", adminProducts);
 router.patch("/products/:id/status", updateProductStatus);

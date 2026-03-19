@@ -1,4 +1,8 @@
 import prisma from "../../libs/prisma";
+import {
+  createOrderDeliveredNotification,
+  createOrderInTransitNotification,
+} from "../notifications/notification.service";
 import { recalculateOrderStatus } from "../orders/order.service";
 import { ShipmentStatus, UpdateShipmentInput } from "./shipment.types";
 
@@ -115,6 +119,14 @@ export const updateShipmentForItem = async (
 
     if (item.order_id && nextStatus) {
       await recalculateOrderStatus(item.order_id, tx);
+    }
+
+    if (nextStatus === "shipping") {
+      await createOrderInTransitNotification(item.id, tx);
+    }
+
+    if (nextStatus === "delivered") {
+      await createOrderDeliveredNotification(item.id, tx);
     }
 
     return shipment;

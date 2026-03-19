@@ -26,3 +26,13 @@ export interface ListSellerItemsQuery {
   page?: string;
   limit?: string;
 }
+
+export interface SellerWalletSummaryQuery {
+  shop_id?: string;
+  limit?: string;
+}
+
+export interface RequestSellerWithdrawalInput {
+  shop_id?: string;
+  amount?: string | number;
+}

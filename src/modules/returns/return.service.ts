@@ -1,5 +1,9 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../libs/prisma";
+import { createReturnApprovedNotification } from "../notifications/notification.service";
+import {
+  reverseSellerPayoutForOrderItem,
+} from "../orders/order.service";
 import {
   CreateReturnInput,
   CreateDisputeInput,
@@ -46,8 +50,12 @@ export const requestReturn = async (userId: string, input: CreateReturnInput) =>
     throw new Error("Order item not found");
   }
 
-  if (item.status !== "received") {
-    throw new Error("Only received items can be returned");
+  if (item.status === "received") {
+    throw new Error("Đơn đã xác nhận nhận hàng nên không thể tạo yêu cầu trả hàng/hoàn tiền");
+  }
+
+  if (item.status !== "delivered") {
+    throw new Error("Chỉ đơn ở trạng thái đã giao mới có thể yêu cầu trả hàng/hoàn tiền");
   }
 
   if (item.return_deadline_at && item.return_deadline_at.getTime() < Date.now()) {
@@ -81,6 +89,8 @@ export const requestReturn = async (userId: string, input: CreateReturnInput) =>
         payout_available_at: null,
       },
     });
+
+    await reverseSellerPayoutForOrderItem(tx, item.id);
 
     return ret;
   });
@@ -199,6 +209,7 @@ export const updateReturnStatus = async (
           id: true,
           quantity: true,
           price: true,
+          received_at: true,
           product_variant_id: true,
           orders: { select: { id: true, user_id: true, payment_status: true } },
         },
@@ -269,6 +280,8 @@ export const updateReturnStatus = async (
         });
       }
 
+      await createReturnApprovedNotification(orderItem.id, ret.id, tx);
+
       return { message: "Return approved" };
     }
 
@@ -285,8 +298,10 @@ export const updateReturnStatus = async (
     await tx.order_items.update({
       where: { id: orderItem.id },
       data: {
-        status: "received",
-        payout_available_at: addDays(now, PAYOUT_DELAY_DAYS),
+        status: orderItem.received_at ? "received" : "delivered",
+        payout_available_at: orderItem.received_at
+          ? addDays(now, PAYOUT_DELAY_DAYS)
+          : null,
       },
     });
 
@@ -339,6 +354,8 @@ export const requestDispute = async (
         where: { id: ret.order_item_id },
         data: { payout_available_at: null },
       });
+
+      await reverseSellerPayoutForOrderItem(tx, ret.order_item_id);
     }
 
     return updated;
@@ -402,6 +419,7 @@ export const resolveDispute = async (
           id: true,
           quantity: true,
           price: true,
+          received_at: true,
           product_variant_id: true,
           orders: { select: { user_id: true, payment_status: true } },
         },
@@ -444,6 +462,8 @@ export const resolveDispute = async (
           payout_available_at: null,
         },
       });
+
+      await reverseSellerPayoutForOrderItem(tx, orderItem.id, now);
 
       if (orderItem.product_variant_id) {
         await tx.product_variants.update({
@@ -494,7 +514,10 @@ export const resolveDispute = async (
     await tx.order_items.update({
       where: { id: orderItem.id },
       data: {
-        payout_available_at: addDays(now, PAYOUT_DELAY_DAYS),
+        status: orderItem.received_at ? "received" : "delivered",
+        payout_available_at: orderItem.received_at
+          ? addDays(now, PAYOUT_DELAY_DAYS)
+          : null,
       },
     });
 

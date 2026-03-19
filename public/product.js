@@ -33,6 +33,7 @@
     description: document.querySelector("#productDescription"),
     reviewAverageLabel: document.querySelector("#reviewAverageLabel"),
     reviewSummaryCount: document.querySelector("#reviewSummaryCount"),
+    reviewFilters: document.querySelector("#reviewFilters"),
     reviewList: document.querySelector("#reviewList"),
     reviewEmpty: document.querySelector("#reviewEmpty"),
     reviewPagination: document.querySelector("#reviewPagination"),
@@ -55,6 +56,7 @@
     shopSummary: null,
     shopProductTotal: 0,
     reviewsPage: 1,
+    reviewFilter: "all",
   };
 
   const CONDITION_LABELS = {
@@ -66,11 +68,12 @@
   const MAX_CART_QUANTITY = 99;
   const DESKTOP_MEDIA_THUMBS_PER_VIEW = 5;
   const MOBILE_MEDIA_THUMBS_PER_VIEW = 4;
+  const CART_SELECTION_QUERY_PARAM = "selected";
   const RELATED_CAROUSEL_EDGE_THRESHOLD = 6;
   let relatedCarouselFrame = 0;
 
   const escapeHtml = (value) =>
-    String(value || "")
+    String(value ?? "")
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
@@ -402,6 +405,72 @@
       const active = index < rounded;
       return `<span class="${active ? "active" : ""}">★</span>`;
     }).join("");
+  };
+
+  const getReviewAuthorInitials = (value) => {
+    const parts = String(value || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+
+    if (!parts.length) return "BM";
+    return parts.map((part) => part[0]?.toUpperCase() || "").join("");
+  };
+
+  const getReviewMediaUrls = (value) =>
+    Array.isArray(value)
+      ? value.map((item) => String(item || "").trim()).filter(Boolean)
+      : [];
+
+  const getReviewMediaItems = (review) => [
+    ...getReviewMediaUrls(review?.image_urls).map((url) => ({
+      type: "image",
+      url,
+    })),
+    ...getReviewMediaUrls(review?.video_urls).map((url) => ({
+      type: "video",
+      url,
+    })),
+  ];
+
+  const getReviewRequestParams = (page = 1) => {
+    const params = new URLSearchParams({
+      product_id: String(state.product?.id || ""),
+      page: String(page),
+      limit: "6",
+    });
+
+    if (state.reviewFilter.startsWith("rating:")) {
+      params.set("rating", state.reviewFilter.split(":")[1] || "");
+    }
+
+    if (state.reviewFilter === "comment") {
+      params.set("has_comment", "1");
+    }
+
+    if (state.reviewFilter === "media") {
+      params.set("has_media", "1");
+    }
+
+    return params;
+  };
+
+  const getReviewEmptyMessage = () => {
+    if (state.reviewFilter === "comment") {
+      return "Chưa có đánh giá nào có bình luận cho sản phẩm này.";
+    }
+
+    if (state.reviewFilter === "media") {
+      return "Chưa có đánh giá nào kèm hình ảnh hoặc video.";
+    }
+
+    if (state.reviewFilter.startsWith("rating:")) {
+      const rating = state.reviewFilter.split(":")[1] || "";
+      return `Chưa có đánh giá ${rating} sao cho sản phẩm này.`;
+    }
+
+    return "Chưa có đánh giá nào cho sản phẩm này.";
   };
 
   const renderBreadcrumb = (trail, product) => {
@@ -999,6 +1068,68 @@
     }
   };
 
+  const renderReviewFilters = (summary) => {
+    if (!els.reviewFilters) return;
+
+    const ratingCounts = summary?.rating_counts || {};
+    const filters = [
+      {
+        key: "all",
+        label: "Tất cả",
+        count: Number(summary?.total_reviews || 0),
+      },
+      {
+        key: "rating:5",
+        label: "5 Sao",
+        count: Number(ratingCounts?.["5"] || 0),
+      },
+      {
+        key: "rating:4",
+        label: "4 Sao",
+        count: Number(ratingCounts?.["4"] || 0),
+      },
+      {
+        key: "rating:3",
+        label: "3 Sao",
+        count: Number(ratingCounts?.["3"] || 0),
+      },
+      {
+        key: "rating:2",
+        label: "2 Sao",
+        count: Number(ratingCounts?.["2"] || 0),
+      },
+      {
+        key: "rating:1",
+        label: "1 Sao",
+        count: Number(ratingCounts?.["1"] || 0),
+      },
+      {
+        key: "comment",
+        label: "Có bình luận",
+        count: Number(summary?.with_comment_count || 0),
+      },
+      {
+        key: "media",
+        label: "Có hình ảnh / video",
+        count: Number(summary?.with_media_count || 0),
+      },
+    ];
+
+    els.reviewFilters.innerHTML = filters
+      .map(
+        (filter) => `
+          <button
+            class="review-filter-btn ${state.reviewFilter === filter.key ? "active" : ""}"
+            type="button"
+            data-review-filter="${escapeHtml(filter.key)}"
+          >
+            ${escapeHtml(filter.label)} (${escapeHtml(filter.count)})
+          </button>
+        `
+      )
+      .join("");
+  };
+
   const renderReviewList = (payload) => {
     if (!els.reviewList || !els.reviewEmpty || !els.reviewPagination) return;
 
@@ -1007,9 +1138,12 @@
     const pagination = payload?.pagination || {};
 
     renderMeta(summary);
+    renderReviewFilters(summary);
+    state.reviewsPage = Math.max(1, Number(pagination?.page || 1));
 
     if (!reviews.length) {
       els.reviewList.innerHTML = "";
+      els.reviewEmpty.textContent = getReviewEmptyMessage();
       els.reviewEmpty.hidden = false;
       els.reviewPagination.innerHTML = "";
       return;
@@ -1020,18 +1154,48 @@
       .map((review) => {
         const reviewRating = Number(review?.rating || 0);
         const author = review?.users?.full_name || "Người mua Bambi";
-        const comment = review?.comment?.trim() || "Người mua chưa để lại nhận xét chi tiết.";
+        const comment = String(review?.comment || "").trim();
+        const mediaItems = getReviewMediaItems(review);
+        const mediaMarkup = mediaItems.length
+          ? `
+            <div class="review-media-list">
+              ${mediaItems
+                .map((item) =>
+                  item.type === "video"
+                    ? `
+                      <div class="review-media-card is-video">
+                        <video src="${escapeHtml(item.url)}" controls preload="metadata"></video>
+                      </div>
+                    `
+                    : `
+                      <div class="review-media-card">
+                        <img src="${escapeHtml(item.url)}" alt="Media đánh giá" loading="lazy" />
+                      </div>
+                    `
+                )
+                .join("")}
+            </div>
+          `
+          : "";
 
         return `
           <article class="review-item">
             <div class="review-item-header">
               <div class="review-author">
-                <strong>${escapeHtml(author)}</strong>
-                <span>${escapeHtml(formatDate(review?.created_at))}</span>
+                <div class="review-author-avatar">${escapeHtml(
+                  getReviewAuthorInitials(author)
+                )}</div>
+                <div class="review-author-copy">
+                  <strong>${escapeHtml(author)}</strong>
+                  <span>${escapeHtml(formatDate(review?.created_at))}</span>
+                </div>
               </div>
               <div class="rating-stars">${renderStars(reviewRating)}</div>
             </div>
-            <p class="review-comment">${escapeHtml(comment)}</p>
+            <p class="review-copy ${comment ? "" : "is-muted"}">${escapeHtml(
+              comment || "Người mua không để lại bình luận."
+            )}</p>
+            ${mediaMarkup}
           </article>
         `;
       })
@@ -1158,9 +1322,8 @@
   const loadReviews = async (page = 1) => {
     if (!state.product?.id) return;
     state.reviewsPage = page;
-    const payload = await fetchJson(
-      `/reviews?product_id=${encodeURIComponent(state.product.id)}&page=${page}&limit=6`
-    );
+    const params = getReviewRequestParams(page);
+    const payload = await fetchJson(`/reviews?${params.toString()}`);
     renderReviewList(payload);
   };
 
@@ -1208,9 +1371,7 @@
       const [categoriesResult, reviewResult, relatedResult, shopsResult] =
         await Promise.allSettled([
           fetchJson("/categories"),
-          fetchJson(
-            `/reviews?product_id=${encodeURIComponent(product.id)}&page=1&limit=6`
-          ),
+          fetchJson(`/reviews?${getReviewRequestParams(1).toString()}`),
           product?.shop_id
             ? fetchJson(
                 `/products?status=active&shop_id=${encodeURIComponent(
@@ -1306,7 +1467,7 @@
 
     try {
       hideStatus(els.actionStatus);
-      await auth.apiFetch(
+      const payload = await auth.apiFetch(
         "/cart/items",
         {
           method: "POST",
@@ -1320,6 +1481,18 @@
 
       if (window.BambiStoreCart?.emitChange) {
         window.BambiStoreCart.emitChange();
+      }
+
+      if (mode === "buy") {
+        const cartItemId = String(payload?.item?.id || "").trim();
+        const cartUrl = new URL("/ui/cart.html", window.location.origin);
+
+        if (cartItemId) {
+          cartUrl.searchParams.set(CART_SELECTION_QUERY_PARAM, cartItemId);
+        }
+
+        window.location.href = `${cartUrl.pathname}${cartUrl.search}`;
+        return;
       }
 
       showStatus(
@@ -1441,6 +1614,26 @@
 
     els.buyNowBtn?.addEventListener("click", () => {
       withCartAction("buy");
+    });
+
+    els.reviewFilters?.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("[data-review-filter]");
+      if (!button) return;
+
+      const nextFilter = String(button.dataset.reviewFilter || "all");
+      if (!nextFilter || nextFilter === state.reviewFilter) return;
+
+      state.reviewFilter = nextFilter;
+      loadReviews(1).catch((error) => {
+        showStatus(
+          els.actionStatus,
+          error instanceof Error ? error.message : "Không thể tải đánh giá.",
+          true
+        );
+      });
     });
 
     els.reviewPagination?.addEventListener("click", (event) => {

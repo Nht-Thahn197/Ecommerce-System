@@ -3,6 +3,8 @@ const AdminVouchersPage = (() => {
   const { $, escapeHtml, formatCurrency, formatDateTime } = Admin;
 
   const pageSizeOptions = [10, 15, 20];
+  const datetimePickers = new Map();
+  let activeDatetimePicker = null;
 
   const state = {
     vouchers: [],
@@ -68,6 +70,284 @@ const AdminVouchersPage = (() => {
 
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return localDate.toISOString().slice(0, 16);
+  };
+
+  const padNumber = (value) => String(value).padStart(2, "0");
+
+  const parseDatetimeLocalValue = (value) => {
+    if (!value || typeof value !== "string" || !value.includes("T")) return null;
+
+    const [datePart, timePart = "00:00"] = value.split("T");
+    if (!datePart) return null;
+
+    const [hourPart = "00", minutePart = "00"] = timePart.split(":");
+
+    return {
+      date: datePart,
+      hour: padNumber(Number(hourPart) || 0),
+      minute: padNumber(Number(minutePart) || 0),
+    };
+  };
+
+  const buildDatetimeLocalValue = (dateValue, hourValue, minuteValue) => {
+    if (!dateValue) return "";
+    return `${dateValue}T${padNumber(Number(hourValue) || 0)}:${padNumber(
+      Number(minuteValue) || 0
+    )}`;
+  };
+
+  const parseDateValue = (value) => {
+    if (!value || typeof value !== "string") return null;
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  };
+
+  const toDateValue = (date) =>
+    `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+
+  const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+  const shiftMonth = (date, offset) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
+
+  const formatCalendarMonth = (date) => {
+    const label = new Intl.DateTimeFormat("vi-VN", {
+      month: "long",
+      year: "numeric",
+    }).format(date);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  const renderCalendar = (picker) => {
+    if (!picker.calendarGrid || !picker.monthLabel) return;
+
+    const selectedDate = parseDateValue(picker.date.value) || new Date();
+    const cursor = picker.monthCursor || startOfMonth(selectedDate);
+    const monthStart = startOfMonth(cursor);
+    const leadingDays = (monthStart.getDay() + 6) % 7;
+    const gridStart = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth(),
+      monthStart.getDate() - leadingDays
+    );
+    const todayValue = toDateValue(new Date());
+    const selectedValue = picker.date.value;
+
+    picker.monthCursor = monthStart;
+    picker.monthLabel.textContent = formatCalendarMonth(monthStart);
+    picker.calendarGrid.innerHTML = Array.from({ length: 42 }, (_, index) => {
+      const cellDate = new Date(
+        gridStart.getFullYear(),
+        gridStart.getMonth(),
+        gridStart.getDate() + index
+      );
+      const cellValue = toDateValue(cellDate);
+      const className = [
+        "datetime-calendar-day",
+        cellDate.getMonth() !== monthStart.getMonth() ? "is-muted" : "",
+        cellValue === todayValue ? "is-today" : "",
+        cellValue === selectedValue ? "is-selected" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return `
+        <button class="${className}" type="button" data-role="calendar-day" data-value="${cellValue}">
+          ${cellDate.getDate()}
+        </button>
+      `;
+    }).join("");
+  };
+
+  const focusCalendarSelection = (picker) => {
+    picker.calendarGrid
+      ?.querySelector(".datetime-calendar-day.is-selected, .datetime-calendar-day.is-today, .datetime-calendar-day")
+      ?.focus();
+  };
+
+  const closeDatetimePicker = (picker) => {
+    if (!picker) return;
+    picker.root.classList.remove("is-open");
+    picker.trigger.setAttribute("aria-expanded", "false");
+    picker.panel.hidden = true;
+    if (activeDatetimePicker === picker) {
+      activeDatetimePicker = null;
+    }
+  };
+
+  const syncDatetimePickerTrigger = (picker) => {
+    picker.display.textContent = picker.input.value
+      ? formatDateTime(picker.input.value)
+      : "Chọn ngày và giờ";
+  };
+
+  const syncDatetimePickerControls = (picker) => {
+    const fallbackValue = toDatetimeLocalValue(new Date());
+    const parsed = parseDatetimeLocalValue(picker.input.value) || parseDatetimeLocalValue(fallbackValue);
+    if (!parsed) return;
+
+    picker.date.value = parsed.date;
+    picker.monthCursor = startOfMonth(parseDateValue(parsed.date) || new Date());
+    picker.hour.value = parsed.hour;
+    picker.minute.value = parsed.minute;
+    renderCalendar(picker);
+    refreshSelect(picker.hour);
+    refreshSelect(picker.minute);
+    syncDatetimePickerTrigger(picker);
+  };
+
+  const commitDatetimePickerValue = (picker, emitEvents = true) => {
+    const nextValue = buildDatetimeLocalValue(
+      picker.date.value,
+      picker.hour.value,
+      picker.minute.value
+    );
+
+    picker.input.value = nextValue;
+    syncDatetimePickerTrigger(picker);
+
+    if (emitEvents) {
+      picker.input.dispatchEvent(new Event("input", { bubbles: true }));
+      picker.input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  };
+
+  const openDatetimePicker = (picker) => {
+    if (!picker) return;
+    if (activeDatetimePicker && activeDatetimePicker !== picker) {
+      closeDatetimePicker(activeDatetimePicker);
+    }
+
+    syncDatetimePickerControls(picker);
+    picker.root.classList.add("is-open");
+    picker.trigger.setAttribute("aria-expanded", "true");
+    picker.panel.hidden = false;
+    activeDatetimePicker = picker;
+    window.requestAnimationFrame(() => focusCalendarSelection(picker));
+  };
+
+  const applyDatetimePreset = (picker, preset) => {
+    const parsedCurrent = parseDatetimeLocalValue(picker.input.value);
+    const baseDate = parsedCurrent
+      ? new Date(`${parsedCurrent.date}T${parsedCurrent.hour}:${parsedCurrent.minute}`)
+      : new Date();
+
+    if (preset === "now") {
+      baseDate.setSeconds(0, 0);
+    } else if (preset === "plus-1-day") {
+      baseDate.setDate(baseDate.getDate() + 1);
+    } else if (preset === "end-of-day") {
+      baseDate.setHours(23, 59, 0, 0);
+    }
+
+    const parsedNext = parseDatetimeLocalValue(toDatetimeLocalValue(baseDate));
+    if (!parsedNext) return;
+
+    picker.date.value = parsedNext.date;
+    picker.hour.value = parsedNext.hour;
+    picker.minute.value = parsedNext.minute;
+    refreshSelect(picker.hour);
+    refreshSelect(picker.minute);
+    commitDatetimePickerValue(picker);
+  };
+
+  const populateDatetimeSelect = (select, total) => {
+    if (!select || select.options.length) return;
+
+    select.innerHTML = Array.from({ length: total }, (_, index) => {
+      const value = padNumber(index);
+      return `<option value="${value}">${value}</option>`;
+    }).join("");
+  };
+
+  const initDatetimePickers = () => {
+    document.querySelectorAll(".datetime-picker").forEach((root) => {
+      const inputId = root.dataset.inputId;
+      const input = inputId ? $(`#${inputId}`) : root.querySelector('input[type="datetime-local"]');
+      if (!input || datetimePickers.has(input.id)) return;
+
+      const picker = {
+        root,
+        input,
+        trigger: root.querySelector(".datetime-trigger"),
+        backdrop: root.querySelector(".datetime-backdrop"),
+        panel: root.querySelector(".datetime-panel"),
+        display: root.querySelector('[data-role="display"]'),
+        date: root.querySelector('[data-role="date"]'),
+        monthLabel: root.querySelector('[data-role="month-label"]'),
+        calendarGrid: root.querySelector('[data-role="calendar-grid"]'),
+        prevMonthButton: root.querySelector('[data-role="month-prev"]'),
+        nextMonthButton: root.querySelector('[data-role="month-next"]'),
+        todayButton: root.querySelector('[data-role="calendar-today"]'),
+        hour: root.querySelector('[data-role="hour"]'),
+        minute: root.querySelector('[data-role="minute"]'),
+        monthCursor: null,
+      };
+
+      populateDatetimeSelect(picker.hour, 24);
+      populateDatetimeSelect(picker.minute, 60);
+
+      picker.trigger?.addEventListener("click", () => {
+        if (picker.root.classList.contains("is-open")) {
+          closeDatetimePicker(picker);
+          return;
+        }
+        openDatetimePicker(picker);
+      });
+
+      picker.backdrop?.addEventListener("click", () => {
+        closeDatetimePicker(picker);
+        picker.trigger?.focus();
+      });
+
+      picker.hour?.addEventListener("change", () => commitDatetimePickerValue(picker));
+      picker.minute?.addEventListener("change", () => commitDatetimePickerValue(picker));
+
+      picker.prevMonthButton?.addEventListener("click", () => {
+        picker.monthCursor = shiftMonth(picker.monthCursor || new Date(), -1);
+        renderCalendar(picker);
+      });
+
+      picker.nextMonthButton?.addEventListener("click", () => {
+        picker.monthCursor = shiftMonth(picker.monthCursor || new Date(), 1);
+        renderCalendar(picker);
+      });
+
+      picker.todayButton?.addEventListener("click", () => {
+        const today = new Date();
+        picker.date.value = toDateValue(today);
+        picker.monthCursor = startOfMonth(today);
+        renderCalendar(picker);
+        commitDatetimePickerValue(picker);
+      });
+
+      picker.calendarGrid?.addEventListener("click", (event) => {
+        const button = event.target.closest('[data-role="calendar-day"]');
+        if (!button) return;
+
+        picker.date.value = button.dataset.value;
+        picker.monthCursor = startOfMonth(parseDateValue(button.dataset.value) || new Date());
+        renderCalendar(picker);
+        commitDatetimePickerValue(picker);
+      });
+
+      root.querySelectorAll('[data-role="preset"]').forEach((button) => {
+        button.addEventListener("click", () => {
+          applyDatetimePreset(picker, button.dataset.preset);
+        });
+      });
+
+      picker.input.addEventListener("input", () => syncDatetimePickerControls(picker));
+      picker.input.addEventListener("change", () => syncDatetimePickerControls(picker));
+
+      datetimePickers.set(picker.input.id, picker);
+      syncDatetimePickerControls(picker);
+      closeDatetimePicker(picker);
+    });
+  };
+
+  const syncAllDatetimePickers = () => {
+    datetimePickers.forEach((picker) => syncDatetimePickerControls(picker));
   };
 
   const normalizePageSize = (value) =>
@@ -304,10 +584,10 @@ const AdminVouchersPage = (() => {
                       <span class="muted">${escapeHtml(formatDateTime(voucher.starts_at))}</span><br />
                       <span class="muted">đến ${escapeHtml(formatDateTime(voucher.ends_at))}</span>
                     </td>
-                    <td><span class="chip ${escapeHtml(stateMeta.className)}">${escapeHtml(
+                    <td class="voucher-state-cell"><span class="chip ${escapeHtml(stateMeta.className)}">${escapeHtml(
                       stateMeta.label
                     )}</span></td>
-                    <td class="actions">
+                    <td class="actions voucher-action-cell">
                       <button class="btn secondary" type="button" data-action="edit-voucher" data-id="${escapeHtml(
                         voucher.id
                       )}">Sửa</button>
@@ -378,6 +658,7 @@ const AdminVouchersPage = (() => {
     $("#voucherIsActive").checked = defaults.is_active;
     setFormMode("create");
     syncDiscountFieldState();
+    syncAllDatetimePickers();
     refreshSelect($("#voucherKind"));
     refreshSelect($("#voucherDiscountType"));
     refreshSelect($("#voucherCategoryId"));
@@ -402,6 +683,7 @@ const AdminVouchersPage = (() => {
     $("#voucherIsActive").checked = Boolean(voucher.is_active);
     setFormMode("edit", voucher);
     syncDiscountFieldState();
+    syncAllDatetimePickers();
     refreshSelect($("#voucherKind"));
     refreshSelect($("#voucherDiscountType"));
     refreshSelect($("#voucherCategoryId"));
@@ -460,6 +742,14 @@ const AdminVouchersPage = (() => {
   const submitForm = async (event) => {
     event.preventDefault();
     const payload = collectFormData();
+    if (!payload.starts_at || !payload.ends_at) {
+      throw new Error("Hãy chọn thời gian bắt đầu và kết thúc.");
+    }
+
+    if (new Date(payload.ends_at) < new Date(payload.starts_at)) {
+      throw new Error("Thời gian kết thúc phải sau thời gian bắt đầu.");
+    }
+
     const isEditMode = Boolean(payload.id);
     const path = isEditMode ? `/admin/vouchers/${payload.id}` : "/admin/vouchers";
 
@@ -627,6 +917,10 @@ const AdminVouchersPage = (() => {
     });
 
     document.addEventListener("click", async (event) => {
+      if (activeDatetimePicker && !activeDatetimePicker.root.contains(event.target)) {
+        closeDatetimePicker(activeDatetimePicker);
+      }
+
       const editButton = event.target.closest('[data-action="edit-voucher"]');
       if (!editButton) return;
 
@@ -637,11 +931,19 @@ const AdminVouchersPage = (() => {
         Admin.setStatus(error.message, "error");
       }
     });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !activeDatetimePicker) return;
+      const currentPicker = activeDatetimePicker;
+      closeDatetimePicker(currentPicker);
+      currentPicker.trigger?.focus();
+    });
   };
 
   const init = async () => {
     Admin.initShell("vouchers");
     state.currentPageSize = normalizePageSize(paginationEls.pageSize()?.value);
+    initDatetimePickers();
     bindEvents();
     syncDiscountFieldState();
     resetForm();

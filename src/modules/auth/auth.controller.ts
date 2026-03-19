@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
 import {
+  changePassword,
   getCurrentUser,
   loginUser,
   logoutAllUserTokens,
@@ -11,6 +12,7 @@ import {
   updateProfile,
 } from "./auth.service";
 import {
+  ChangePasswordInput,
   LoginInput,
   LogoutInput,
   RefreshTokenInput,
@@ -81,6 +83,19 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
     const avatarUrl = `/ui/uploads/avatars/${file.filename}`;
     const user = await updateAvatar(req.userId, avatarUrl);
     res.json({ user });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const changeMyPassword = async (
+  req: AuthRequest<{}, {}, ChangePasswordInput>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    await changePassword(req.userId, req.body);
+    res.json({ message: "Đã cập nhật mật khẩu" });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

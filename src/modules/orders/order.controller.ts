@@ -1,15 +1,19 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
 import {
+  getSellerWalletSummary,
   getOrderForUser,
   listOrderItemsForSeller,
   listOrdersForUser,
+  requestSellerWithdrawal,
   updatePaymentStatus,
   updateOrderItemStatus,
 } from "./order.service";
 import {
   ListOrdersQuery,
   ListSellerItemsQuery,
+  RequestSellerWithdrawalInput,
+  SellerWalletSummaryQuery,
   UpdateOrderItemStatusInput,
   UpdatePaymentStatusInput,
 } from "./order.types";
@@ -48,6 +52,32 @@ export const getSellerItems = async (
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     const items = await listOrderItemsForSeller(req.userId, req.query);
     res.json({ items });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const getSellerWallet = async (
+  req: AuthRequest<{}, {}, {}, SellerWalletSummaryQuery>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    const walletSummary = await getSellerWalletSummary(req.userId, req.query);
+    res.json({ wallet_summary: walletSummary });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const postSellerWithdrawal = async (
+  req: AuthRequest<{}, {}, RequestSellerWithdrawalInput>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    const result = await requestSellerWithdrawal(req.userId, req.body || {});
+    res.json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

@@ -4,6 +4,7 @@ import crypto from "crypto";
 import jwt, { type SignOptions, type Secret } from "jsonwebtoken";
 import prisma from "../../libs/prisma";
 import {
+  ChangePasswordInput,
   LoginInput,
   LogoutInput,
   RefreshTokenInput,
@@ -304,6 +305,65 @@ export const updateAvatar = async (
   });
 
   return user;
+};
+
+export const changePassword = async (
+  userId: string,
+  input: ChangePasswordInput
+): Promise<void> => {
+  const currentPassword = String(input.current_password || "");
+  const newPassword = String(input.new_password || "");
+  const confirmPassword = String(input.confirm_password || "");
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    throw new Error("Vui lòng nhập đầy đủ mật khẩu cũ, mật khẩu mới và xác nhận mật khẩu mới");
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new Error("Xác nhận mật khẩu mới không khớp");
+  }
+
+  if (!isValidPassword(newPassword)) {
+    throw new Error("Mật khẩu mới phải có từ 6 đến 72 ký tự");
+  }
+
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      password_hash: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const isCurrentMatch = await bcrypt.compare(
+    currentPassword,
+    user.password_hash
+  );
+
+  if (!isCurrentMatch) {
+    throw new Error("Mật khẩu cũ không đúng");
+  }
+
+  const isSameAsCurrent = await bcrypt.compare(newPassword, user.password_hash);
+  if (isSameAsCurrent) {
+    throw new Error("Mật khẩu mới phải khác mật khẩu cũ");
+  }
+
+  const nextPasswordHash = await bcrypt.hash(newPassword, 10);
+
+  await prisma.$transaction([
+    prisma.users.update({
+      where: { id: userId },
+      data: { password_hash: nextPasswordHash },
+    }),
+    prisma.refresh_tokens.deleteMany({
+      where: { user_id: userId },
+    }),
+  ]);
 };
 
 export const refreshAccessToken = async (

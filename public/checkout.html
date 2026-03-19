@@ -171,8 +171,12 @@
             <strong id="checkoutShipping">0đ</strong>
           </div>
           <div id="checkoutProductDiscountRow" class="checkout-summary-row checkout-discount-row" hidden>
-            <span>Voucher giảm giá</span>
+            <span>Voucher của sàn</span>
             <strong id="checkoutProductDiscount">-0đ</strong>
+          </div>
+          <div id="checkoutShopDiscountRow" class="checkout-summary-row checkout-discount-row" hidden>
+            <span>Voucher của shop</span>
+            <strong id="checkoutShopDiscount">-0đ</strong>
           </div>
           <div id="checkoutShippingDiscountRow" class="checkout-summary-row checkout-discount-row" hidden>
             <span>Voucher giảm phí vận chuyển</span>
@@ -256,7 +260,34 @@
       </div>
     </div>
 
+    <div id="shopVoucherModal" class="account-modal" aria-hidden="true" hidden>
+      <div
+        class="account-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shopVoucherTitle"
+      >
+        <div class="account-modal-head">
+          <div>
+            <h3 id="shopVoucherTitle">Chon voucher cua shop</h3>
+            <p id="shopVoucherSubtitle" class="checkout-modal-subtitle">
+              Cac voucher duoi day da duoc loc theo san pham cua shop trong gio hien tai.
+            </p>
+          </div>
+          <button
+            id="closeShopVoucherModalBtn"
+            class="account-modal-close"
+            type="button"
+            aria-label="Dong"
+          >
+            ×
+          </button>
+        </div>
+        <div id="shopVoucherList" class="checkout-voucher-list"></div>
+      </div>
+    </div>
+
     <script src="/ui/store.js?v=20260311-4"></script>
-    <script src="/ui/checkout.js?v=20260316-1"></script>
+    <script src="/ui/checkout.js?v=20260319-2"></script>
   </body>
 </html>

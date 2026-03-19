@@ -4,11 +4,21 @@ const refs = {
   profileEmail: document.querySelector("#profileEmail"),
   profilePhone: document.querySelector("#profilePhone"),
   profileBirth: document.querySelector("#profileBirth"),
+  currentPassword: document.querySelector("#currentPassword"),
+  newPassword: document.querySelector("#newPassword"),
+  confirmNewPassword: document.querySelector("#confirmNewPassword"),
   avatarInput: document.querySelector("#avatarInput"),
   avatarButton: document.querySelector("#avatarButton"),
   avatarPreview: document.querySelector("#avatarPreview"),
   avatarLabel: document.querySelector("#avatarLabel"),
   saveProfile: document.querySelector("#saveProfile"),
+  savePassword: document.querySelector("#savePassword"),
+  passwordStatus: document.querySelector("#passwordStatus"),
+  notificationNavBadge: document.querySelector("#notificationNavBadge"),
+  notificationSummary: document.querySelector("#notificationSummary"),
+  notificationStatus: document.querySelector("#notificationStatus"),
+  notificationList: document.querySelector("#notificationList"),
+  markAllNotificationsReadBtn: document.querySelector("#markAllNotificationsReadBtn"),
   navLinks: [...document.querySelectorAll("[data-account-nav]")],
   panels: [...document.querySelectorAll("[data-account-panel]")],
   addressStatus: document.querySelector("#addressStatus"),
@@ -38,6 +48,7 @@ const ADDRESS_STORAGE_PREFIX = "bambi_customer_addresses_v2";
 const PROVINCE_TREE_CACHE_KEY = "bambi_vn_legacy_province_tree_v1";
 const WARD_CACHE_PREFIX = "bambi_vn_legacy_wards_v1";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const NOTIFICATION_POLL_INTERVAL_MS = 15000;
 const ADDRESS_API_BASE = "https://provinces.open-api.vn/api/v1";
 const FALLBACK_REGION_LIBRARY = {
   "Hà Nội": { districts: { "Ba Đình": ["Điện Biên", "Kim Mã", "Liễu Giai", "Ngọc Hà", "Phúc Xá"], "Cầu Giấy": ["Dịch Vọng", "Dịch Vọng Hậu", "Mai Dịch", "Nghĩa Đô", "Yên Hòa"], "Hà Đông": ["Biên Giang", "Dương Nội", "Hà Cầu", "Kiến Hưng", "Mộ Lao", "Phú La", "Văn Quán", "Yên Nghĩa"], "Long Biên": ["Bồ Đề", "Gia Thụy", "Ngọc Lâm", "Ngọc Thụy", "Việt Hưng"], "Nam Từ Liêm": ["Cầu Diễn", "Mễ Trì", "Mỹ Đình 1", "Mỹ Đình 2", "Tây Mỗ"] } },
@@ -50,7 +61,7 @@ const FALLBACK_REGION_LIBRARY = {
   "Bắc Ninh": { districts: { "Bắc Ninh": ["Đại Phúc", "Hạp Lĩnh", "Kinh Bắc", "Ninh Xá", "Vệ An"], "Từ Sơn": ["Châu Khê", "Đình Bảng", "Đồng Kỵ", "Tân Hồng", "Trang Hạ"], "Quế Võ": ["Phố Mới", "Việt Hùng", "Bằng An", "Nhân Hòa", "Phù Lãng"] } },
 };
 
-const state = { currentUser: null, activeView: "profile", addresses: [], editingAddressId: null, mapTimer: 0, location: { source: "api", provinceTree: null, provinceTreePromise: null, wardCache: {}, wardPromises: {}, syncRequestId: 0 } };
+const state = { currentUser: null, activeView: "profile", addresses: [], editingAddressId: null, notifications: [], notificationUnreadCount: 0, notificationTotal: 0, notificationPollTimer: 0, mapTimer: 0, location: { source: "api", provinceTree: null, provinceTreePromise: null, wardCache: {}, wardPromises: {}, syncRequestId: 0 } };
 
 const setStatus = (el, msg, type = "info") => {
   if (!el) return;
@@ -58,9 +69,11 @@ const setStatus = (el, msg, type = "info") => {
   el.style.display = "block"; el.textContent = msg; el.className = `status ${type === "error" ? "error" : ""}`;
 };
 const setProfileStatus = (m, t) => setStatus(refs.profileStatus, m, t);
+const setPasswordStatus = (m, t) => setStatus(refs.passwordStatus, m, t);
 const setAddressStatus = (m, t) => setStatus(refs.addressStatus, m, t);
 const setAddressModalStatus = (m, t) => setStatus(refs.addressModalStatus, m, t);
-const escapeHtml = (v) => String(v || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+const setNotificationStatus = (m, t) => setStatus(refs.notificationStatus, m, t);
+const escapeHtml = (v) => String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 const normalizeLookup = (v) => String(v || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const readCache = (key) => { try { const raw = localStorage.getItem(key); if (!raw) return null; const parsed = JSON.parse(raw); if (!parsed?.timestamp || !parsed?.data) return null; return { data: parsed.data, source: parsed.source || "cache", fresh: Date.now() - Number(parsed.timestamp) < CACHE_TTL_MS }; } catch (_e) { return null; } };
 const writeCache = (key, data, source = "api") => { try { localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), source, data })); } catch (_e) {} };
@@ -74,12 +87,31 @@ const setGenderValue = (value) => {
 };
 const updateAvatarPreview = (url) => { if (!refs.avatarPreview) return; refs.avatarPreview.src = url || ""; refs.avatarPreview.style.display = url ? "block" : "none"; if (refs.avatarLabel) refs.avatarLabel.style.display = url ? "none" : "block"; };
 const ensureAuth = () => (StoreAuth?.getToken() ? true : (StoreAuth?.redirectToLogin(), false));
-const getViewFromHash = () => (window.location.hash === "#addresses" ? "addresses" : "profile");
+const getViewFromHash = () => (
+  window.location.hash === "#addresses"
+    ? "addresses"
+    : window.location.hash === "#password"
+      ? "password"
+      : window.location.hash === "#notifications"
+        ? "notifications"
+      : "profile"
+);
 const setActiveView = (view, syncHash = false) => {
-  state.activeView = view === "addresses" ? "addresses" : "profile";
+  state.activeView = ["addresses", "password", "notifications"].includes(view) ? view : "profile";
   refs.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.accountNav === state.activeView));
   refs.panels.forEach((panel) => { panel.hidden = panel.dataset.accountPanel !== state.activeView; });
-  if (syncHash) { const nextHash = state.activeView === "addresses" ? "#addresses" : "#profile"; if (window.location.hash !== nextHash) window.history.replaceState(null, "", nextHash); }
+  if (state.activeView === "notifications" && state.currentUser) void fetchNotifications({ silent: true });
+  if (syncHash) {
+    const nextHash =
+      state.activeView === "addresses"
+        ? "#addresses"
+        : state.activeView === "password"
+          ? "#password"
+          : state.activeView === "notifications"
+            ? "#notifications"
+          : "#profile";
+    if (window.location.hash !== nextHash) window.history.replaceState(null, "", nextHash);
+  }
 };
 const getAddressStorageKey = () => `${ADDRESS_STORAGE_PREFIX}:${state.currentUser?.id || state.currentUser?.email || state.currentUser?.phone || "anonymous"}`;
 const createAddressDraft = () => ({ id: "", contact_name: state.currentUser?.full_name || "", contact_phone: state.currentUser?.phone || "", province: "", province_code: "", district: "", district_code: "", ward: "", ward_code: "", detail: "", address_type: "home", is_default: state.addresses.length === 0 });
@@ -247,6 +279,99 @@ const renderAddresses = () => {
   }
   refs.addressList.innerHTML = state.addresses.map((address) => `<article class="address-card"><div class="address-card-main"><div class="address-card-head"><div class="address-card-contact"><strong>${escapeHtml(address.contact_name)}</strong><span class="address-card-divider">|</span><span>${escapeHtml(address.contact_phone)}</span></div><button type="button" class="address-link-btn" data-address-action="edit" data-address-id="${escapeHtml(address.id)}">Cập nhật</button></div><p class="address-card-text">${escapeHtml(buildAddressText(address))}</p><div class="address-card-tags">${address.is_default ? '<span class="address-tag is-default">Mặc định</span>' : ""}<span class="address-tag">${escapeHtml(getAddressTypeLabel(address.address_type))}</span></div></div><div class="address-card-actions">${address.is_default ? '<button type="button" class="address-secondary-btn" disabled>Địa chỉ mặc định</button>' : `<button type="button" class="address-secondary-btn" data-address-action="default" data-address-id="${escapeHtml(address.id)}">Thiết lập mặc định</button>`}</div></article>`).join("");
 };
+const formatNotificationDateTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(date).replace(",", "");
+};
+const renderNotificationBadge = () => {
+  if (!refs.notificationNavBadge) return;
+  const count = Math.max(0, Number(state.notificationUnreadCount || 0));
+  refs.notificationNavBadge.hidden = count === 0;
+  refs.notificationNavBadge.textContent = count > 99 ? "99+" : String(count);
+  refs.notificationNavBadge.setAttribute("aria-label", `${count} thông báo chưa đọc`);
+};
+const renderNotifications = () => {
+  renderNotificationBadge();
+  if (refs.notificationSummary) refs.notificationSummary.textContent = state.notificationTotal ? `${state.notificationUnreadCount} chưa đọc trên tổng ${state.notificationTotal} thông báo. Danh sách tự làm mới mỗi 15 giây khi bạn đang mở trang.` : "Chưa có thông báo nào. Những cập nhật đơn hàng và trả hàng mới sẽ xuất hiện tại đây.";
+  if (refs.markAllNotificationsReadBtn) {
+    refs.markAllNotificationsReadBtn.disabled = !state.notificationUnreadCount;
+    refs.markAllNotificationsReadBtn.textContent = state.notificationUnreadCount ? "Đánh dấu đã đọc tất cả" : "Đã đọc hết";
+  }
+  if (!refs.notificationList) return;
+  if (!state.notifications.length) {
+    refs.notificationList.innerHTML = `<div class="notification-empty-card"><strong>Chưa có thông báo mới</strong><p>Thông báo về duyệt đơn, vận chuyển, giao hàng và trả hàng sẽ xuất hiện ở đây.</p></div>`;
+    return;
+  }
+  refs.notificationList.innerHTML = state.notifications.map((notification) => {
+    const detailLink = notification.link || "/ui/orders.html";
+    const title = escapeHtml(notification.title || "Thông báo đơn hàng");
+    const message = escapeHtml(notification.message || "");
+    const createdAt = formatNotificationDateTime(notification.created_at);
+    const imageUrl = notification.image_url ? `<img src="${escapeHtml(notification.image_url)}" alt="${title}" loading="lazy" />` : '<span class="notification-thumb-fallback" aria-hidden="true">🔔</span>';
+    return `<article class="notification-card ${notification.is_read ? "" : "is-unread"}" data-notification-id="${escapeHtml(notification.id)}"><div class="notification-thumb">${imageUrl}</div><div class="notification-body"><div class="notification-top"><h3 class="notification-title">${title}</h3>${notification.is_read ? "" : '<span class="notification-dot" aria-label="Chưa đọc"></span>'}</div><p class="notification-copy">${message}</p><div class="notification-meta"><span>${escapeHtml(createdAt)}</span></div></div><div class="notification-action"><button type="button" class="notification-action-btn" data-notification-action="open" data-notification-id="${escapeHtml(notification.id)}" data-notification-link="${escapeHtml(detailLink)}">Xem chi tiết</button></div></article>`;
+  }).join("");
+};
+const fetchNotifications = async ({ silent = false } = {}) => {
+  if (!ensureAuth()) return;
+  if (!silent) setNotificationStatus("Đang tải thông báo...");
+  try {
+    const response = await StoreAuth.apiFetch("/notifications?limit=30", {}, { redirectOn401: true });
+    const payload = response?.notifications || {};
+    state.notifications = Array.isArray(payload.data) ? payload.data : [];
+    state.notificationUnreadCount = Number(payload.summary?.unread_count || 0);
+    state.notificationTotal = Number(payload.summary?.total || state.notifications.length || 0);
+    renderNotifications();
+    if (!silent) setNotificationStatus("");
+  } catch (error) {
+    if (!silent) setNotificationStatus(error.message, "error");
+  }
+};
+const markNotificationRead = async (notificationId, { silent = false } = {}) => {
+  const target = state.notifications.find((item) => item.id === notificationId);
+  if (!target || target.is_read) return true;
+  try {
+    await StoreAuth.apiFetch(`/notifications/${encodeURIComponent(notificationId)}/read`, { method: "PATCH" }, { redirectOn401: true });
+    state.notifications = state.notifications.map((item) => item.id === notificationId ? { ...item, is_read: true, read_at: item.read_at || new Date().toISOString() } : item);
+    state.notificationUnreadCount = Math.max(0, state.notificationUnreadCount - 1);
+    renderNotifications();
+    return true;
+  } catch (error) {
+    if (!silent) setNotificationStatus(error.message, "error");
+    return false;
+  }
+};
+const markAllNotificationsRead = async () => {
+  if (!ensureAuth() || !state.notificationUnreadCount) return;
+  setNotificationStatus("");
+  if (refs.markAllNotificationsReadBtn) {
+    refs.markAllNotificationsReadBtn.disabled = true;
+    refs.markAllNotificationsReadBtn.textContent = "Đang cập nhật...";
+  }
+  try {
+    await StoreAuth.apiFetch("/notifications/read-all", { method: "PATCH" }, { redirectOn401: true });
+    state.notifications = state.notifications.map((item) => ({ ...item, is_read: true, read_at: item.read_at || new Date().toISOString() }));
+    state.notificationUnreadCount = 0;
+    renderNotifications();
+    setNotificationStatus("Đã đánh dấu tất cả thông báo là đã đọc.");
+  } catch (error) {
+    setNotificationStatus(error.message, "error");
+    renderNotifications();
+  }
+};
+const stopNotificationPolling = () => {
+  if (!state.notificationPollTimer) return;
+  window.clearInterval(state.notificationPollTimer);
+  state.notificationPollTimer = 0;
+};
+const startNotificationPolling = () => {
+  stopNotificationPolling();
+  state.notificationPollTimer = window.setInterval(() => {
+    if (!state.currentUser || document.hidden) return;
+    void fetchNotifications({ silent: true });
+  }, NOTIFICATION_POLL_INTERVAL_MS);
+};
 const fetchProfile = async () => {
   if (!ensureAuth()) return;
   try {
@@ -265,6 +390,9 @@ const fetchProfile = async () => {
     updateAvatarPreview(user.avatar_url || "");
     loadAddresses();
     renderAddresses();
+    renderNotifications();
+    void fetchNotifications({ silent: state.activeView !== "notifications" });
+    startNotificationPolling();
   } catch (error) { setProfileStatus(error.message, "error"); }
 };
 const saveProfile = async () => {
@@ -289,11 +417,70 @@ const handleAvatarUpload = async (event) => {
   } catch (error) { setProfileStatus(error.message, "error"); } finally { refs.avatarInput.value = ""; URL.revokeObjectURL(tempUrl); }
 };
 
+const clearPasswordForm = () => {
+  if (refs.currentPassword) refs.currentPassword.value = "";
+  if (refs.newPassword) refs.newPassword.value = "";
+  if (refs.confirmNewPassword) refs.confirmNewPassword.value = "";
+};
+
+const setPasswordSaving = (saving) => {
+  if (!refs.savePassword) return;
+  refs.savePassword.disabled = Boolean(saving);
+  refs.savePassword.textContent = saving ? "Đang cập nhật..." : "Cập nhật mật khẩu";
+};
+
+const savePassword = async () => {
+  if (!ensureAuth()) return;
+  setPasswordStatus("");
+
+  const currentPassword = refs.currentPassword?.value || "";
+  const newPassword = refs.newPassword?.value || "";
+  const confirmPassword = refs.confirmNewPassword?.value || "";
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return setPasswordStatus("Vui lòng nhập đầy đủ mật khẩu cũ, mật khẩu mới và xác nhận mật khẩu mới.", "error");
+  }
+
+  if (newPassword !== confirmPassword) {
+    return setPasswordStatus("Xác nhận mật khẩu mới không khớp.", "error");
+  }
+
+  if (newPassword.length < 6) {
+    return setPasswordStatus("Mật khẩu mới phải có ít nhất 6 ký tự.", "error");
+  }
+
+  setPasswordSaving(true);
+
+  try {
+    const data = await StoreAuth.apiFetch(
+      "/auth/me/password",
+      {
+        method: "PATCH",
+        body: {
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
+        },
+      },
+      { redirectOn401: true }
+    );
+
+    clearPasswordForm();
+    setPasswordStatus(data?.message || "Đã cập nhật mật khẩu.");
+  } catch (error) {
+    setPasswordStatus(error.message, "error");
+  } finally {
+    setPasswordSaving(false);
+  }
+};
+
 refs.navLinks.forEach((link) => link.addEventListener("click", (event) => { event.preventDefault(); setActiveView(link.dataset.accountNav, true); }));
 window.addEventListener("hashchange", () => setActiveView(getViewFromHash()));
 refs.saveProfile?.addEventListener("click", (event) => { event.preventDefault(); saveProfile(); });
+refs.savePassword?.addEventListener("click", (event) => { event.preventDefault(); savePassword(); });
 refs.avatarButton?.addEventListener("click", (event) => { event.preventDefault(); refs.avatarInput?.click(); });
 refs.avatarInput?.addEventListener("change", handleAvatarUpload);
+refs.markAllNotificationsReadBtn?.addEventListener("click", () => { void markAllNotificationsRead(); });
 refs.openAddressModalBtn?.addEventListener("click", () => { setAddressStatus(""); void openAddressModal(); });
 refs.closeAddressModalBtn?.addEventListener("click", closeAddressModal);
 refs.cancelAddressBtn?.addEventListener("click", closeAddressModal);
@@ -313,10 +500,23 @@ refs.addressList?.addEventListener("click", (event) => {
   if (addressAction === "edit") return setAddressStatus(""), void openAddressModal(addressId);
   if (addressAction === "default" && addressId) setDefaultAddress(addressId);
 });
+refs.notificationList?.addEventListener("click", async (event) => {
+  const actionButton = event.target.closest("[data-notification-action='open']");
+  if (!actionButton) return;
+  const notificationId = actionButton.dataset.notificationId || "";
+  const detailLink = actionButton.dataset.notificationLink || "/ui/orders.html";
+  if (notificationId) await markNotificationRead(notificationId, { silent: true });
+  window.location.href = detailLink;
+});
+document.addEventListener("visibilitychange", () => { if (!document.hidden && state.currentUser) void fetchNotifications({ silent: true }); });
+window.addEventListener("beforeunload", stopNotificationPolling);
 
 resetRegionSelects();
 updateMapPreview();
 setActiveView(getViewFromHash());
 setProfileStatus("");
+setPasswordStatus("");
 setAddressStatus("");
+setNotificationStatus("");
+renderNotifications();
 fetchProfile();
