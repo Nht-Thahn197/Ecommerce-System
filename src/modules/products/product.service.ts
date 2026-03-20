@@ -241,7 +241,19 @@ const buildWhere = async (
   }
   if (status) where.status = status;
   if (shopId) where.shop_id = shopId;
-  if (q) where.name = { contains: q, mode: "insensitive" };
+  if (q) {
+    where.OR = [
+      { name: { contains: q, mode: "insensitive" } },
+      { description: { contains: q, mode: "insensitive" } },
+      {
+        shops: {
+          is: {
+            name: { contains: q, mode: "insensitive" },
+          },
+        },
+      },
+    ];
+  }
 
   const minPrice = toNumber(query.min_price);
   const maxPrice = toNumber(query.max_price);

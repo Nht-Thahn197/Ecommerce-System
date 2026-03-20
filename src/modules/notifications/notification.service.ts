@@ -54,6 +54,11 @@ const toNumber = (value?: string) => {
 const parseBoolean = (value?: string) =>
   TRUE_VALUES.has((value || "").trim().toLowerCase());
 
+const uuidSql = (value: string) => Prisma.sql`CAST(${value} AS UUID)`;
+
+const nullableUuidSql = (value?: string | null) =>
+  value ? uuidSql(value) : Prisma.sql`NULL`;
+
 const getPagination = (query?: { page?: string; limit?: string }) => {
   const page = Math.max(1, toNumber(query?.page) || 1);
   const limit = Math.min(MAX_LIMIT, Math.max(1, toNumber(query?.limit) || 20));
@@ -206,18 +211,18 @@ const createNotification = async (
   }
 
   const dedupeCondition = input.order_item_id
-    ? Prisma.sql`order_item_id = ${input.order_item_id}`
+    ? Prisma.sql`order_item_id = ${uuidSql(input.order_item_id)}`
     : input.return_id
-      ? Prisma.sql`return_id = ${input.return_id}`
+      ? Prisma.sql`return_id = ${uuidSql(input.return_id)}`
       : input.order_id
-        ? Prisma.sql`order_id = ${input.order_id}`
+        ? Prisma.sql`order_id = ${uuidSql(input.order_id)}`
         : null;
 
   if (dedupeCondition) {
     const existing = await db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
       SELECT id
       FROM notifications
-      WHERE user_id = ${input.user_id}
+      WHERE user_id = ${uuidSql(input.user_id)}
         AND type = ${input.type}
         AND ${dedupeCondition}
         AND created_at >= NOW() - (${DEDUPE_WINDOW_MINUTES} * INTERVAL '1 minute')
@@ -242,15 +247,15 @@ const createNotification = async (
       return_id
     )
     VALUES (
-      ${input.user_id},
+      ${uuidSql(input.user_id)},
       ${input.type},
       ${input.title},
       ${input.message},
       ${input.link || null},
       ${input.image_url || null},
-      ${input.order_id || null},
-      ${input.order_item_id || null},
-      ${input.return_id || null}
+      ${nullableUuidSql(input.order_id)},
+      ${nullableUuidSql(input.order_item_id)},
+      ${nullableUuidSql(input.return_id)}
     )
   `);
 
@@ -280,7 +285,7 @@ export const listNotificationsForUser = async (
     };
   }
 
-  const conditions: Prisma.Sql[] = [Prisma.sql`user_id = ${userId}`];
+  const conditions: Prisma.Sql[] = [Prisma.sql`user_id = ${uuidSql(userId)}`];
   if (parseBoolean(query.unread_only)) {
     conditions.push(Prisma.sql`is_read = false`);
   }
@@ -317,7 +322,7 @@ export const listNotificationsForUser = async (
     prisma.$queryRaw<Array<{ count: number }>>(Prisma.sql`
       SELECT COUNT(*)::int AS count
       FROM notifications
-      WHERE user_id = ${userId}
+      WHERE user_id = ${uuidSql(userId)}
         AND is_read = false
     `),
   ]);
@@ -351,8 +356,8 @@ export const markNotificationRead = async (userId: string, notificationId: strin
     SET
       is_read = true,
       read_at = COALESCE(read_at, NOW())
-    WHERE id = ${notificationId}
-      AND user_id = ${userId}
+    WHERE id = ${uuidSql(notificationId)}
+      AND user_id = ${uuidSql(userId)}
   `);
 
   return { updated: true };
@@ -369,7 +374,7 @@ export const markAllNotificationsRead = async (userId: string) => {
     SET
       is_read = true,
       read_at = COALESCE(read_at, NOW())
-    WHERE user_id = ${userId}
+    WHERE user_id = ${uuidSql(userId)}
       AND is_read = false
   `);
 

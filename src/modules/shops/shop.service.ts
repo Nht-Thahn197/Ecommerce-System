@@ -263,7 +263,7 @@ export const updateShopProfile = async (
 ) => {
   const shop = await prisma.shops.findFirst({
     where: { id: shopId, owner_id: userId },
-    select: { id: true },
+    select: { id: true, onboarding_data: true },
   });
 
   if (!shop) {
@@ -282,6 +282,18 @@ export const updateShopProfile = async (
 
   if (input.description !== undefined) {
     data.description = sanitizeString(input.description);
+  }
+
+  if (input.shipping_config !== undefined) {
+    const currentOnboardingData =
+      shop.onboarding_data && typeof shop.onboarding_data === "object"
+        ? (shop.onboarding_data as Prisma.JsonObject)
+        : {};
+
+    data.onboarding_data = {
+      ...currentOnboardingData,
+      shipping_config: normalizeShippingConfig(input.shipping_config),
+    } as Prisma.InputJsonValue;
   }
 
   await prisma.shops.update({

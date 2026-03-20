@@ -36,6 +36,8 @@
   const catalogState = {
     allProducts: [],
     filteredProducts: [],
+    context: "category",
+    query: "",
     reviewSummaryById: new Map(),
     reviewsLoaded: false,
     reviewLoadPromise: null,
@@ -370,7 +372,9 @@
       catalogEmpty,
       hasActiveCatalogFilters()
         ? "Không có sản phẩm phù hợp với bộ lọc hiện tại."
-        : "Chưa có sản phẩm đang bán trong danh mục này."
+        : catalogState.context === "search"
+          ? `Không tìm thấy sản phẩm phù hợp với "${catalogState.query}".`
+          : "Chưa có sản phẩm đang bán trong danh mục này."
     );
   };
 
@@ -650,6 +654,56 @@
   const loadCategoryPage = async () => {
     const params = new URLSearchParams(window.location.search);
     const categoryId = params.get("id");
+    const query = params.get("q")?.trim() || "";
+
+    if (query) {
+      try {
+        const productsPayload = await fetchJson(
+          `/products?status=active&q=${encodeURIComponent(query)}&limit=100`
+        );
+
+        document.title = `Kết quả tìm kiếm: ${query} - Bambi`;
+        catalogState.context = "search";
+        catalogState.query = query;
+        catalogState.allProducts = Array.isArray(productsPayload?.data)
+          ? productsPayload.data
+          : [];
+        catalogState.reviewSummaryById = new Map();
+        catalogState.reviewsLoaded = false;
+        catalogState.reviewLoadPromise = null;
+
+        if (catalogTitle) catalogTitle.textContent = `Kết quả cho "${query}"`;
+        if (catalogTrailLabel) catalogTrailLabel.textContent = "Tìm kiếm";
+        if (catalogDescription) {
+          catalogDescription.textContent =
+            "Đang hiển thị các sản phẩm khớp với từ khóa bạn vừa nhập.";
+        }
+        if (catalogSectionTitle) {
+          catalogSectionTitle.textContent = `Sản phẩm liên quan đến "${query}"`;
+        }
+        if (catalogChildLinks) {
+          catalogChildLinks.innerHTML = `<span class="catalog-chip active">Từ khóa: ${escapeHtml(
+            query
+          )}</span>`;
+        }
+
+        hideStatus(catalogStatus);
+        syncCatalogRatingButtons();
+        renderCatalogProducts(catalogState.allProducts);
+      } catch (error) {
+        if (catalogProductGrid) catalogProductGrid.innerHTML = "";
+        showStatus(
+          catalogStatus,
+          error instanceof Error ? error.message : "Không thể tìm kiếm sản phẩm.",
+          true
+        );
+        if (catalogEmpty) {
+          catalogEmpty.hidden = false;
+          catalogEmpty.textContent = `Không thể hiển thị kết quả cho "${query}".`;
+        }
+      }
+      return;
+    }
 
     if (!categoryId) {
       showStatus(catalogStatus, "Thiếu mã danh mục để tải sản phẩm.", true);
@@ -687,6 +741,8 @@
         catalogSectionTitle.textContent = `Sản phẩm thuộc ${selected.name}`;
       }
 
+      catalogState.context = "category";
+      catalogState.query = "";
       catalogState.allProducts = Array.isArray(productsPayload?.data)
         ? productsPayload.data
         : [];

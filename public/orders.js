@@ -1,5 +1,6 @@
 (function () {
   const auth = window.BambiStoreAuth || {};
+  const CART_SELECTION_QUERY_PARAM = "selected";
 
   const els = {
     status: document.querySelector("#orderStatus"),
@@ -61,6 +62,7 @@
     filter: "all",
     confirmingEntryKey: "",
     returningEntryKey: "",
+    reorderingEntryKey: "",
     reviewingEntryKey: "",
     reviewDrafts: {},
     submittingReview: false,
@@ -297,6 +299,35 @@
         String(entry?.order?.id || "") === String(orderId || "") &&
         String(entry?.shopId || "") === String(shopId || "")
     ) || null;
+
+  const getBuyAgainRequests = (entry) => {
+    const quantitiesByVariantId = new Map();
+
+    if (!Array.isArray(entry?.items)) return [];
+
+    entry.items.forEach((item) => {
+      const variantId = String(item?.product_variants?.id || "").trim();
+      const productStatus = String(item?.product_variants?.products?.status || "").trim();
+      const quantity = Number(item?.quantity || 0);
+
+      if (!variantId || (productStatus && productStatus !== "active")) {
+        return;
+      }
+
+      const safeQuantity = Number.isFinite(quantity) ? Math.max(1, Math.floor(quantity)) : 1;
+      quantitiesByVariantId.set(
+        variantId,
+        Number(quantitiesByVariantId.get(variantId) || 0) + safeQuantity
+      );
+    });
+
+    return Array.from(quantitiesByVariantId.entries()).map(
+      ([productVariantId, quantity]) => ({
+        productVariantId,
+        quantity,
+      })
+    );
+  };
 
   const getReviewTargetKey = (item) => getProductId(item);
 
@@ -577,6 +608,7 @@
         const entryKey = getEntryKey(entry);
         const confirming = state.confirmingEntryKey === entryKey;
         const returning = state.returningEntryKey === entryKey;
+        const reordering = state.reorderingEntryKey === entryKey;
         const showReceivedButton = canConfirmReceived(entry);
         const showReturnButton = canRequestReturn(entry);
         const showPostDeliveryActions =
@@ -613,8 +645,17 @@
             `
           : showPostDeliveryActions
           ? `
-              <button class="primary" type="button">Mua lại</button>
-              <button type="button">Liên hệ người bán</button>
+              <button
+                class="primary"
+                type="button"
+                data-action="buy-again"
+                data-order-id="${escapeHtml(entry.order?.id || "")}"
+                data-shop-id="${escapeHtml(entry.shopId)}"
+                ${reordering ? "disabled" : ""}
+              >
+                ${reordering ? "Đang thêm..." : "Mua lại"}
+              </button>
+              <button type="button" data-action="contact-seller">Liên hệ người bán</button>
             `
           : "";
 
@@ -680,13 +721,8 @@
       const actions = card?.querySelector(".order-actions .actions");
       if (!actions) return;
 
-      const buttons = Array.from(actions.querySelectorAll("button"));
-      const buyAgainButton = buttons.find((button) =>
-        /mua/i.test(button.textContent || "")
-      );
-      const contactButton = buttons.find((button) =>
-        /li/i.test(button.textContent || "")
-      );
+      const buyAgainButton = actions.querySelector('[data-action="buy-again"]');
+      const contactButton = actions.querySelector('[data-action="contact-seller"]');
 
       if (buyAgainButton) {
         buyAgainButton.classList.remove("primary");
@@ -862,6 +898,73 @@
       await loadOrders({ showLoading: false });
     } finally {
       state.returningEntryKey = "";
+      render();
+    }
+  };
+
+  const buyAgain = async (entry) => {
+    if (!ensureAuth()) return;
+
+    if (typeof auth.apiFetch !== "function") {
+      showStatus("Không thể kết nối chức năng giỏ hàng.", true);
+      return;
+    }
+
+    const requests = getBuyAgainRequests(entry);
+    if (!requests.length) {
+      showStatus("Không thể mua lại vì sản phẩm không còn khả dụng.", true);
+      return;
+    }
+
+    state.reorderingEntryKey = getEntryKey(entry);
+    render();
+    showStatus("Đang thêm sản phẩm vào giỏ hàng...");
+
+    try {
+      const results = await Promise.allSettled(
+        requests.map(({ productVariantId, quantity }) =>
+          auth.apiFetch(
+            "/cart/items",
+            {
+              method: "POST",
+              body: {
+                product_variant_id: productVariantId,
+                quantity,
+              },
+            },
+            { redirectOn401: true }
+          )
+        )
+      );
+
+      const cartItemIds = Array.from(
+        new Set(
+          results
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => String(result.value?.item?.id || "").trim())
+            .filter(Boolean)
+        )
+      );
+
+      if (!cartItemIds.length) {
+        const firstError = results.find((result) => result.status === "rejected");
+        throw firstError?.status === "rejected" && firstError.reason instanceof Error
+          ? firstError.reason
+          : new Error("Không thể thêm sản phẩm vào giỏ hàng.");
+      }
+
+      window.BambiStoreCart?.emitChange?.();
+
+      const cartUrl = new URL("/ui/cart.html", window.location.origin);
+      cartUrl.searchParams.set(CART_SELECTION_QUERY_PARAM, cartItemIds.join(","));
+      window.location.href = `${cartUrl.pathname}${cartUrl.search}`;
+    } catch (error) {
+      showStatus(
+        error instanceof Error ? error.message : "Không thể thêm sản phẩm vào giỏ hàng.",
+        true
+      );
+    } finally {
+      state.reorderingEntryKey = "";
       render();
     }
   };
@@ -1147,11 +1250,40 @@
       const target = event.target;
       if (!(target instanceof Element)) return;
 
+      const buyAgainButton = target.closest('[data-action="buy-again"]');
+      if (buyAgainButton) {
+        const orderId = String(buyAgainButton.dataset.orderId || "");
+        const shopId = String(buyAgainButton.dataset.shopId || "");
+        if (
+          !orderId ||
+          !shopId ||
+          state.confirmingEntryKey ||
+          state.returningEntryKey ||
+          state.reorderingEntryKey
+        ) {
+          return;
+        }
+
+        const entry = findEntry(orderId, shopId);
+        if (!entry) return;
+
+        await buyAgain(entry);
+        return;
+      }
+
       const reviewButton = target.closest('[data-action="open-review"]');
       if (reviewButton) {
         const orderId = String(reviewButton.dataset.orderId || "");
         const shopId = String(reviewButton.dataset.shopId || "");
-        if (!orderId || !shopId || state.confirmingEntryKey || state.returningEntryKey) return;
+        if (
+          !orderId ||
+          !shopId ||
+          state.confirmingEntryKey ||
+          state.returningEntryKey ||
+          state.reorderingEntryKey
+        ) {
+          return;
+        }
 
         const entry = findEntry(orderId, shopId);
         if (!entry) return;
@@ -1164,7 +1296,15 @@
       if (returnButton) {
         const orderId = String(returnButton.dataset.orderId || "");
         const shopId = String(returnButton.dataset.shopId || "");
-        if (!orderId || !shopId || state.confirmingEntryKey || state.returningEntryKey) return;
+        if (
+          !orderId ||
+          !shopId ||
+          state.confirmingEntryKey ||
+          state.returningEntryKey ||
+          state.reorderingEntryKey
+        ) {
+          return;
+        }
 
         const entry = findEntry(orderId, shopId);
         if (!entry) return;
@@ -1178,7 +1318,15 @@
 
       const orderId = String(button.dataset.orderId || "");
       const shopId = String(button.dataset.shopId || "");
-      if (!orderId || !shopId || state.confirmingEntryKey || state.returningEntryKey) return;
+      if (
+        !orderId ||
+        !shopId ||
+        state.confirmingEntryKey ||
+        state.returningEntryKey ||
+        state.reorderingEntryKey
+      ) {
+        return;
+      }
 
       const entry = findEntry(orderId, shopId);
       if (!entry) return;

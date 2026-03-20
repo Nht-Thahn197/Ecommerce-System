@@ -57,6 +57,7 @@ export interface RegisterShopInput {
 export interface UpdateShopProfileInput {
   name?: string;
   description?: string | null;
+  shipping_config?: ShopShippingConfigInput | null;
 }
 
 export interface UpdateShopStatusInput {

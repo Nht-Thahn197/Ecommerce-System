@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Đăng ký | Bambi</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="./store.css" />
+    <link rel="stylesheet" href="./store.css?v=20260320-52" />
     <style>
       .auth-grid {
         margin-top: 24px;
@@ -84,7 +84,29 @@
           <span>Kết nối</span>
         </div>
         <div class="top-actions">
-          <span>Thông báo</span>
+          <div class="topbar-notification-menu" data-topbar-notification>
+            <a
+              class="topbar-notification-trigger"
+              data-topbar-notification-trigger
+              href="/ui/account.html#notifications"
+              aria-label="Mở trang thông báo"
+            >
+              <span>Thông báo</span>
+              <span class="topbar-notification-badge" data-topbar-notification-badge hidden>0</span>
+            </a>
+            <div
+              class="topbar-notification-dropdown"
+              data-topbar-notification-dropdown
+              aria-label="Danh sách thông báo mới"
+            >
+              <div class="topbar-notification-head">Thông báo mới nhận</div>
+              <div class="topbar-notification-status" data-topbar-notification-status hidden></div>
+              <div class="topbar-notification-list" data-topbar-notification-list>
+                <div class="topbar-notification-placeholder">Di chuột để xem thông báo mới.</div>
+              </div>
+              <a class="topbar-notification-footer" href="/ui/account.html#notifications">Xem tất cả</a>
+            </div>
+          </div>
           <span>Hỗ trợ</span>
           <span>Tiếng Việt</span>
         </div>
@@ -205,7 +227,7 @@
         }
       });
     </script>
-    <script src="/ui/store.js"></script>
+    <script src="/ui/store.js?v=20260320-9"></script>
     <script src="/ui/custom-select.js"></script>
   </body>
 </html>

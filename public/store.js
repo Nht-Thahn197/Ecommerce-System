@@ -8,6 +8,22 @@ const cartCountBadges = Array.from(document.querySelectorAll("[data-cart-count]"
 const sellerChannelLinks = Array.from(
   document.querySelectorAll('a[href="/ui/shop-register.html"]')
 );
+const searchWrap = document.querySelector(".search-wrap");
+const searchInput = searchWrap?.querySelector("input");
+const searchButton = searchWrap?.querySelector("button");
+const notificationMenu = document.querySelector("[data-topbar-notification]");
+const notificationTrigger = notificationMenu?.querySelector(
+  "[data-topbar-notification-trigger]"
+);
+const notificationBadge = notificationMenu?.querySelector(
+  "[data-topbar-notification-badge]"
+);
+const notificationStatus = notificationMenu?.querySelector(
+  "[data-topbar-notification-status]"
+);
+const notificationList = notificationMenu?.querySelector(
+  "[data-topbar-notification-list]"
+);
 
 const customerStorageKeys = {
   userBase: "bambi_user_base",
@@ -17,6 +33,11 @@ const customerStorageKeys = {
   sellerToken: "bambi_seller_token",
   sellerRefresh: "bambi_seller_refresh",
 };
+
+const TOPBAR_NOTIFICATION_URL = "/ui/account.html#notifications";
+const TOPBAR_NOTIFICATION_LIMIT = 5;
+const TOPBAR_NOTIFICATION_STALE_MS = 30_000;
+const STORE_SEARCH_RESULTS_URL = "/ui/category.html";
 
 const getLoginRedirect = ({ preserveNext = true } = {}) => {
   if (!preserveNext) {
@@ -62,6 +83,37 @@ const getActiveSession = () =>
 
 const getToken = () => getActiveSession().token;
 
+const escapeTopbarHtml = (value) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+const formatTopbarNotificationDateTime = (value) => {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+    .format(date)
+    .replace(",", "");
+};
+
+const getSearchResultsHref = (query) => {
+  const params = new URLSearchParams();
+  params.set("q", query);
+  return `${STORE_SEARCH_RESULTS_URL}?${params.toString()}`;
+};
+
 const setAvatar = (name, url) => {
   if (avatarImg) {
     avatarImg.src = url || "";
@@ -84,6 +136,7 @@ const showUser = (name, avatarUrl) => {
 };
 
 const hideUser = () => {
+  resetTopbarNotifications({ authenticated: false });
   if (!authButtons || !userMenu) return;
   authButtons.classList.remove("hidden");
   userMenu.style.display = "none";
@@ -99,6 +152,7 @@ const clearAuth = () => {
   sellerChannelPromise = null;
   cartCountPromise = null;
   setCartCount(0, false);
+  resetTopbarNotifications({ authenticated: false });
 };
 
 const saveSession = (source, token, refreshToken) => {
@@ -130,6 +184,13 @@ const parseResponsePayload = async (response) => {
 let refreshPromise = null;
 let sellerChannelPromise = null;
 let cartCountPromise = null;
+let topbarNotificationPromise = null;
+let topbarNotificationLoaded = false;
+let topbarNotificationFetchedAt = 0;
+let topbarNotificationState = {
+  items: [],
+  unreadCount: 0,
+};
 
 const setCartCount = (count, authenticated = true) => {
   const total = Math.max(0, Number(count) || 0);
@@ -139,6 +200,205 @@ const setCartCount = (count, authenticated = true) => {
     badge.textContent = label;
     badge.hidden = !authenticated;
     badge.setAttribute("aria-label", `${total} sản phẩm trong giỏ hàng`);
+  });
+};
+
+const setTopbarNotificationExpanded = (expanded) => {
+  if (!notificationMenu || !notificationTrigger) return;
+
+  notificationMenu.classList.toggle("is-open", expanded);
+  notificationTrigger.setAttribute("aria-expanded", expanded ? "true" : "false");
+};
+
+const setTopbarNotificationStatus = (message, { error = false } = {}) => {
+  if (!notificationStatus) return;
+
+  notificationStatus.hidden = !message;
+  notificationStatus.textContent = message || "";
+  notificationStatus.classList.toggle("is-error", Boolean(message && error));
+};
+
+const renderTopbarNotificationBadge = (
+  count,
+  authenticated = Boolean(getToken())
+) => {
+  if (!notificationBadge) return;
+
+  const total = Math.max(0, Number(count) || 0);
+  notificationBadge.hidden = !authenticated || total === 0;
+  notificationBadge.textContent = total > 99 ? "99+" : String(total);
+
+  if (authenticated) {
+    notificationBadge.setAttribute("aria-label", `${total} thông báo chưa đọc`);
+  } else {
+    notificationBadge.removeAttribute("aria-label");
+  }
+};
+
+const renderTopbarNotificationPlaceholder = (message) => {
+  if (!notificationList) return;
+
+  notificationList.innerHTML = `<div class="topbar-notification-placeholder">${escapeTopbarHtml(message)}</div>`;
+};
+
+const renderTopbarNotifications = ({ authenticated = Boolean(getToken()) } = {}) => {
+  if (!notificationList) return;
+
+  setTopbarNotificationStatus("");
+  renderTopbarNotificationBadge(topbarNotificationState.unreadCount, authenticated);
+
+  if (!authenticated) {
+    renderTopbarNotificationPlaceholder("Đăng nhập để xem thông báo mới.");
+    return;
+  }
+
+  if (!topbarNotificationState.items.length) {
+    renderTopbarNotificationPlaceholder("Bạn chưa có thông báo mới.");
+    return;
+  }
+
+  notificationList.innerHTML = topbarNotificationState.items
+    .map((notification) => {
+      const title = escapeTopbarHtml(notification?.title || "Thông báo đơn hàng");
+      const message = escapeTopbarHtml(notification?.message || "");
+      const createdAt = escapeTopbarHtml(
+        formatTopbarNotificationDateTime(notification?.created_at) || "Mới đây"
+      );
+      const imageMarkup = notification?.image_url
+        ? `<img src="${escapeTopbarHtml(notification.image_url)}" alt="${title}" loading="lazy" />`
+        : '<span class="topbar-notification-thumb-fallback" aria-hidden="true">🔔</span>';
+
+      return `<a class="topbar-notification-item ${notification?.is_read ? "" : "is-unread"}" href="${TOPBAR_NOTIFICATION_URL}"><div class="topbar-notification-thumb">${imageMarkup}</div><div class="topbar-notification-content"><div class="topbar-notification-title-row"><strong class="topbar-notification-title">${title}</strong>${notification?.is_read ? "" : '<span class="topbar-notification-dot" aria-label="Chưa đọc"></span>'}</div><p class="topbar-notification-copy">${message}</p><div class="topbar-notification-meta">${createdAt}</div></div></a>`;
+    })
+    .join("");
+};
+
+const resetTopbarNotifications = ({
+  authenticated = Boolean(getToken()),
+} = {}) => {
+  topbarNotificationLoaded = false;
+  topbarNotificationFetchedAt = 0;
+  topbarNotificationState = { items: [], unreadCount: 0 };
+  topbarNotificationPromise = null;
+
+  setTopbarNotificationExpanded(false);
+  setTopbarNotificationStatus("");
+  renderTopbarNotificationBadge(0, authenticated);
+  renderTopbarNotificationPlaceholder(
+    authenticated
+      ? "Di chuột để xem thông báo mới."
+      : "Đăng nhập để xem thông báo mới."
+  );
+};
+
+const loadTopbarNotifications = async ({ force = false } = {}) => {
+  if (!notificationMenu || !notificationList) return null;
+
+  if (!getToken()) {
+    resetTopbarNotifications({ authenticated: false });
+    return null;
+  }
+
+  const isStale =
+    !topbarNotificationFetchedAt ||
+    Date.now() - topbarNotificationFetchedAt > TOPBAR_NOTIFICATION_STALE_MS;
+
+  if (!force && topbarNotificationLoaded && !isStale) {
+    return topbarNotificationState;
+  }
+
+  if (topbarNotificationPromise) {
+    return topbarNotificationPromise;
+  }
+
+  setTopbarNotificationStatus("");
+  renderTopbarNotificationPlaceholder("Đang tải thông báo...");
+
+  topbarNotificationPromise = (async () => {
+    try {
+      const response = await apiFetch(
+        `/notifications?limit=${TOPBAR_NOTIFICATION_LIMIT}`,
+        {},
+        { redirectOn401: false }
+      );
+      const payload = response?.notifications || {};
+
+      topbarNotificationState = {
+        items: Array.isArray(payload.data) ? payload.data : [],
+        unreadCount: Number(payload.summary?.unread_count || 0),
+      };
+      topbarNotificationLoaded = true;
+      topbarNotificationFetchedAt = Date.now();
+      renderTopbarNotifications({ authenticated: true });
+      return topbarNotificationState;
+    } catch (error) {
+      topbarNotificationLoaded = false;
+      topbarNotificationState = { items: [], unreadCount: 0 };
+      renderTopbarNotificationBadge(0, Boolean(getToken()));
+      renderTopbarNotificationPlaceholder("Chưa tải được danh sách thông báo.");
+      setTopbarNotificationStatus(
+        error?.message || "Không tải được thông báo.",
+        { error: true }
+      );
+      return null;
+    } finally {
+      topbarNotificationPromise = null;
+    }
+  })();
+
+  return topbarNotificationPromise;
+};
+
+const bindTopbarNotifications = () => {
+  if (!notificationMenu || !notificationTrigger) return;
+
+  notificationTrigger.setAttribute("aria-haspopup", "true");
+  notificationTrigger.setAttribute("aria-expanded", "false");
+  resetTopbarNotifications({ authenticated: Boolean(getToken()) });
+
+  const openMenu = () => {
+    setTopbarNotificationExpanded(true);
+    void loadTopbarNotifications();
+  };
+  const closeMenu = () => setTopbarNotificationExpanded(false);
+
+  notificationMenu.addEventListener("mouseenter", openMenu);
+  notificationMenu.addEventListener("mouseleave", closeMenu);
+  notificationMenu.addEventListener("focusin", openMenu);
+  notificationMenu.addEventListener("focusout", (event) => {
+    if (notificationMenu.contains(event.relatedTarget)) return;
+    closeMenu();
+  });
+  notificationMenu.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    closeMenu();
+    notificationTrigger.blur();
+  });
+};
+
+const bindStoreSearch = () => {
+  if (!searchWrap || !searchInput || !searchButton) return;
+
+  const currentQuery = new URLSearchParams(window.location.search).get("q") || "";
+  if (currentQuery && !searchInput.value.trim()) {
+    searchInput.value = currentQuery;
+  }
+
+  const submitSearch = () => {
+    const query = searchInput.value.trim();
+    if (!query) {
+      searchInput.focus();
+      return;
+    }
+
+    window.location.href = getSearchResultsHref(query);
+  };
+
+  searchButton.addEventListener("click", submitSearch);
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    submitSearch();
   });
 };
 
@@ -402,5 +662,7 @@ if (logoutBtn) {
 }
 
 bindSellerChannelLinks();
+bindTopbarNotifications();
+bindStoreSearch();
 fetchMe();
 refreshCartCount();

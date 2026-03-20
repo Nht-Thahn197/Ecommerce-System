@@ -961,6 +961,7 @@
     user: null,
     approvedShops: [],
     currentShopId: "",
+    shippingSettingsSaving: false,
     categories: [],
     products: [],
     orderItems: [],
@@ -1408,6 +1409,26 @@
     shop?.onboarding_data && typeof shop.onboarding_data === "object"
       ? shop.onboarding_data
       : {};
+
+  const getShopShippingConfig = (shop) => {
+    const shippingConfig = getShopOnboardingData(shop)?.shipping_config || {};
+    return SHIPPING_METHODS.reduce(
+      (config, method) => ({
+        ...config,
+        [method.key]: Boolean(shippingConfig?.[method.key]),
+      }),
+      {}
+    );
+  };
+
+  const countEnabledShippingMethods = (config = {}) =>
+    SHIPPING_METHODS.filter((method) => Boolean(config?.[method.key])).length;
+
+  const replaceApprovedShop = (nextShop) => {
+    state.approvedShops = state.approvedShops.map((shop) =>
+      shop.id === nextShop.id ? nextShop : shop
+    );
+  };
 
   const getShopAddress = (shop, addressType) => {
     const matchedAddress = Array.isArray(shop?.shop_addresses)
@@ -3375,15 +3396,16 @@
       return;
     }
 
-    const onboarding = getShopOnboardingData(currentShop);
-    const shippingConfig = onboarding?.shipping_config || {};
-    const enabledCount = SHIPPING_METHODS.filter((method) =>
-      Boolean(shippingConfig?.[method.key])
-    ).length;
+    const shippingConfig = getShopShippingConfig(currentShop);
+    const enabledCount = countEnabledShippingMethods(shippingConfig);
+    const disabledAttr = state.shippingSettingsSaving ? "disabled" : "";
+    const statusCopy = state.shippingSettingsSaving
+      ? "Đang cập nhật..."
+      : "Bật hoặc tắt từng phương thức để áp dụng ngay cho shop.";
 
     els.shippingSettingsContent.innerHTML = `
       <div class="seller-inline-alert">
-        Cấu hình vận chuyển của ${escapeHtml(currentShop.name || "shop")} đang lấy từ hồ sơ đã duyệt. Để thay đổi, hãy cập nhật hồ sơ shop hoặc đăng ký lại cấu hình với admin.
+        ${escapeHtml(currentShop.name || "Shop")} có thể chủ động bật hoặc tắt phương thức vận chuyển phù hợp với quá trình vận hành hiện tại. ${statusCopy}
       </div>
       <div class="seller-shipping-card">
         <div class="seller-shipping-head">
@@ -3400,13 +3422,68 @@
                   enabled ? "Đang bật" : "Chưa bật"
                 }</small>
               </span>
-              <input type="checkbox" ${enabled ? "checked" : ""} disabled />
+              <input
+                type="checkbox"
+                data-shipping-toggle="${escapeHtml(method.key)}"
+                ${enabled ? "checked" : ""}
+                ${disabledAttr}
+              />
               <span class="seller-switch"></span>
             </label>
           `;
         }).join("")}
       </div>
     `;
+  };
+
+  const updateShippingSettings = async (methodKey, enabled) => {
+    const currentShop = getCurrentShop();
+    if (!currentShop || !methodKey) return;
+
+    const currentConfig = getShopShippingConfig(currentShop);
+    const nextConfig = {
+      ...currentConfig,
+      [methodKey]: Boolean(enabled),
+    };
+
+    if (!countEnabledShippingMethods(nextConfig)) {
+      showStatus("Shop cần bật ít nhất 1 phương thức vận chuyển.", {
+        error: true,
+      });
+      renderShippingSettings();
+      return;
+    }
+
+    state.shippingSettingsSaving = true;
+    renderShippingSettings();
+    showStatus("Đang cập nhật phương thức vận chuyển...", { persist: true });
+
+    try {
+      const payload = await apiFetch(
+        `/shops/${encodeURIComponent(currentShop.id)}/profile`,
+        {
+          method: "PATCH",
+          body: {
+            shipping_config: nextConfig,
+          },
+        },
+        { redirectOn401: true }
+      );
+
+      replaceApprovedShop({ ...currentShop, ...(payload?.shop || {}) });
+      state.shippingSettingsSaving = false;
+      renderAll();
+      showStatus("Đã cập nhật phương thức vận chuyển.");
+    } catch (error) {
+      state.shippingSettingsSaving = false;
+      renderShippingSettings();
+      showStatus(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật phương thức vận chuyển.",
+        { error: true }
+      );
+    }
   };
 
   const renderDashboard = () => {
@@ -6712,6 +6789,16 @@
     els.productConditionInput?.addEventListener("change", (event) => {
       state.draft.condition = event.target.value || "new";
       renderDraft();
+    });
+
+    els.shippingSettingsContent?.addEventListener("change", async (event) => {
+      const input = event.target.closest("[data-shipping-toggle]");
+      if (!input) return;
+
+      await updateShippingSettings(
+        input.dataset.shippingToggle || "",
+        Boolean(input.checked)
+      );
     });
 
     els.shippingSelfPickup?.addEventListener("change", (event) => {
