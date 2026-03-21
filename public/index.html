@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bambi - Trang chủ</title>
     <link rel="icon" href="/ui/favicon-bambi.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/ui/store.css?v=20260320-52" />
+    <link rel="stylesheet" href="/ui/store.css?v=20260321-7" />
   </head>
   <body data-page="home">
     <div class="topbar">
@@ -93,25 +93,76 @@
 
     <main class="container hero">
       <div class="hero-grid">
-        <div class="hero-banner">
-          <h2>Sale giữa tuần - Giảm tới 50%</h2>
-          <p>
-            Ưu đãi lớn cho đồ gia dụng, phụ kiện và thiết bị điện tử từ các
-            shop đang bán trên Bambi.
-          </p>
-          <span class="cta">Mua ngay</span>
+        <div class="hero-banner hero-slider" data-hero-slider aria-label="Banner khuyến mãi nổi bật">
+          <div class="hero-slider-viewport">
+            <div class="hero-slider-track" data-hero-slider-track>
+              <a class="hero-slider-slide" aria-label="Banner khuyến mãi 1">
+                <img
+                  src="/ui/uploads/banners/banner3.png"
+                  alt="Banner khuyến mãi 1"
+                  loading="eager"
+                  fetchpriority="high"
+                />
+              </a>
+              <a class="hero-slider-slide" aria-label="Banner khuyến mãi 2">
+                <img src="/ui/uploads/banners/banner4.png" alt="Banner khuyến mãi 2" loading="lazy" />
+              </a>
+              <a class="hero-slider-slide" aria-label="Banner khuyến mãi 3">
+                <img src="/ui/uploads/banners/banner5.png" alt="Banner khuyến mãi 3" loading="lazy" />
+              </a>
+              <a class="hero-slider-slide" aria-label="Banner khuyến mãi 4">
+                <img src="/ui/uploads/banners/banner6.png" alt="Banner khuyến mãi 4" loading="lazy" />
+              </a>
+              <a class="hero-slider-slide" aria-label="Banner khuyến mãi 5">
+                <img src="/ui/uploads/banners/banner7.png" alt="Banner khuyến mãi 5" loading="lazy" />
+              </a>
+              <a class="hero-slider-slide" aria-label="Banner khuyến mãi 6">
+                <img src="/ui/uploads/banners/banner8.png" alt="Banner khuyến mãi 6" loading="lazy" />
+              </a>
+              <a class="hero-slider-slide" aria-label="Banner khuyến mãi 7">
+                <img src="/ui/uploads/banners/banner9.png" alt="Banner khuyến mãi 7" loading="lazy" />
+              </a>
+            </div>
+          </div>
+          <button
+            class="hero-slider-arrow hero-slider-arrow-prev"
+            type="button"
+            data-hero-slide-nav="-1"
+            aria-label="Xem banner trước"
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+          <button
+            class="hero-slider-arrow hero-slider-arrow-next"
+            type="button"
+            data-hero-slide-nav="1"
+            aria-label="Xem banner tiếp theo"
+          >
+            <span aria-hidden="true">›</span>
+          </button>
+          <div class="hero-slider-dots" aria-label="Điều hướng banner">
+            <button class="hero-slider-dot is-active" type="button" data-hero-slide-to="0" aria-label="Xem banner 1" aria-pressed="true"></button>
+            <button class="hero-slider-dot" type="button" data-hero-slide-to="1" aria-label="Xem banner 2" aria-pressed="false"></button>
+            <button class="hero-slider-dot" type="button" data-hero-slide-to="2" aria-label="Xem banner 3" aria-pressed="false"></button>
+            <button class="hero-slider-dot" type="button" data-hero-slide-to="3" aria-label="Xem banner 4" aria-pressed="false"></button>
+            <button class="hero-slider-dot" type="button" data-hero-slide-to="4" aria-label="Xem banner 5" aria-pressed="false"></button>
+            <button class="hero-slider-dot" type="button" data-hero-slide-to="5" aria-label="Xem banner 6" aria-pressed="false"></button>
+            <button class="hero-slider-dot" type="button" data-hero-slide-to="6" aria-label="Xem banner 7" aria-pressed="false"></button>
+            </div>
         </div>
         <div class="hero-side">
-          <div class="promo-card">
-            <span class="promo-tag">Flash Deal</span>
-            <h4>Khung giờ vàng 12:00 - 14:00</h4>
-            <p class="muted">Giảm mạnh cho phụ kiện công nghệ và thời trang.</p>
-          </div>
-          <div class="promo-card">
-            <span class="promo-tag">Freeship</span>
-            <h4>Đơn từ 99k freeship</h4>
-            <p class="muted">Áp dụng toàn sàn trong hôm nay.</p>
-          </div>
+          <a
+            class="promo-banner banner-1"
+            aria-label="Banner Flash Deal"
+          >
+            <img src="/ui/uploads/banners/banner1.png" alt="Banner Flash Deal" loading="lazy" />
+          </a>
+          <a
+            class="promo-banner banner-2"
+            aria-label="Banner Freeship"
+          >
+            <img src="/ui/uploads/banners/banner2.png" alt="Banner Freeship" loading="lazy" />
+          </a>
         </div>
       </div>
 
@@ -163,7 +214,7 @@
     </footer>
 
     <script src="/ui/store.js?v=20260320-9"></script>
-    <script src="/ui/storefront.js?v=20260320-6"></script>
+    <script src="/ui/storefront.js?v=20260321-1"></script>
     <script src="/ui/custom-select.js?v=20260310-3"></script>
   </body>
 </html>

@@ -5,6 +5,17 @@
   const homeCategoryStatus = document.querySelector("#storeCategoryStatus");
   const homeCategoryPrev = document.querySelector("#storeCategoryPrev");
   const homeCategoryNext = document.querySelector("#storeCategoryNext");
+  const homeHeroSlider = document.querySelector("[data-hero-slider]");
+  const homeHeroSliderTrack = document.querySelector("[data-hero-slider-track]");
+  const homeHeroSliderDots = Array.from(
+    document.querySelectorAll("[data-hero-slide-to]")
+  );
+  const homeHeroSliderArrows = Array.from(
+    document.querySelectorAll("[data-hero-slide-nav]")
+  );
+  const homeHeroSliderSlides = Array.from(
+    document.querySelectorAll(".hero-slider-slide")
+  );
   const homeFeaturedGrid = document.querySelector("#storeFeaturedProducts");
   const homeFeaturedStatus = document.querySelector("#storeFeaturedStatus");
   const homeFeaturedEmpty = document.querySelector("#storeFeaturedEmpty");
@@ -50,6 +61,7 @@
   };
 
   let categoryResizeFrame = 0;
+  let heroSliderTimer = 0;
 
   const CONDITION_LABELS = {
     new: "Mới",
@@ -203,6 +215,110 @@
 
   const getCategorySlidesCount = () =>
     Math.ceil(categoryCarouselState.roots.length / categoryCarouselState.pageSize);
+
+  const getHeroSlidesCount = () =>
+    homeHeroSliderTrack ? homeHeroSliderTrack.children.length : 0;
+
+  const syncHeroSlider = (nextIndex, { animate = true } = {}) => {
+    if (!homeHeroSlider || !homeHeroSliderTrack) return;
+
+    const slideCount = getHeroSlidesCount();
+    if (!slideCount) return;
+
+    const safeIndex = ((Number(nextIndex) % slideCount) + slideCount) % slideCount;
+    homeHeroSliderTrack.style.transition = animate
+      ? "transform 560ms cubic-bezier(0.22, 1, 0.36, 1)"
+      : "none";
+    homeHeroSliderTrack.style.transform = `translateX(-${safeIndex * 100}%)`;
+    homeHeroSlider.dataset.activeIndex = String(safeIndex);
+
+    homeHeroSliderSlides.forEach((slide, index) => {
+      const active = index === safeIndex;
+      slide.setAttribute("aria-hidden", active ? "false" : "true");
+      slide.tabIndex = active ? 0 : -1;
+    });
+
+    homeHeroSliderDots.forEach((button, index) => {
+      const active = index === safeIndex;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
+
+  const stopHeroSlider = () => {
+    if (!heroSliderTimer) return;
+    window.clearInterval(heroSliderTimer);
+    heroSliderTimer = 0;
+  };
+
+  const startHeroSlider = () => {
+    if (!homeHeroSlider || !homeHeroSliderTrack) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (getHeroSlidesCount() <= 1) return;
+
+    stopHeroSlider();
+    heroSliderTimer = window.setInterval(() => {
+      const currentIndex = Number(homeHeroSlider.dataset.activeIndex || 0);
+      syncHeroSlider(currentIndex + 1);
+    }, 3000);
+  };
+
+  const releaseHeroSliderControlFocus = (button, event) => {
+    if (!button || !event || event.detail === 0) return;
+
+    window.requestAnimationFrame(() => {
+      if (document.activeElement === button) {
+        button.blur();
+      }
+    });
+  };
+
+  const bindHeroSlider = () => {
+    if (!homeHeroSlider || !homeHeroSliderTrack) return;
+    if (homeHeroSlider.dataset.bound === "true") return;
+
+    homeHeroSlider.dataset.bound = "true";
+    syncHeroSlider(0, { animate: false });
+
+    homeHeroSliderDots.forEach((button) => {
+      button.addEventListener("click", (event) => {
+        const nextIndex = Number(button.dataset.heroSlideTo || 0);
+        syncHeroSlider(nextIndex);
+        startHeroSlider();
+        releaseHeroSliderControlFocus(button, event);
+      });
+    });
+
+    homeHeroSliderArrows.forEach((button) => {
+      button.addEventListener("click", (event) => {
+        const delta = Number(button.dataset.heroSlideNav || 0);
+        const currentIndex = Number(homeHeroSlider.dataset.activeIndex || 0);
+        if (!delta) return;
+        syncHeroSlider(currentIndex + delta);
+        startHeroSlider();
+        releaseHeroSliderControlFocus(button, event);
+      });
+    });
+
+    homeHeroSlider.addEventListener("focusin", stopHeroSlider);
+    homeHeroSlider.addEventListener("focusout", () => {
+      window.setTimeout(() => {
+        if (!homeHeroSlider.contains(document.activeElement)) {
+          startHeroSlider();
+        }
+      }, 0);
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        stopHeroSlider();
+      } else {
+        startHeroSlider();
+      }
+    });
+
+    startHeroSlider();
+  };
 
   const syncCategoryCarousel = () => {
     if (!homeCategoryGrid) return;
@@ -769,6 +885,7 @@
   };
 
   if (page === "home") {
+    bindHeroSlider();
     bindCategoryCarousel();
     loadHomePage();
   }
