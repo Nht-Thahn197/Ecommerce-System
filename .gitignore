@@ -7,6 +7,4 @@ dist/
 tmp/
 .chrome-headless/
 *.log
-public/uploads/*
-!public/uploads/banners/
-!public/uploads/banners/**
+public/uploads/

@@ -1,6 +1,6 @@
 # SETUP - Bambi E-commerce System
 
-File nay huong dan cach tai project tu GitHub ve va chay duoc tren may moi.
+File nay huong dan cach chay local va deploy production cho project nay.
 
 ## 1. Yeu cau cai san
 
@@ -35,11 +35,13 @@ cd Ecommerce-System
 npm install
 ```
 
-Lenh nay se cai cac package trong `package.json`.
+Neu deploy production, uu tien dung:
+
+```bash
+npm ci
+```
 
 ## 4. Tao file moi truong
-
-Project nay khong day file `.env` len GitHub, nen sau khi clone ve ban phai tu tao lai.
 
 Windows PowerShell:
 
@@ -53,13 +55,12 @@ macOS / Linux:
 cp .env.example .env
 ```
 
-Sau do mo file `.env` va sua lai gia tri cho dung may cua ban.
-
 Vi du:
 
 ```env
+PORT="3000"
 DATABASE_URL="postgresql://postgres:password@localhost:5432/bambi"
-JWT_SECRET="mot_chuoi_bi_mat"
+JWT_SECRET="mot_chuoi_bi_mat_rat_dai"
 ACCESS_TOKEN_EXPIRES_IN="1d"
 REFRESH_TOKEN_TTL_DAYS="30"
 PLATFORM_FEE_PERCENT="30"
@@ -72,12 +73,11 @@ GOOGLE_MAPS_EMBED_KEY=""
 
 Quan trong nhat la:
 
+- `PORT`
 - `DATABASE_URL`
 - `JWT_SECRET`
 
 ## 5. Tao database PostgreSQL
-
-Ban can tu tao database vi GitHub khong chua du lieu PostgreSQL.
 
 Vi du dung `psql`:
 
@@ -86,12 +86,6 @@ CREATE DATABASE bambi;
 ```
 
 Neu PostgreSQL cua ban dung user/password khac, hay sua lai `DATABASE_URL` trong `.env`.
-
-Vi du:
-
-```env
-DATABASE_URL="postgresql://postgres:123456@localhost:5432/bambi"
-```
 
 ## 6. Tao Prisma Client va chay migration
 
@@ -102,48 +96,148 @@ npm run prisma:generate
 npx prisma migrate deploy
 ```
 
-Neu ban dang lam viec local de phat trien tiep, co the dung:
+Neu dang phat trien local va can tao migration moi:
 
 ```bash
 npx prisma migrate dev
 ```
 
-Goi y:
-
-- `migrate deploy` phu hop khi chi muon ap dung cac migration da co san
-- `migrate dev` phu hop khi dang phat trien tren may local
-
-## 7. Chay project
-
-Chay che do development:
+## 7. Chay local
 
 ```bash
 npm run dev
 ```
 
-Sau khi chay thanh cong, mo:
+Mac dinh app chay tai:
 
 ```text
-http://localhost:3000/ui/index.html
+http://localhost:3000
 ```
 
-Mot so trang khac:
+Mot so duong dan:
 
 - Storefront: `http://localhost:3000/ui/index.html`
 - Account: `http://localhost:3000/ui/account.html`
 - Orders: `http://localhost:3000/ui/orders.html`
 - Admin UI: `http://localhost:3000/ui/admin/`
 
-## 8. Chay production
+## 8. Deploy production de nhat
+
+Huong phu hop nhat cho repo nay:
+
+- 1 VPS Linux
+- 1 PostgreSQL database
+- Nginx reverse proxy
+- PM2 de giu process Node chay on dinh
+
+Ly do:
+
+- project nay la Node server chay lau dai
+- API va UI static duoc phuc vu cung mot process Express
+- app ghi file upload vao `public/uploads/`
+- app co scheduler nen khong phu hop deploy kieu static hosting
+
+## 9. Quy trinh deploy production
+
+### 9.1. Cai tren server
+
+Can co:
+
+- Node.js 18+
+- npm
+- PostgreSQL
+- Nginx
+- PM2
+
+Cai PM2:
 
 ```bash
-npm run build
-npm start
+npm install -g pm2
 ```
 
-## 9. Nhung gi GitHub khong mang theo
+### 9.2. Lay code va cai package
 
-Khi ban `git push`, GitHub chi luu code va cac file duoc Git theo doi. Repo nay khong mang theo cac phan sau:
+```bash
+git clone https://github.com/Nht-Thahn197/Ecommerce-System.git /var/www/bambi
+cd /var/www/bambi
+npm ci
+```
+
+### 9.3. Tao `.env`
+
+```bash
+cp .env.example .env
+```
+
+Can sua toi thieu:
+
+- `PORT`
+- `DATABASE_URL`
+- `JWT_SECRET`
+
+Neu muon bat scheduler tren production:
+
+```env
+SCHEDULER_ENABLED="true"
+```
+
+Chi nen bat scheduler o 1 process / 1 server de tranh job chay trung.
+
+### 9.4. Chay migration va build
+
+```bash
+npm run prisma:generate
+npx prisma migrate deploy
+npm run build
+```
+
+### 9.5. Chay bang PM2
+
+Repo da co file `ecosystem.config.cjs`, co the chay:
+
+```bash
+pm2 start ecosystem.config.cjs --env production
+pm2 save
+pm2 startup
+```
+
+Neu cap nhat code:
+
+```bash
+git pull
+npm ci
+npm run prisma:generate
+npx prisma migrate deploy
+npm run build
+pm2 reload ecosystem.config.cjs --env production
+```
+
+### 9.6. Reverse proxy bang Nginx
+
+Vi du:
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    client_max_body_size 25M;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Sau do cau hinh SSL bang Certbot neu can.
+
+## 10. Du lieu can backup rieng
+
+GitHub khong mang theo:
 
 - `.env`
 - `node_modules`
@@ -152,33 +246,59 @@ Khi ban `git push`, GitHub chi luu code va cac file duoc Git theo doi. Repo nay 
 - `public/uploads/`
 - du lieu trong PostgreSQL
 
-Dieu do co nghia la neu ban muon may moi co dung du lieu cu, ban phai tu chep them:
+Neu ban muon server moi co dung du lieu cu, can backup va restore:
 
-- database dump / backup cua PostgreSQL
+- database PostgreSQL
 - thu muc `public/uploads/`
 
-Neu khong chep 2 phan nay thi app van co the chay, nhung:
+## 11. Banner va upload
 
-- du lieu san pham, tai khoan, don hang cu se khong co
-- anh upload truoc do co the bi mat
+Hien tai co 2 nhom khac nhau:
 
-## 10. Quy trinh ngan gon
+- `public/assets/banners/`: banner mac dinh cua trang chu, duoc commit len GitHub
+- `public/uploads/`: noi chua file upload runtime, khong commit len GitHub
+
+Ly do tach rieng:
+
+- banner mac dinh can co san khi deploy
+- file upload runtime khong nen version control
+
+Neu sau nay ban lam trang chuong trinh / tin tuc co banner upload:
+
+- khong nen dung `public/assets/banners/` cho du lieu dong
+- nen tao module rieng, vi du `campaigns` hoac `news`
+- nen luu trong database cac truong: `title`, `slug`, `banner_image_url`, `target_url`, `published_at`, `status`
+- neu nguoi dung bam vao banner thi co the mo trang `/ui/news/<slug>` hoac mot trang chi tiet tuong tu
+- file banner upload co the luu o `public/uploads/campaign-banners/` truoc, ve sau co the doi sang object storage
+
+## 12. Quy trinh ngan gon
+
+### Local
 
 ```bash
 git clone https://github.com/Nht-Thahn197/Ecommerce-System.git
 cd Ecommerce-System
 npm install
-```
-
-Tao `.env`, tao database `bambi`, roi chay:
-
-```bash
+cp .env.example .env
 npm run prisma:generate
 npx prisma migrate deploy
 npm run dev
 ```
 
-## 11. Neu chay loi
+### Production
+
+```bash
+git clone https://github.com/Nht-Thahn197/Ecommerce-System.git /var/www/bambi
+cd /var/www/bambi
+npm ci
+cp .env.example .env
+npm run prisma:generate
+npx prisma migrate deploy
+npm run build
+pm2 start ecosystem.config.cjs --env production
+```
+
+## 13. Neu chay loi
 
 ### Loi khong ket noi duoc database
 
@@ -186,15 +306,7 @@ Kiem tra lai:
 
 - PostgreSQL da bat chua
 - database `bambi` da tao chua
-- `DATABASE_URL` co dung user/password/port chua
-
-### Loi thieu package
-
-Chay lai:
-
-```bash
-npm install
-```
+- `DATABASE_URL` co dung user/password/host/port chua
 
 ### Loi Prisma
 
@@ -205,15 +317,10 @@ npm run prisma:generate
 npx prisma migrate deploy
 ```
 
-### Loi cong 3000 da duoc dung
+### Loi cong da duoc dung
 
-Tat tien trinh dang dung cong 3000, hoac sua code de dung cong khac.
+Doi `PORT` trong `.env` hoac sua Nginx / process manager cho phu hop.
 
-## 12. Goi y cho may khac
+### Loi mat anh upload sau khi doi server
 
-Neu ban muon nguoi khac tai ve la chay nhanh hon, nen chuan bi them:
-
-- file `.env.example` day du va ro rang
-- file seed du lieu mau
-- ban backup database mau
-- thu muc anh mau neu giao dien phu thuoc anh upload
+Can copy lai thu muc `public/uploads/` tu server cu hoac tu ban backup.
