@@ -55,6 +55,15 @@
   };
   const MAX_REVIEW_IMAGES = 6;
   const MAX_REVIEW_VIDEOS = 1;
+  const parseUploadLimitMb = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  };
+  const REVIEW_VIDEO_MAX_MB = parseUploadLimitMb(
+    window.BAMBI_REVIEW_VIDEO_MAX_MB,
+    20
+  );
+  const REVIEW_VIDEO_MAX_BYTES = REVIEW_VIDEO_MAX_MB * 1024 * 1024;
 
   const state = {
     orders: [],
@@ -529,7 +538,7 @@
                   <span>Thêm video</span>
                 </label>
                 <span class="review-media-hint">
-                  Tối đa ${MAX_REVIEW_IMAGES} ảnh và ${MAX_REVIEW_VIDEOS} video
+                  Tối đa ${MAX_REVIEW_IMAGES} ảnh, ${MAX_REVIEW_VIDEOS} video, video không quá ${REVIEW_VIDEO_MAX_MB}MB
                 </span>
               </div>
               <div class="review-media-grid">
@@ -1022,6 +1031,19 @@
 
     const files = Array.from(fileList).slice(0, availableSlots);
     if (!files.length) return;
+
+    if (field === "video") {
+      const oversizedFile = files.find(
+        (file) => Number(file?.size || 0) > REVIEW_VIDEO_MAX_BYTES
+      );
+      if (oversizedFile) {
+        showStatus(
+          `Video danh gia khong duoc vuot qua ${REVIEW_VIDEO_MAX_MB}MB.`,
+          true
+        );
+        return;
+      }
+    }
 
     const formData = new FormData();
     files.forEach((file) => {

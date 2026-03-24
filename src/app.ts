@@ -16,7 +16,16 @@ import returnRoutes from "./modules/returns/return.route";
 import categoryRoutes from "./modules/categories/category.route";
 import notificationRoutes from "./modules/notifications/notification.route";
 
+const parseUploadLimitMb = (value: string | undefined, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 const app = express();
+const reviewMediaUploadMaxMb = parseUploadLimitMb(
+  process.env.REVIEW_MEDIA_UPLOAD_MAX_MB,
+  20
+);
 
 app.use(express.json());
 app.get("/ui/runtime-config.js", (_req, res) => {
@@ -25,7 +34,8 @@ app.get("/ui/runtime-config.js", (_req, res) => {
   res.send(
     `window.BAMBI_GOOGLE_MAPS_EMBED_KEY = ${JSON.stringify(
       process.env.GOOGLE_MAPS_EMBED_KEY || process.env.GOOGLE_MAPS_API_KEY || ""
-    )};`
+    )};
+window.BAMBI_REVIEW_VIDEO_MAX_MB = ${JSON.stringify(reviewMediaUploadMaxMb)};`
   );
 });
 app.use("/ui", express.static(path.join(process.cwd(), "public")));

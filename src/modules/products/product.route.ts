@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 import fs from "fs";
 import path from "path";
 import multer from "multer";
@@ -20,6 +20,16 @@ import {
 const router = Router();
 const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
 
+const parseUploadLimitMb = (value: string | undefined, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const productMediaUploadMaxMb = parseUploadLimitMb(
+  process.env.PRODUCT_MEDIA_UPLOAD_MAX_MB,
+  100
+);
+
 fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -37,7 +47,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: productMediaUploadMaxMb * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = [
       "image/jpeg",
@@ -51,23 +61,51 @@ const upload = multer({
 
     if (!ok) {
       (req as any).fileValidationError =
-        "Chi ho tro JPG, PNG, WEBP, MP4, MOV hoac WEBM";
+        "Chỉ hỗ trợ JPG, PNG, WEBP, MP4, MOV hoac WEBM";
     }
 
     cb(null, ok);
   },
 });
 
+const productMediaUpload = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  upload.fields([
+    { name: "gallery", maxCount: 9 },
+    { name: "cover", maxCount: 1 },
+    { name: "video", maxCount: 1 },
+  ])(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError) {
+      if (error.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          message: `Mỗi file media tối đa ${productMediaUploadMaxMb}MB`,
+        });
+      }
+
+      return res.status(400).json({
+        message: error.message || "Không thể tải media sản phẩm",
+      });
+    }
+
+    if (error) {
+      return res.status(400).json({
+        message: "Không thể tải media sản phẩm",
+      });
+    }
+
+    next();
+  });
+};
+
 router.get("/", getProducts);
 router.post(
   "/media/upload",
   authMiddleware,
   requireSeller,
-  upload.fields([
-    { name: "gallery", maxCount: 9 },
-    { name: "cover", maxCount: 1 },
-    { name: "video", maxCount: 1 },
-  ]),
+  productMediaUpload,
   uploadProductMedia
 );
 router.post("/", authMiddleware, requireSeller, createProductHandler);

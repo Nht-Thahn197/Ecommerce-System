@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 import fs from "fs";
 import path from "path";
 import multer from "multer";
@@ -18,6 +18,16 @@ import {
 const router = Router();
 const uploadDir = path.join(process.cwd(), "public", "uploads", "reviews");
 
+const parseUploadLimitMb = (value: string | undefined, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const reviewMediaUploadMaxMb = parseUploadLimitMb(
+  process.env.REVIEW_MEDIA_UPLOAD_MAX_MB,
+  20
+);
+
 fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -35,7 +45,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: reviewMediaUploadMaxMb * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = [
       "image/jpeg",
@@ -56,15 +66,43 @@ const upload = multer({
   },
 });
 
+const reviewMediaUpload = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  upload.fields([
+    { name: "images", maxCount: 6 },
+    { name: "video", maxCount: 1 },
+  ])(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError) {
+      if (error.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          message: `Video danh gia khong duoc vuot qua ${reviewMediaUploadMaxMb}MB`,
+        });
+      }
+
+      return res.status(400).json({
+        message: error.message || "Khong the tai media danh gia",
+      });
+    }
+
+    if (error) {
+      return res.status(400).json({
+        message: "Khong the tai media danh gia",
+      });
+    }
+
+    next();
+  });
+};
+
 router.get("/", getReviews);
 router.get("/summary", getSummary);
 router.post(
   "/media/upload",
   authMiddleware,
-  upload.fields([
-    { name: "images", maxCount: 6 },
-    { name: "video", maxCount: 1 },
-  ]),
+  reviewMediaUpload,
   uploadReviewMedia
 );
 router.post("/", authMiddleware, addReview);

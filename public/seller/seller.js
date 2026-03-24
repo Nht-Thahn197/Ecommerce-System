@@ -1211,6 +1211,13 @@
 
   const parseResponsePayload = async (response) => {
     const text = await response.text();
+    if (response.status === 413) {
+      return {
+        message:
+          "File upload vượt giới hạn dung lượng",
+      };
+    }
+
     try {
       return text ? JSON.parse(text) : {};
     } catch (_error) {

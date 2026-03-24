@@ -174,6 +174,16 @@ const saveSession = (source, token, refreshToken) => {
 
 const parseResponsePayload = async (response) => {
   const text = await response.text();
+  if (response.status === 413) {
+    const reviewVideoMaxMb = Number(window.BAMBI_REVIEW_VIDEO_MAX_MB || 20);
+    return {
+      message:
+        Number.isFinite(reviewVideoMaxMb) && reviewVideoMaxMb > 0
+          ? `File upload vuot gioi han dung luong cua server. Neu dang tai video danh gia, file khong qua ${reviewVideoMaxMb}MB.`
+          : "File upload vuot gioi han dung luong cua server.",
+    };
+  }
+
   try {
     return text ? JSON.parse(text) : {};
   } catch (_error) {

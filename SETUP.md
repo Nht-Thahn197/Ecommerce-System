@@ -69,6 +69,8 @@ AUTO_RECEIVE_INTERVAL_MS="3600000"
 PAYOUT_INTERVAL_MS="3600000"
 GOOGLE_MAPS_API_KEY=""
 GOOGLE_MAPS_EMBED_KEY=""
+PRODUCT_MEDIA_UPLOAD_MAX_MB="100"
+REVIEW_MEDIA_UPLOAD_MAX_MB="20"
 ```
 
 Quan trong nhat la:
@@ -76,6 +78,8 @@ Quan trong nhat la:
 - `PORT`
 - `DATABASE_URL`
 - `JWT_SECRET`
+- `PRODUCT_MEDIA_UPLOAD_MAX_MB` neu can tang gioi han video san pham
+- `REVIEW_MEDIA_UPLOAD_MAX_MB` neu can doi gioi han video danh gia
 
 ## 5. Tao database PostgreSQL
 
@@ -220,7 +224,7 @@ Vi du:
 server {
     listen 80;
     server_name your-domain.com;
-    client_max_body_size 25M;
+    client_max_body_size 120M;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -232,6 +236,12 @@ server {
     }
 }
 ```
+
+Luu y:
+
+- `client_max_body_size` cua Nginx phai lon hon tong dung luong request upload thuc te
+- khong nen dat thap hon `PRODUCT_MEDIA_UPLOAD_MAX_MB`
+- route `/products/media/upload` gui cung luc gallery, cover va video, nen limit Nginx thuong can cao hon limit moi file trong app
 
 Sau do cau hinh SSL bang Certbot neu can.
 
@@ -324,3 +334,40 @@ Doi `PORT` trong `.env` hoac sua Nginx / process manager cho phu hop.
 ### Loi mat anh upload sau khi doi server
 
 Can copy lai thu muc `public/uploads/` tu server cu hoac tu ban backup.
+
+### Loi 413 khi upload video san pham
+
+Neu trinh duyet bao:
+
+```text
+413 Request Entity Too Large
+```
+
+thi day la Nginx dang chan request truoc khi toi Node app.
+
+Can kiem tra:
+
+- file Nginx dang co `client_max_body_size` du lon chua
+- gia tri `PRODUCT_MEDIA_UPLOAD_MAX_MB` trong `.env`
+- da reload Nginx va PM2 sau khi sua cau hinh chua
+
+Quy trinh sua nhanh tren server:
+
+```bash
+sudo nano /etc/nginx/sites-available/your-domain
+```
+
+Dat vi du:
+
+```nginx
+client_max_body_size 120M;
+```
+
+Sau do:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+cd /var/www/bambi
+pm2 reload ecosystem.config.cjs --env production
+```

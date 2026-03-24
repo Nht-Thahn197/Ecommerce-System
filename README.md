@@ -102,6 +102,44 @@ Static files in `public/` are served under `/ui`.
 - Orders: `http://localhost:3000/ui/orders.html`
 - Admin assets: `http://localhost:3000/ui/admin/`
 
+## Production URLs
+
+- Customer domain: `https://bambi.io.vn`
+- Storefront entry: `https://bambi.io.vn/ui/index.html`
+- Admin UI: `https://bambi.io.vn/ui/admin/`
+
+## Default account
+
+Default login for the current deployment:
+
+- Email: `test@example.com`
+- Password: `abc@123`
+
+Important:
+
+- This account will only be able to use the admin UI after its `users.role` is set to `admin`
+- If the project was already deployed before that role was granted, run the SQL script below on production once
+- After updating the role, sign out and sign in again so the new JWT contains the `admin` role
+
+Promote the account on production:
+
+```bash
+psql "$DATABASE_URL" -f database/promote-test-admin.sql
+```
+
+Quick manual SQL:
+
+```sql
+UPDATE users
+SET role = 'admin',
+    updated_at = NOW()
+WHERE email = 'test@example.com';
+
+SELECT id, email, role, status
+FROM users
+WHERE email = 'test@example.com';
+```
+
 ## API route groups
 
 - `/auth`
