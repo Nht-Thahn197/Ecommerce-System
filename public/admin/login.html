@@ -95,7 +95,7 @@
           <span class="login-badge">Bambi Admin</span>
           <h1 style="margin: 18px 0 10px; font-size: 40px; line-height: 1.05;">Đăng nhập quản trị</h1>
           <p class="muted" style="max-width: 520px; font-size: 16px; line-height: 1.7;">
-            Dùng tài khoản admin để truy cập bảng điều khiển riêng, duyệt shop, xử lý khiếu nại và theo dõi nhịp vận hành của toàn sàn.
+            Dùng tài khoản admin hoặc staff để truy cập bảng điều khiển riêng, duyệt shop, xử lý khiếu nại và theo dõi nhịp vận hành của toàn sàn.
           </p>
           <div class="login-points">
             <div class="login-point">
@@ -193,8 +193,8 @@
             }),
           });
 
-          if (payload.user?.role !== "admin") {
-            setStatus("Tài khoản này không có quyền quản trị.", "error");
+          if (!["admin", "staff"].includes(payload.user?.role || "")) {
+            setStatus("Tài khoản này không có quyền truy cập trang quản trị.", "error");
             return;
           }
 

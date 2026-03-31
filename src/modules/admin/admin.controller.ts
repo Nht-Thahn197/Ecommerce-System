@@ -3,6 +3,8 @@ import { AuthRequest } from "../../middleware/auth.middleware";
 import {
   createAdminVoucher,
   deleteAdminVoucher,
+  getAdminUserById,
+  getAdminUsers,
   getShopRevenueManagement,
   getOverview,
   getAdminProducts,
@@ -11,6 +13,7 @@ import {
   getPendingShops,
   getRecentOrders,
   getShopDetail,
+  updateAdminUserById,
   updateWithdrawRequestStatus,
   updateAdminVoucher,
   updateProductStatusByAdmin,
@@ -21,6 +24,7 @@ import {
   AdminVoucherInput,
   AdminVouchersQuery,
   RecentOrdersQuery,
+  UpdateAdminUserInput,
   UpdateWithdrawRequestInput,
   UpdateProductStatusInput,
 } from "./admin.types";
@@ -77,6 +81,40 @@ export const shopRevenueManagement = async (
   try {
     const revenue = await getShopRevenueManagement(req.query);
     res.json({ revenue });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const adminUsers = async (_req: AuthRequest, res: Response) => {
+  try {
+    const users = await getAdminUsers();
+    res.json({ users });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const adminUserDetail = async (
+  req: AuthRequest<{ id: string }>,
+  res: Response
+) => {
+  try {
+    const user = await getAdminUserById(req.params.id);
+    res.json({ user });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateAdminUser = async (
+  req: AuthRequest<{ id: string }, {}, UpdateAdminUserInput>,
+  res: Response
+) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    const user = await updateAdminUserById(req.userId, req.params.id, req.body || {});
+    res.json({ user });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

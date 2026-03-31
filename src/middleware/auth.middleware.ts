@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import prisma from "../libs/prisma";
 
-export type Role = "admin" | "customer";
+export type Role = "admin" | "staff" | "customer";
 
 export interface AuthRequest<
   Params = any,
@@ -31,17 +31,54 @@ export const authMiddleware = (
     return res.status(500).json({ message: "JWT secret is not set" });
   }
 
-  try {
-    const decoded = jwt.verify(token, secret) as {
-      userId?: string;
-      role?: string;
-    };
-    req.userId = decoded.userId;
-    req.userRole = decoded.role as Role | undefined;
-    next();
-  } catch {
-    res.status(401).json({ message: "Invalid token" });
-  }
+  jwt.verify(
+    token,
+    secret,
+    async (
+      error,
+      decoded: jwt.JwtPayload | string | undefined
+    ) => {
+      if (error || !decoded || typeof decoded === "string") {
+        return res.status(401).json({ message: "Invalid token" });
+      }
+
+      const userId = typeof decoded.userId === "string" ? decoded.userId : "";
+      if (!userId) {
+        return res.status(401).json({ message: "Invalid token" });
+      }
+
+      try {
+        const user = await prisma.users.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            role: true,
+            status: true,
+          },
+        });
+
+        if (!user) {
+          return res.status(401).json({ message: "User not found" });
+        }
+
+        if (user.status && user.status !== "active") {
+          return res
+            .status(401)
+            .json({ message: "Tài khoản đã bị khóa hoặc ngưng hoạt động" });
+        }
+
+        const role = (user.role || "customer").toLowerCase();
+
+        req.userId = user.id;
+        req.userRole =
+          role === "admin" || role === "staff" ? role : "customer";
+
+        next();
+      } catch {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  );
 };
 
 export const requireRole =
@@ -57,7 +94,8 @@ export const requireRole =
   };
 
 export const requireAdmin = requireRole("admin");
-export const requireCustomer = requireRole("customer", "admin");
+export const requireAdminAccess = requireRole("admin", "staff");
+export const requireCustomer = requireRole("customer", "staff", "admin");
 
 export const requireSeller = async (
   req: AuthRequest,

@@ -8,6 +8,7 @@ import {
   AdminVouchersQuery,
   RecentOrdersQuery,
   UpdateWithdrawRequestInput,
+  UpdateAdminUserInput,
 } from "./admin.types";
 
 const MAX_LIMIT = 100;
@@ -18,6 +19,24 @@ const PRODUCT_STATUSES = new Set([
   "locked",
   "inactive",
 ]);
+const ADMIN_USER_ROLES = new Set(["customer", "staff", "admin"]);
+const ADMIN_USER_STATUSES = new Set(["active", "locked", "inactive"]);
+const adminUserListSelect = {
+  id: true,
+  email: true,
+  full_name: true,
+  phone: true,
+  role: true,
+  status: true,
+  created_at: true,
+  updated_at: true,
+} satisfies Prisma.usersSelect;
+const adminUserDetailSelect = {
+  ...adminUserListSelect,
+  gender: true,
+  birth_date: true,
+  avatar_url: true,
+} satisfies Prisma.usersSelect;
 
 const toNumber = (value?: string) => {
   if (!value) return undefined;
@@ -666,6 +685,38 @@ const normalizeProductStatus = (value?: string) => {
   return normalized;
 };
 
+const normalizeAdminUserRole = (value?: string) => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    throw new Error("Vai trò người dùng là bắt buộc");
+  }
+
+  if (!ADMIN_USER_ROLES.has(normalized)) {
+    throw new Error("Vai trò người dùng không hợp lệ");
+  }
+
+  return normalized;
+};
+
+const normalizeAdminUserStatus = (value?: string) => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    throw new Error("Trạng thái người dùng là bắt buộc");
+  }
+
+  if (!ADMIN_USER_STATUSES.has(normalized)) {
+    throw new Error("Trạng thái người dùng không hợp lệ");
+  }
+
+  return normalized;
+};
+
 const isUuid = (value?: string) =>
   Boolean(
     value &&
@@ -736,6 +787,107 @@ export const getAdminProducts = async (query: AdminProductsQuery) => {
     },
     summary,
   };
+};
+
+export const getAdminUsers = async () => {
+  return prisma.users.findMany({
+    orderBy: { created_at: "desc" },
+    select: adminUserListSelect,
+  });
+};
+
+export const getAdminUserById = async (userId: string) => {
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: adminUserDetailSelect,
+  });
+
+  if (!user) {
+    throw new Error("Người dùng không tồn tại");
+  }
+
+  return user;
+};
+
+export const updateAdminUserById = async (
+  actorId: string,
+  userId: string,
+  input: UpdateAdminUserInput
+) => {
+  const nextRole =
+    input.role !== undefined ? normalizeAdminUserRole(input.role) : undefined;
+  const nextStatus =
+    input.status !== undefined
+      ? normalizeAdminUserStatus(input.status)
+      : undefined;
+
+  if (nextRole === undefined && nextStatus === undefined) {
+    throw new Error("Không có dữ liệu cập nhật");
+  }
+
+  const existing = await prisma.users.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true,
+      status: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error("Người dùng không tồn tại");
+  }
+
+  if (actorId === userId) {
+    if (nextRole && nextRole !== "admin") {
+      throw new Error("Không thể tự hạ quyền tài khoản đang đăng nhập");
+    }
+
+    if (nextStatus && nextStatus !== "active") {
+      throw new Error("Không thể tự khóa tài khoản đang đăng nhập");
+    }
+  }
+
+  const data: Prisma.usersUpdateInput = {};
+  const normalizedCurrentRole = (existing.role || "customer").toLowerCase();
+  const normalizedCurrentStatus = (existing.status || "active").toLowerCase();
+
+  if (nextRole && nextRole !== normalizedCurrentRole) {
+    data.role = nextRole;
+  }
+
+  if (nextStatus && nextStatus !== normalizedCurrentStatus) {
+    data.status = nextStatus;
+  }
+
+  if (!Object.keys(data).length) {
+    return getAdminUserById(userId);
+  }
+
+  const now = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.users.update({
+      where: { id: userId },
+      data: {
+        ...data,
+        updated_at: now,
+      },
+      select: adminUserDetailSelect,
+    });
+
+    await tx.refresh_tokens.updateMany({
+      where: {
+        user_id: userId,
+        revoked_at: null,
+      },
+      data: {
+        revoked_at: now,
+      },
+    });
+
+    return user;
+  });
 };
 
 export const getAdminVouchers = async (query: AdminVouchersQuery) => {

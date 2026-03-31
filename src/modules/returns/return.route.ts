@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   authMiddleware,
-  requireAdmin,
+  requireAdminAccess,
 } from "../../middleware/auth.middleware";
 import {
   createDispute,
@@ -17,10 +17,10 @@ const router = Router();
 
 router.post("/", authMiddleware, createReturn);
 router.get("/me", authMiddleware, myReturns);
-router.get("/pending", authMiddleware, requireAdmin, pendingReturns);
-router.get("/disputes", authMiddleware, requireAdmin, pendingDisputes);
+router.get("/pending", authMiddleware, requireAdminAccess, pendingReturns);
+router.get("/disputes", authMiddleware, requireAdminAccess, pendingDisputes);
 router.post("/:id/dispute", authMiddleware, createDispute);
-router.patch("/:id/dispute", authMiddleware, requireAdmin, updateDispute);
-router.patch("/:id", authMiddleware, requireAdmin, updateReturn);
+router.patch("/:id/dispute", authMiddleware, requireAdminAccess, updateDispute);
+router.patch("/:id", authMiddleware, requireAdminAccess, updateReturn);
 
 export default router;

@@ -4,7 +4,7 @@ import path from "path";
 import multer from "multer";
 import {
   authMiddleware,
-  requireAdmin,
+  requireAdminAccess,
   requireSeller,
 } from "../../middleware/auth.middleware";
 import {
@@ -135,11 +135,11 @@ router.delete(
   requireSeller,
   deleteShopVoucherHandler
 );
-router.get("/pending", authMiddleware, requireAdmin, listPending);
+router.get("/pending", authMiddleware, requireAdminAccess, listPending);
 router.patch(
   "/:id/status",
   authMiddleware,
-  requireAdmin,
+  requireAdminAccess,
   updateStatus
 );
 

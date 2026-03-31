@@ -58,6 +58,7 @@
             </div>
             <span class="chip gray" id="userCountLabel">0 người dùng</span>
           </div>
+          <p class="note" id="userPermissionNote"></p>
           <div class="toolbar-form">
             <input id="userQuery" class="input" placeholder="Tìm theo tên, email, số điện thoại hoặc vai trò" />
             <button class="btn" id="applyUserFilter" type="button">Lọc</button>
@@ -67,6 +68,90 @@
           <div id="usersTable"></div>
         </section>
       </main>
+    </div>
+
+    <div class="admin-modal" id="userModal" hidden aria-hidden="true">
+      <button
+        class="admin-modal-backdrop"
+        data-close-user-modal
+        type="button"
+        aria-label="Đóng form cập nhật người dùng"
+      ></button>
+      <div
+        class="admin-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="userModalTitle"
+      >
+        <div class="admin-section-head">
+          <div>
+            <div class="kicker user-kicker">Phân quyền</div>
+            <h2 id="userModalTitle">Cập nhật người dùng</h2>
+            <p class="muted">
+              Đổi role hoặc khóa tài khoản vi phạm. Khi lưu, các phiên đăng nhập đang mở của người dùng sẽ bị thu hồi.
+            </p>
+          </div>
+          <button class="btn ghost" id="closeUserModal" type="button">Đóng</button>
+        </div>
+
+        <div id="userModalStatus" class="status" style="display: none"></div>
+
+        <form id="userForm" class="user-form-grid">
+          <div class="field">
+            <label>Mã người dùng</label>
+            <input id="userIdField" class="input user-readonly" readonly />
+          </div>
+          <div class="field">
+            <label>Họ tên</label>
+            <input id="userNameField" class="input user-readonly" readonly />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="userEmailField" class="input user-readonly" readonly />
+          </div>
+          <div class="field">
+            <label>Số điện thoại</label>
+            <input id="userPhoneField" class="input user-readonly" readonly />
+          </div>
+          <div class="field">
+            <label>Ngày sinh</label>
+            <input id="userBirthDateField" class="input user-readonly" readonly />
+          </div>
+          <div class="field">
+            <label>Cập nhật lần cuối</label>
+            <input id="userUpdatedAtField" class="input user-readonly" readonly />
+          </div>
+          <div class="field">
+            <label>Ngày tạo</label>
+            <input id="userCreatedAtField" class="input user-readonly" readonly />
+          </div>
+          <div class="field">
+            <label>Vai trò truy cập</label>
+            <select id="userRoleInput" class="select">
+              <option value="customer">Customer</option>
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="field span-2">
+            <label>Trạng thái tài khoản</label>
+            <div class="user-status-panel">
+              <span class="chip green" id="userStatusChip">Hoạt động</span>
+              <button class="btn danger" id="toggleUserStatusBtn" type="button">
+                Khóa tài khoản
+              </button>
+            </div>
+            <p class="note" id="userStatusNote">
+              Tài khoản bị khóa sẽ không thể đăng nhập hoặc tiếp tục dùng phiên đã mở.
+            </p>
+            <p class="note" id="userSelfGuardNote" style="display: none"></p>
+          </div>
+          <div class="user-form-actions">
+            <button class="btn" id="saveUserBtn" type="submit">Lưu cập nhật</button>
+            <p class="note" id="userReadOnlyNote" style="display: none"></p>
+          </div>
+        </form>
+      </div>
     </div>
 
     <script src="/ui/admin/admin.js"></script>

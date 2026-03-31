@@ -23,6 +23,7 @@ const REFRESH_TOKEN_TTL_DAYS = (() => {
   );
   return Number.isFinite(value) && value > 0 ? value : 30;
 })();
+const INACTIVE_USER_MESSAGE = "Tài khoản đã bị khóa hoặc ngưng hoạt động";
 
 const publicUserSelect = {
   id: true,
@@ -72,7 +73,7 @@ const createAccessToken = (user: {
   status?: string | null;
 }) => {
   if (user.status && user.status !== "active") {
-    throw new Error("User is inactive");
+    throw new Error(INACTIVE_USER_MESSAGE);
   }
 
   return jwt.sign(
@@ -397,7 +398,7 @@ export const refreshAccessToken = async (
   });
 
   if (!user || user.status !== "active") {
-    throw new Error("User not found");
+    throw new Error(INACTIVE_USER_MESSAGE);
   }
 
   await prisma.refresh_tokens.update({

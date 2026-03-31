@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   authMiddleware,
-  requireAdmin,
+  requireAdminAccess,
 } from "../../middleware/auth.middleware";
 import {
   createCategoryHandler,
@@ -15,9 +15,8 @@ const router = Router();
 
 router.get("/", getCategories);
 router.get("/:id", getCategory);
-router.post("/", authMiddleware, requireAdmin, createCategoryHandler);
-router.patch("/:id", authMiddleware, requireAdmin, updateCategoryHandler);
-router.delete("/:id", authMiddleware, requireAdmin, deleteCategoryHandler);
+router.post("/", authMiddleware, requireAdminAccess, createCategoryHandler);
+router.patch("/:id", authMiddleware, requireAdminAccess, updateCategoryHandler);
+router.delete("/:id", authMiddleware, requireAdminAccess, deleteCategoryHandler);
 
 export default router;
-

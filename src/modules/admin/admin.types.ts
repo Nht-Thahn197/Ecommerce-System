@@ -24,6 +24,11 @@ export interface UpdateProductStatusInput {
   status?: string;
 }
 
+export interface UpdateAdminUserInput {
+  role?: string;
+  status?: string;
+}
+
 export interface AdminVouchersQuery {
   limit?: string;
   page?: string;
